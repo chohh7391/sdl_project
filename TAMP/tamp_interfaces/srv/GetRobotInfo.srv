@@ -1,0 +1,6 @@
+# Request
+---
+# Response
+float64[] q_init
+string[] joint_names
+string current_tool

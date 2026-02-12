@@ -1,0 +1,9 @@
+# Request
+string current_tool
+string desired_tool
+---
+# Response
+float64[] current_tool_position
+float64[] current_tool_orientation
+float64[] desired_tool_position
+float64[] desired_tool_orientation

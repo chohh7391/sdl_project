@@ -1,0 +1,11 @@
+# Define the goal
+bool grasp
+uint8 position_percentage
+uint8 speed_percentage
+uint8 torque_percentage
+---
+# Define the result
+bool is_completed
+---
+# Define a feedback message
+float32 percent_complete

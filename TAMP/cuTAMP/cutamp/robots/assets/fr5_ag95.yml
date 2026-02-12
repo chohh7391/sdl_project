@@ -1,0 +1,127 @@
+robot_cfg:
+  kinematics:
+    usd_path: '/robot/dcp_description/usd/fr5_ag95/fr5_ag95.usd'
+    usd_robot_root: '/robot'
+    isaac_usd_path: ''
+    usd_flip_joints: {}
+    usd_flip_joint_limits: []
+
+    external_asset_path: "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/content/assets"
+    urdf_path: 'robot/dcp_description/urdf/robot/fr5_ag95.urdf'
+    external_robot_configs_path: "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/content/configs/robot"
+
+    base_link: 'base_link'
+    ee_link: 'grasp_frame'
+    link_names: null
+    lock_joints: {'gripper_finger1_joint': 0.0}
+
+    extra_links: {
+      "attached_object": {
+        "parent_link_name": "grasp_frame",
+        "link_name": "attached_object",
+        "fixed_transform": [0,0,0,1,0,0,0],
+        "joint_type":"FIXED",
+        "joint_name": "attach_joint"
+      }
+    }
+    extra_collision_spheres: {'attached_object': 4}
+
+    collision_link_names: [
+      'shoulder_link', 'upperarm_link', 'forearm_link', 'wrist1_link', 'wrist2_link', 'wrist3_link', # fr5
+      'gripper_finger1_finger_tip_link', 'gripper_finger2_finger_tip_link', 'gripper_finger1_finger_link', 'gripper_finger2_finger_link', # ag95
+      'attached_object' # target object
+    ] # List[str]
+    collision_spheres: 'spheres/fr5_ag95.yml'
+    collision_sphere_buffer: 0.005 # float or Dict[str, float]
+
+    self_collision_ignore: {
+      'upperarm_link': [
+        'forearm_link', 'shoulder_link'
+      ],
+      'forearm_link': [
+        'wrist1_link', 'wrist2_link', 'wrist3_link'
+      ],
+      'wrist1_link': [
+        'wrist2_link', 'wrist3_link',
+        'gripper_finger1_finger_tip_link', 'gripper_finger2_finger_tip_link', 'gripper_finger1_finger_link', 'gripper_finger2_finger_link'
+      ],
+      'wrist2_link': [
+        'wrist3_link',
+        'gripper_finger1_finger_tip_link', 'gripper_finger2_finger_tip_link', 'gripper_finger1_finger_link', 'gripper_finger2_finger_link',
+        'attached_object'
+      ],
+      'wrist3_link': [
+        'gripper_finger1_finger_tip_link', 'gripper_finger2_finger_tip_link', 'gripper_finger1_finger_link', 'gripper_finger2_finger_link',
+        'attached_object'
+      ],
+      'gripper_finger1_finger_tip_link': [
+        'gripper_finger2_finger_tip_link', 'gripper_finger1_finger_link', 'gripper_finger2_finger_link',
+        'attached_object'
+      ],
+      'gripper_finger2_finger_tip_link': [
+        'gripper_finger1_finger_tip_link', 'gripper_finger1_finger_link', 'gripper_finger2_finger_link',
+        'attached_object'
+      ],
+      'gripper_finger1_finger_link': [
+        'gripper_finger1_finger_tip_link', 'gripper_finger2_finger_tip_link', 'gripper_finger2_finger_link',
+        'attached_object'
+      ],
+      'gripper_finger2_finger_link': [
+        'gripper_finger1_finger_tip_link', 'gripper_finger2_finger_tip_link', 'gripper_finger1_finger_link',
+        'attached_object'
+      ]
+    } # Dict[str, List[str]]
+
+    self_collision_buffer: {
+      'shoulder_link': 0.01,
+      'upperarm_link': 0, 
+      'forearm_link': 0, 
+      'wrist1_link': 0, 
+      'wrist2_link': 0,
+      'wrist3_link': 0.025,
+      'gripper_finger1_finger_tip_link': 0.01,
+      'gripper_finger2_finger_tip_link': 0.01,
+      'gripper_finger1_finger_link': 0.025,
+      'gripper_finger2_finger_link': 0.025,
+    }  # Dict[str, float]
+
+    use_global_cumul: True
+    mesh_link_names: [
+      # fr5
+      'shoulder_link','upperarm_link', 'forearm_link', 'wrist1_link', 'wrist2_link' ,'wrist3_link', 'tool0',
+      # ag95
+      'gripper_finger1_finger_link', 'gripper_finger1_knukle_link', 'gripper_finger1_inner_knukle_link', 'gripper_finger1_finger_tip_link',
+      'gripper_finger2_finger_link', 'gripper_finger2_knukle_link', 'gripper_finger2_inner_knukle_link', 'gripper_finger2_finger_tip_link',
+    ] # List[str]
+    
+    cspace:
+      joint_names: [
+        # fr5
+        'j1', 'j2', 'j3', 'j4', 'j5', 'j6',
+        # ag95
+        'gripper_finger1_inner_knuckle_joint',
+        'gripper_finger1_joint',
+        'gripper_finger2_inner_knuckle_joint',
+        'gripper_finger2_joint',
+        'gripper_finger1_finger_tip_joint',
+        'gripper_finger1_finger_joint',
+        'gripper_finger2_finger_tip_joint',
+        'gripper_finger2_finger_joint',
+      ] # List[str]
+      retract_config:  [
+        0.0, -2.2, 1.9, -1.383, -1.57, 0.0, # fr5
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, # ag95
+      ]
+      null_space_weight:  [
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, # fr5
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, # ag95
+      ]
+      cspace_distance_weight: [
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, # fr5
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, # ag95
+      ]
+      max_jerk: 500.0
+      max_acceleration: 12.0
+      position_limit_clip: 0.1
+
+      # external_asset_path: null # Use this to add path for externally located assets/robot folder.

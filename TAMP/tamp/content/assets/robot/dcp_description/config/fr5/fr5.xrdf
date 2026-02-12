@@ -1,0 +1,87 @@
+format: "xrdf"
+
+format_version: 1.0
+
+default_joint_positions: 
+  j1: 0.0
+  j2: 0.0016
+  j3: 0.0005
+  j4: 0.0
+  j5: -0.0
+  j6: 0.0
+
+cspace: 
+  joint_names: 
+    - "j1"
+    - "j2"
+    - "j3"
+    - "j4"
+    - "j5"
+    - "j6"
+  acceleration_limits: [10, 10, 10, 10, 10, 10]
+  jerk_limits: [10000, 10000, 10000, 10000, 10000, 10000]
+
+collision: 
+  geometry: "auto_generated_collision_sphere_group"
+
+self_collision: 
+  geometry: "auto_generated_collision_sphere_group"
+  ignore: 
+    base_link: 
+      - "shoulder_link"
+    shoulder_link: 
+      - "upperarm_link"
+    upperarm_link: 
+      - "forearm_link"
+    forearm_link: 
+      - "wrist1_link"
+    wrist1_link: 
+      - "wrist2_link"
+    wrist2_link: 
+      - "wrist3_link"
+
+geometry: 
+  auto_generated_collision_sphere_group: 
+    spheres: 
+      shoulder_link: 
+        - center: [-0.0, -0.004, 0.159]
+          radius: 0.0868
+      upperarm_link: 
+        - center: [0.001, -0.0, 0.14]
+          radius: 0.0877
+        - center: [-0.423, -0.003, 0.147]
+          radius: 0.085
+        - center: [-0.22, -0.0, 0.138]
+          radius: 0.0588
+        - center: [-0.156, 0.0, 0.138]
+          radius: 0.0588
+        - center: [-0.283, -0.0, 0.138]
+          radius: 0.0588
+        - center: [-0.073, 0.002, 0.136]
+          radius: 0.0705
+        - center: [-0.354, 0.0, 0.136]
+          radius: 0.0616
+      forearm_link: 
+        - center: [-0.009, 0.002, 0.035]
+          radius: 0.076
+        - center: [-0.392, 0.0, 0.004]
+          radius: 0.0699
+        - center: [-0.249, 0.0, 0.0]
+          radius: 0.0544
+        - center: [-0.121, -0.0, -0.0]
+          radius: 0.0544
+        - center: [-0.059, 0.001, 0.0]
+          radius: 0.0534
+        - center: [-0.313, 0.001, -0.0]
+          radius: 0.0539
+        - center: [-0.184, -0.0, 0.0]
+          radius: 0.0544
+      wrist1_link: 
+        - center: [-0.0, 0.004, 0.101]
+          radius: 0.0645
+      wrist2_link: 
+        - center: [-0.0, -0.005, 0.097]
+          radius: 0.0645
+      wrist3_link: 
+        - center: [-0.0, -0.0, 0.07]
+          radius: 0.0529

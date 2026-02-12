@@ -1,0 +1,101 @@
+##
+## Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+##
+## NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+## property and proprietary rights in and to this material, related
+## documentation and any modifications thereto. Any use, reproduction,
+## disclosure or distribution of this material and related documentation
+## without an express license agreement from NVIDIA CORPORATION or
+## its affiliates is strictly prohibited.
+##
+robot: 'fairino5_v6_robot'
+urdf_path: "robot/dcp_description/urdf/robot/fr5_dh3.urdf"
+collision_spheres:
+  base_link:
+    - "center": [0.008, 0.003, 0.06]
+      "radius": 0.06494
+  shoulder_link:
+    - "center": [-0.0, -0.004, 0.165]
+      "radius": 0.07675
+  upperarm_link:
+    - "center": [-0.004, -0.0, 0.14]
+      "radius": 0.07874
+    - "center": [-0.423, -0.003, 0.147]
+      "radius": 0.07595
+    - "center": [-0.221, -0.0, 0.138]
+      "radius": 0.06483
+    - "center": [-0.134, 0.0, 0.138]
+      "radius": 0.06483
+    - "center": [-0.304, -0.0, 0.138]
+      "radius": 0.06483
+    - "center": [-0.05, 0.001, 0.136]
+      "radius": 0.07651
+    - "center": [-0.426, 0.008, 0.11]
+      "radius": 0.06984
+    - "center": [-0.376, 0.01, 0.133]
+      "radius": 0.06761
+  forearm_link:
+    - "center": [-0.018, 0.002, 0.015]
+      "radius": 0.06095
+    - "center": [-0.392, 0.0, -0.0]
+      "radius": 0.05489
+    - "center": [-0.274, 0.0, 0.0]
+      "radius": 0.05439
+    - "center": [-0.176, 0.0, -0.0]
+      "radius": 0.05439
+    - "center": [-0.105, 0.001, 0.0]
+      "radius": 0.05338
+    - "center": [-0.321, 0.001, -0.0]
+      "radius": 0.05388
+    - "center": [-0.216, -0.0, 0.0]
+      "radius": 0.05439
+    - "center": [0.015, -0.001, 0.024]
+      "radius": 0.05136
+    - "center": [-0.05, 0.001, 0.003]
+      "radius": 0.05691
+    - "center": [-0.395, -0.002, 0.019]
+      "radius": 0.05287
+    - "center": [0.007, -0.022, 0.032]
+      "radius": 0.04378
+  wrist1_link:
+    - "center": [-0.0, -0.002, 0.101]
+      "radius": 0.06448
+  wrist2_link:
+    - "center": [-0.0, 0.0, 0.097]
+      "radius": 0.06448
+  wrist3_link:
+    - "center": [0.001, 0.001, 0.076]
+      "radius": 0.04788
+  gripper_base_link:
+    - "center": [-0.001, -0.003, 0.059]
+      "radius": 0.065
+  finger1_link:
+    - "center": [0.016, 0.014, 0.004]
+      "radius": 0.01822
+    - "center": [0.036, 0.012, 0.016]
+      "radius": 0.01822
+  finger1_tip_link:
+    - "center": [-0.001, 0.013, 0.011]
+      "radius": 0.013
+    - "center": [-0.002, 0.012, 0.029]
+      "radius": 0.013
+  finger2_link:
+    - "center": [0.02, 0.012, 0.0]
+      "radius": 0.02122
+    - "center": [0.037, 0.012, 0.015]
+      "radius": 0.02122
+  finger2_tip_link:
+    - "center": [-0.003, 0.011, 0.014]
+      "radius": 0.013
+    - "center": [-0.003, 0.012, 0.03]
+      "radius": 0.013
+  finger3_link:
+    - "center": [0.016, 0.014, 0.004]
+      "radius": 0.018
+    - "center": [0.038, 0.013, 0.019]
+      "radius": 0.018
+  finger3_tip_link:
+    - "center": [-0.004, 0.011, 0.012]
+      "radius": 0.013
+    - "center": [-0.004, 0.012, 0.03]
+      "radius": 0.013

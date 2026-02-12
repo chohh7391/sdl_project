@@ -1,0 +1,8 @@
+# Request
+# Request
+string env_name
+---
+# Response
+bool plan_success
+int32 total_num_satisfying
+tamp_interfaces/PlanStep[] curobo_plan

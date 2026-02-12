@@ -1,0 +1,95 @@
+robot_cfg:
+  kinematics:
+    usd_path: '/robot/dcp_description/usd/fr5_vgc10/fr5_vgc10.usd'
+    usd_robot_root: '/robot'
+    isaac_usd_path: ''
+    usd_flip_joints: {}
+    usd_flip_joint_limits: []
+
+    external_asset_path: "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/content/assets"
+    urdf_path: 'robot/dcp_description/urdf/robot/fr5_vgc10.urdf'
+    external_robot_configs_path: "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/content/configs/robot"
+
+    base_link: 'base_link'
+    ee_link: 'grasp_frame'
+    link_names: null
+
+    lock_joints: {}
+
+    extra_links: {
+      "attached_object": {
+        "parent_link_name": "grasp_frame",
+        "link_name": "attached_object",
+        "fixed_transform": [0,0,0,1,0,0,0],
+        "joint_type": "FIXED",
+        "joint_name": "attach_joint"
+      }
+    }
+    extra_collision_spheres: {'attached_object': 4}
+
+    collision_link_names: [
+      # FR5 본체
+      'shoulder_link', 'upperarm_link', 'forearm_link',
+      'wrist1_link', 'wrist2_link', 'wrist3_link',
+      # VGC10
+      'gripper_base_link', 'suction',
+      # Attached object
+      'attached_object'
+    ]
+    collision_spheres: 'spheres/fr5_vgc10.yml'
+    collision_sphere_buffer: 0.005
+
+    self_collision_ignore: {
+      'upperarm_link': ['forearm_link', 'shoulder_link'],
+      'forearm_link': ['wrist1_link', 'wrist2_link', 'wrist3_link'],
+      'wrist1_link': [
+        'wrist2_link', 'wrist3_link',
+        'gripper_base_link', 'suction',
+      ],
+      'wrist2_link': [
+        'wrist3_link',
+        'gripper_base_link', 'suction',
+        'attached_object'
+      ],
+      'wrist3_link': [
+        'gripper_base_link', 'suction',
+        'attached_object'
+      ],
+      'suction': [
+        'gripper_base_link', 'attached_object'
+      ],
+    }
+
+    self_collision_buffer: {
+      'shoulder_link': 0.01,
+      'upperarm_link': 0,
+      'forearm_link': 0,
+      'wrist1_link': 0,
+      'wrist2_link': 0,
+      'wrist3_link': 0.025,
+      'gripper_base_link': 0.015,
+      'suction': 0.015,
+    }
+
+    use_global_cumul: True
+
+    mesh_link_names: [
+      # FR5
+      'shoulder_link', 'upperarm_link', 'forearm_link',
+      'wrist1_link', 'wrist2_link', 'wrist3_link', 'tool0',
+      # VGC10
+      'gripper_base_link', 'suction',
+      'vgc10_left_suction_link', 'vgc10_right_suction_link'
+    ]
+
+    cspace:
+      joint_names: [
+        # FR5
+        'j1', 'j2', 'j3', 'j4', 'j5', 'j6'
+      ]
+      retract_config: [0.0, -2.2, 1.9, -1.383, -1.57, 0.0]
+      null_space_weight: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      cspace_distance_weight: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      max_jerk: 500.0
+      max_acceleration: 12.0
+      position_limit_clip: 0.1

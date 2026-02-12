@@ -1,0 +1,17 @@
+# Request
+int32 num_particles
+string robot
+int32 grasp_dof
+string approach
+int32 num_resampling_attempts
+int32 num_opt_steps
+bool optimize_soft_costs
+int32 num_initial_plans
+bool curobo_plan
+bool enable_visualizer
+int32 opt_viz_interval
+bool viz_robot_mesh
+bool enable_experiment_logging
+---
+# Response
+bool success

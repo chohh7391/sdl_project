@@ -1,0 +1,12 @@
+einops
+jaxtyping
+omegaconf
+open3d
+rerun-sdk
+roma
+tqdm
+trimesh
+yourdfpy
+
+[dev]
+ruff

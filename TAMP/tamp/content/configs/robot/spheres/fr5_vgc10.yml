@@ -1,0 +1,62 @@
+##
+## Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+##
+## NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+## property and proprietary rights in and to this material, related
+## documentation and any modifications thereto. Any use, reproduction,
+## disclosure or distribution of this material and related documentation
+## without an express license agreement from NVIDIA CORPORATION or
+## its affiliates is strictly prohibited.
+##
+robot: 'fairino5_v6_robot'
+urdf_path: "robot/dcp_description/urdf/robot/fr5_vgc10.urdf"
+collision_spheres:
+  base_link:
+    - "center": [-0.002, 0.001, 0.07]
+      "radius": 0.06494
+  shoulder_link:
+    - "center": [-0.0, -0.006, 0.16]
+      "radius": 0.07675
+  upperarm_link:
+    - "center": [-0.004, -0.0, 0.14]
+      "radius": 0.07774
+    - "center": [-0.423, -0.003, 0.147]
+      "radius": 0.07495
+    - "center": [-0.25, -0.0, 0.138]
+      "radius": 0.06383
+    - "center": [-0.166, 0.001, 0.138]
+      "radius": 0.06383
+    - "center": [-0.338, -0.0, 0.138]
+      "radius": 0.06383
+    - "center": [-0.078, 0.002, 0.136]
+      "radius": 0.0638
+  forearm_link:
+    - "center": [-0.018, 0.002, 0.015]
+      "radius": 0.06595
+    - "center": [-0.392, 0.0, -0.0]
+      "radius": 0.05989
+    - "center": [-0.274, 0.0, 0.0]
+      "radius": 0.05939
+    - "center": [-0.176, 0.0, -0.0]
+      "radius": 0.05939
+    - "center": [-0.105, 0.001, 0.0]
+      "radius": 0.05838
+    - "center": [-0.321, 0.001, -0.0]
+      "radius": 0.05888
+    - "center": [-0.216, -0.0, 0.0]
+      "radius": 0.05939
+  wrist1_link:
+    - "center": [-0.0, -0.002, 0.101]
+      "radius": 0.06948
+  wrist2_link:
+    - "center": [-0.0, 0.0, 0.097]
+      "radius": 0.06448
+  wrist3_link:
+    - "center": [-0.002, 0.003, 0.078]
+      "radius": 0.04288
+  gripper_base_link:
+    - "center": [0.001, -0.002, 0.059]
+      "radius": 0.06725
+  suction:
+    - "center": [0.0, 0.0, 0.041]
+      "radius": 0.01255

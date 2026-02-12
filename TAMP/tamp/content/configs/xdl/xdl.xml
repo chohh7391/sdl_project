@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XDL version="1.0" xmlns="http://www.xdl.org/schema/xdl">
+
+  <meta>
+    <title>Pouring and Stirring Protocol</title>
+    <author>Bohyeong Park</author>
+    <date>2025-11-03</date>
+  </meta>
+
+  <hardware>
+    <vessel id="flask" type="flask" volume="500ml"/>
+    <vessel id="beaker" type="beaker" volume="250ml"/>
+  </hardware>
+
+  <procedure>
+    <Move object="box"/>
+    <Transfer from_vessel="beaker" to_vessel="flask"/>
+    <Stir vessel="flask"/>
+  </procedure>
+
+</XDL>

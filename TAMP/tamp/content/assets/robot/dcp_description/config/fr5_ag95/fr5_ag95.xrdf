@@ -1,0 +1,199 @@
+format: "xrdf"
+
+format_version: 1.0
+
+default_joint_positions: 
+  j1: 0.0
+  j2: 0.0017
+  j3: 0.0006
+  j4: 1e-04
+  j5: -0.0
+  j6: 0.0
+  gripper_finger1_inner_knuckle_joint: 0.0
+  gripper_finger1_joint: 0.0
+  gripper_finger2_inner_knuckle_joint: -0.0
+  gripper_finger2_joint: 0.0
+  gripper_finger1_finger_tip_joint: 0.0
+  gripper_finger1_finger_joint: 0.0
+  gripper_finger2_finger_tip_joint: -0.0
+  gripper_finger2_finger_joint: -0.0
+
+cspace: 
+  joint_names: 
+    - "j1"
+    - "j2"
+    - "j3"
+    - "j4"
+    - "j5"
+    - "j6"
+    - "gripper_finger1_inner_knuckle_joint"
+    - "gripper_finger1_joint"
+    - "gripper_finger2_inner_knuckle_joint"
+    - "gripper_finger2_joint"
+    - "gripper_finger1_finger_tip_joint"
+    - "gripper_finger1_finger_joint"
+    - "gripper_finger2_finger_tip_joint"
+    - "gripper_finger2_finger_joint"
+  acceleration_limits: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+  jerk_limits: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000]
+
+collision: 
+  geometry: "auto_generated_collision_sphere_group"
+
+self_collision: 
+  geometry: "auto_generated_collision_sphere_group"
+  ignore: 
+    base_link: 
+      - "shoulder_link"
+    shoulder_link: 
+      - "upperarm_link"
+    upperarm_link: 
+      - "forearm_link"
+    forearm_link: 
+      - "wrist1_link"
+    wrist1_link: 
+      - "wrist2_link"
+    wrist2_link: 
+      - "wrist3_link"
+    wrist3_link: 
+      - "gripper_finger1_inner_knuckle_link"
+      - "gripper_finger1_knuckle_link"
+      - "gripper_finger2_inner_knuckle_link"
+      - "gripper_finger2_knuckle_link"
+    gripper_finger1_inner_knuckle_link: 
+      - "gripper_finger1_finger_tip_link"
+      - "gripper_finger1_knuckle_link"
+      - "gripper_finger2_inner_knuckle_link"
+      - "gripper_finger2_knuckle_link"
+    gripper_finger1_knuckle_link: 
+      - "gripper_finger1_finger_link"
+      - "gripper_finger2_inner_knuckle_link"
+      - "gripper_finger2_knuckle_link"
+    gripper_finger2_inner_knuckle_link: 
+      - "gripper_finger2_finger_tip_link"
+      - "gripper_finger2_knuckle_link"
+    gripper_finger2_knuckle_link: 
+      - "gripper_finger2_finger_link"
+
+geometry: 
+  auto_generated_collision_sphere_group: 
+    spheres: 
+      wrist3_link: 
+        - center: [-0.004, -0.002, 0.115]
+          radius: 0.0579
+        - center: [-0.005, -0.001, 0.085]
+          radius: 0.0569
+        - center: [-0.001, -0.002, 0.186]
+          radius: 0.0579
+      gripper_finger1_finger_tip_link: 
+        - center: [-0.001, 0.0, 0.022]
+          radius: 0.0107
+        - center: [0.0, -0.003, 0.0]
+          radius: 0.0107
+        - center: [0.021, 0.004, -0.004]
+          radius: 0.0102
+        - center: [-0.002, -0.003, 0.024]
+          radius: 0.0107
+        - center: [-0.0, 0.003, 0.0]
+          radius: 0.0102
+        - center: [-0.003, 0.004, 0.027]
+          radius: 0.0097
+        - center: [-0.004, 0.006, 0.017]
+          radius: 0.0086
+        - center: [0.021, -0.005, -0.006]
+          radius: 0.0086
+        - center: [-0.004, -0.0, 0.012]
+          radius: 0.0081
+        - center: [-0.004, 0.006, 0.037]
+          radius: 0.0081
+        - center: [0.011, 0.011, -0.004]
+          radius: 0.0081
+        - center: [-0.004, -0.005, 0.037]
+          radius: 0.0081
+        - center: [0.011, -0.011, -0.004]
+          radius: 0.0081
+        - center: [-0.004, -0.007, 0.013]
+          radius: 0.0081
+        - center: [-0.004, 0.006, 0.01]
+          radius: 0.0081
+        - center: [-0.0, 0.011, -0.0]
+          radius: 0.0081
+        - center: [0.0, -0.011, 0.0]
+          radius: 0.0081
+        - center: [0.005, -0.003, -0.002]
+          radius: 0.0102
+        - center: [-0.004, -0.0, 0.033]
+          radius: 0.0081
+        - center: [-0.002, -0.002, 0.021]
+          radius: 0.0107
+      gripper_finger2_finger_tip_link: 
+        - center: [-0.001, -0.001, 0.011]
+          radius: 0.0107
+        - center: [0.0, -0.003, 0.0]
+          radius: 0.0107
+        - center: [0.008, 0.002, -0.003]
+          radius: 0.0102
+        - center: [-0.002, -0.003, 0.024]
+          radius: 0.0107
+        - center: [-0.0, 0.003, 0.0]
+          radius: 0.0102
+        - center: [-0.003, 0.004, 0.027]
+          radius: 0.0097
+        - center: [-0.004, 0.006, 0.017]
+          radius: 0.0086
+        - center: [0.012, -0.008, -0.003]
+          radius: 0.0086
+        - center: [-0.004, -0.0, 0.012]
+          radius: 0.0081
+        - center: [-0.004, 0.006, 0.037]
+          radius: 0.0081
+        - center: [0.02, 0.004, -0.007]
+          radius: 0.0081
+        - center: [-0.004, -0.005, 0.037]
+          radius: 0.0081
+        - center: [0.02, -0.008, -0.008]
+          radius: 0.0081
+        - center: [-0.004, -0.007, 0.013]
+          radius: 0.0081
+        - center: [-0.004, 0.006, 0.01]
+          radius: 0.0081
+        - center: [-0.0, 0.011, -0.0]
+          radius: 0.0081
+        - center: [0.0, -0.011, 0.0]
+          radius: 0.0081
+        - center: [0.005, -0.003, -0.002]
+          radius: 0.0102
+        - center: [-0.004, -0.0, 0.033]
+          radius: 0.0081
+        - center: [-0.002, 0.002, 0.018]
+          radius: 0.0107
+      gripper_finger1_finger_link: 
+        - center: [0.006, -0.008, 0.024]
+          radius: 0.0141
+        - center: [0.006, 0.003, 0.012]
+          radius: 0.0141
+        - center: [0.012, 0.011, 0.025]
+          radius: 0.0135
+        - center: [0.018, 0.011, 0.043]
+          radius: 0.0129
+        - center: [0.009, -0.002, 0.017]
+          radius: 0.0129
+        - center: [0.016, -0.01, 0.041]
+          radius: 0.0135
+        - center: [0.006, -0.004, 0.011]
+          radius: 0.0141
+      gripper_finger2_finger_link: 
+        - center: [0.006, -0.008, 0.011]
+          radius: 0.0141
+        - center: [0.004, 0.008, 0.016]
+          radius: 0.0141
+        - center: [0.012, 0.011, 0.034]
+          radius: 0.0135
+        - center: [0.02, 0.007, 0.052]
+          radius: 0.0129
+        - center: [0.017, -0.008, 0.041]
+          radius: 0.0129
+        - center: [0.008, -0.01, 0.021]
+          radius: 0.0135
+        - center: [0.006, -0.004, 0.011]
+          radius: 0.0141

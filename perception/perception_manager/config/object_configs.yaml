@@ -1,0 +1,10 @@
+perception_manager:
+  ros__parameters:
+    object_names:
+      # - "base"
+      - "cube"
+      - "cylinder"
+    
+    grasping_offsets:
+      cube: [0.0, 0.0, 0.05, 0.0, 1.0, 0.0, 0.0]
+      cylinder: [0.0, 0.0, 0.06, 0.0, 1.0, 0.0, 0.0]

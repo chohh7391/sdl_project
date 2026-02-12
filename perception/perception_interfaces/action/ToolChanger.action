@@ -1,0 +1,11 @@
+# Define the goal
+bool grip
+int32 tool_id
+float32 duration
+---
+# Define the result
+bool reach_completed
+bool tool_change_completed
+---
+# Define a feedback message
+float32 percent_complete # 50: reach complete, 100: tool change complete

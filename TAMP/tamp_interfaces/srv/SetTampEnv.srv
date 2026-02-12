@@ -1,0 +1,9 @@
+# Request
+string env_name
+string[] entities
+string[] movables
+string[] statics
+string[] ex_collision
+---
+# Response
+bool success

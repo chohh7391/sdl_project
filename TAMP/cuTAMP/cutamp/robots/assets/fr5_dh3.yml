@@ -1,0 +1,170 @@
+robot_cfg:
+  kinematics:
+    usd_path: '/robot/dcp_description/usd/fr5_dh3/fr5_dh3.usd'
+    usd_robot_root: '/robot'
+    isaac_usd_path: ''
+    usd_flip_joints: {}
+    usd_flip_joint_limits: []
+
+    external_asset_path: "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/content/assets"
+    urdf_path: "robot/dcp_description/urdf/robot/fr5_dh3.urdf"
+    external_robot_configs_path: "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/content/configs/robot"
+    
+    base_link: "base_link"
+    ee_link: "grasp_frame"
+    link_names: null
+    lock_joints: {
+      'finger1_base_joint': 0.0,
+      'finger1_joint': 0.0,
+    }
+
+    extra_links: {
+      "attached_object": {
+        "parent_link_name": "grasp_frame",
+        "link_name": "attached_object",
+        "fixed_transform": [0,0,0,1,0,0,0],
+        "joint_type":"FIXED",
+        "joint_name": "attach_joint"
+      }
+    }
+    extra_collision_spheres: {'attached_object': 4}
+
+    collision_link_names: [
+      'shoulder_link', 'upperarm_link', 'forearm_link', 'wrist1_link', 'wrist2_link', 'wrist3_link', # fr5
+      'finger1_link', 'finger1_tip_link',
+      'finger2_link', 'finger2_tip_link',
+      'finger3_link', 'finger3_tip_link',
+      'attached_object' # target object
+    ] # List[str]
+    collision_spheres: 'spheres/fr5_dh3.yml' #
+    collision_sphere_buffer: 0.005 # float or Dict[str, float]
+
+    self_collision_ignore: {
+      'upperarm_link': [
+        'forearm_link', 'shoulder_link'
+      ],
+      'forearm_link': [
+        'wrist1_link', 'wrist2_link', 'wrist3_link'
+      ],
+      'wrist1_link': [
+        'wrist2_link', 'wrist3_link',
+        'finger1_link', 'finger1_tip_link',
+        'finger2_link', 'finger2_tip_link',
+        'finger3_link', 'finger3_tip_link'
+      ],
+      'wrist2_link': [
+        'wrist3_link',
+        'finger1_link', 'finger1_tip_link',
+        'finger2_link', 'finger2_tip_link',
+        'finger3_link', 'finger3_tip_link',
+        'attached_object'
+      ],
+      'wrist3_link': [
+        'finger1_link', 'finger1_tip_link',
+        'finger2_link', 'finger2_tip_link',
+        'finger3_link', 'finger3_tip_link',
+        'attached_object'
+      ],
+      'finger1_link': [
+        'finger1_tip_link',
+        'finger2_link', 'finger2_tip_link',
+        'finger3_link', 'finger3_tip_link',
+        'attached_object'
+      ],
+      'finger1_tip_link': [
+        'finger1_link',
+        'finger2_link', 'finger2_tip_link',
+        'finger3_link', 'finger3_tip_link',
+        'attached_object'
+      ],
+      'finger2_link': [
+        'finger1_link', 'finger1_tip_link',
+        'finger2_tip_link',
+        'finger3_link', 'finger3_tip_link',
+        'attached_object'
+      ],
+      'finger2_tip_link': [
+        'finger1_link', 'finger1_tip_link',
+        'finger2_link',
+        'finger3_link', 'finger3_tip_link',
+        'attached_object'
+      ],
+      'finger3_link': [
+        'finger1_link', 'finger1_tip_link',
+        'finger2_link', 'finger2_tip_link',
+        'finger3_tip_link',
+        'attached_object' 
+      ],
+      'finger3_tip_link': [
+        'finger1_link', 'finger1_tip_link',
+        'finger2_link', 'finger2_tip_link',
+        'finger3_link',
+        'attached_object'
+      ]
+    }
+
+ # Dict[str, List[str]]
+    self_collision_buffer: {
+      'shoulder_link': 0.01,
+      'upperarm_link': 0,
+      'forearm_link': 0,
+      'wrist1_link': 0,
+      'wrist2_link': 0,
+      'wrist3_link': 0.025,
+      'finger1_tip_link': 0.01,
+      'finger2_tip_link': 0.01,
+      'finger3_tip_link': 0.01,
+      'finger1_link': 0.025,
+      'finger2_link': 0.025,
+      'finger3_link': 0.025,
+      
+    } # Dict[str, float]
+
+    use_global_cumul: True
+    mesh_link_names: [
+      # fr5
+      'shoulder_link','upperarm_link', 'forearm_link', 'wrist1_link', 'wrist2_link' ,'wrist3_link', 'tool0',
+      # dh3
+      'finger1_base_link', 'finger1_link', 'finger1_tip_link', 'finger1_outlet_link',
+      'finger2_base_link', 'finger2_link', 'finger2_tip_link', 'finger2_outlet_link',
+      'finger3_base_link', 'finger3_link', 'finger3_tip_link', 'finger3_outlet_link',
+    ] # List[str]
+       
+    cspace:
+      joint_names: [
+        # FR5 (6)
+        'j1', 'j2', 'j3', 'j4', 'j5', 'j6',
+        # DH3 (9) — finger2, finger3는 mimic이지만 cspace에 모두 포함
+        'finger1_base_joint', 'finger1_joint', 'finger1_tip_joint', 'finger1_outlet_joint',
+        'finger2_joint', 'finger2_tip_joint', 'finger2_outlet_joint',
+        'finger3_base_joint', 'finger3_joint', 'finger3_tip_joint', finger3_outlet_joint
+      ] # 15개
+
+      # 기본 리트랙트 포즈: 팔 접기 + 그리퍼 완전 오픈(모든 핑거 0)
+      retract_config: [
+        0.0, -2.2, 1.9, -1.383, -1.57, 0.0,  # FR5 (6)
+        0.0, 0.0, 0.0, 0.0,                  # finger1 (3)
+        0.0, 0.0, 0.0,                       # finger2 (3, mimic)
+        0.0, 0.0, 0.0, 0.0                   # finger3 (3, mimic)
+      ]
+
+      # 널스페이스 가중치: 전 관절 동일(필요시 손가락 낮게 조정 가능)
+      null_space_weight: [
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0,        # FR5 (6)
+        1.0, 1.0, 1.0, 1.0,                  # finger1 (3)
+        1.0, 1.0, 1.0,                       # finger2 (3, mimic)
+        1.0, 1.0, 1.0, 1.0                   # finger3 (3, mimic)
+      ]
+
+      # 조인트 거리 가중치: 전 관절 동일(필요시 손가락 가중 낮출 수 있음)
+      cspace_distance_weight: [
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0,        # FR5 (6)
+        1.0, 1.0, 1.0, 1.0,                  # finger1 (3)
+        1.0, 1.0, 1.0,                       # finger2 (3, mimic)
+        1.0, 1.0, 1.0, 1.0                   # finger3 (3, mimic)
+      ]
+
+      max_jerk: 500.0
+      max_acceleration: 12.0
+      position_limit_clip: 0.1
+

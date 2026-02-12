@@ -1,0 +1,165 @@
+# The robot description defines the generalized coordinates and how to map those
+# to the underlying URDF dofs.
+
+api_version: 1.0
+
+# Defines the generalized coordinates. Each generalized coordinate is assumed
+# to have an entry in the URDF.
+# Lula will only use these joints to control the robot position.
+cspace:
+    - j1
+    - j2
+    - j3
+    - j4
+    - j5
+    - j6
+    - gripper_finger1_inner_knuckle_joint
+    - gripper_finger1_joint
+    - gripper_finger2_inner_knuckle_joint
+    - gripper_finger2_joint
+    - gripper_finger1_finger_tip_joint
+    - gripper_finger1_finger_joint
+    - gripper_finger2_finger_tip_joint
+    - gripper_finger2_finger_joint
+default_q: [
+    0.0,0.0017,0.0006,1e-04,-0.0,0.0,0.0,0.0,-0.0,0.0,0.0,0.0,-0.0,-0.0
+]
+
+acceleration_limits: [
+   10,10,10,10,10,10,10,10,10,10,10,10,10,10
+]
+
+jerk_limits: [
+   10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000,10000
+]
+
+# Most dimensions of the cspace have a direct corresponding element
+# in the URDF. This list of rules defines how unspecified coordinates
+# should be extracted or how values in the URDF should be overwritten.
+
+cspace_to_urdf_rules:
+
+# Lula uses collision spheres to define the robot geometry in order to avoid
+# collisions with external obstacles.  If no spheres are specified, Lula will
+# not be able to avoid obstacles.
+
+collision_spheres:
+  - wrist3_link:
+    - "center": [-0.004, -0.002, 0.115]
+      "radius": 0.05788
+    - "center": [-0.005, -0.001, 0.085]
+      "radius": 0.05694
+    - "center": [-0.001, -0.002, 0.186]
+      "radius": 0.05788
+  - gripper_finger1_finger_tip_link:
+    - "center": [-0.001, 0.0, 0.022]
+      "radius": 0.01072
+    - "center": [0.0, -0.003, 0.0]
+      "radius": 0.01072
+    - "center": [0.021, 0.004, -0.004]
+      "radius": 0.0102
+    - "center": [-0.002, -0.003, 0.024]
+      "radius": 0.01072
+    - "center": [-0.0, 0.003, 0.0]
+      "radius": 0.0102
+    - "center": [-0.003, 0.004, 0.027]
+      "radius": 0.00967
+    - "center": [-0.004, 0.006, 0.017]
+      "radius": 0.00862
+    - "center": [0.021, -0.005, -0.006]
+      "radius": 0.00862
+    - "center": [-0.004, -0.0, 0.012]
+      "radius": 0.0081
+    - "center": [-0.004, 0.006, 0.037]
+      "radius": 0.0081
+    - "center": [0.011, 0.011, -0.004]
+      "radius": 0.0081
+    - "center": [-0.004, -0.005, 0.037]
+      "radius": 0.0081
+    - "center": [0.011, -0.011, -0.004]
+      "radius": 0.0081
+    - "center": [-0.004, -0.007, 0.013]
+      "radius": 0.0081
+    - "center": [-0.004, 0.006, 0.01]
+      "radius": 0.0081
+    - "center": [-0.0, 0.011, -0.0]
+      "radius": 0.0081
+    - "center": [0.0, -0.011, 0.0]
+      "radius": 0.0081
+    - "center": [0.005, -0.003, -0.002]
+      "radius": 0.0102
+    - "center": [-0.004, -0.0, 0.033]
+      "radius": 0.0081
+    - "center": [-0.002, -0.002, 0.021]
+      "radius": 0.01072
+  - gripper_finger2_finger_tip_link:
+    - "center": [-0.001, -0.001, 0.011]
+      "radius": 0.01072
+    - "center": [0.0, -0.003, 0.0]
+      "radius": 0.01072
+    - "center": [0.008, 0.002, -0.003]
+      "radius": 0.0102
+    - "center": [-0.002, -0.003, 0.024]
+      "radius": 0.01072
+    - "center": [-0.0, 0.003, 0.0]
+      "radius": 0.0102
+    - "center": [-0.003, 0.004, 0.027]
+      "radius": 0.00967
+    - "center": [-0.004, 0.006, 0.017]
+      "radius": 0.00862
+    - "center": [0.012, -0.008, -0.003]
+      "radius": 0.00862
+    - "center": [-0.004, -0.0, 0.012]
+      "radius": 0.0081
+    - "center": [-0.004, 0.006, 0.037]
+      "radius": 0.0081
+    - "center": [0.02, 0.004, -0.007]
+      "radius": 0.0081
+    - "center": [-0.004, -0.005, 0.037]
+      "radius": 0.0081
+    - "center": [0.02, -0.008, -0.008]
+      "radius": 0.0081
+    - "center": [-0.004, -0.007, 0.013]
+      "radius": 0.0081
+    - "center": [-0.004, 0.006, 0.01]
+      "radius": 0.0081
+    - "center": [-0.0, 0.011, -0.0]
+      "radius": 0.0081
+    - "center": [0.0, -0.011, 0.0]
+      "radius": 0.0081
+    - "center": [0.005, -0.003, -0.002]
+      "radius": 0.0102
+    - "center": [-0.004, -0.0, 0.033]
+      "radius": 0.0081
+    - "center": [-0.002, 0.002, 0.018]
+      "radius": 0.01072
+  - gripper_finger1_finger_link:
+    - "center": [0.006, -0.008, 0.024]
+      "radius": 0.01409
+    - "center": [0.006, 0.003, 0.012]
+      "radius": 0.01409
+    - "center": [0.012, 0.011, 0.025]
+      "radius": 0.01347
+    - "center": [0.018, 0.011, 0.043]
+      "radius": 0.01285
+    - "center": [0.009, -0.002, 0.017]
+      "radius": 0.01285
+    - "center": [0.016, -0.01, 0.041]
+      "radius": 0.01347
+    - "center": [0.006, -0.004, 0.011]
+      "radius": 0.01409
+  - gripper_finger2_finger_link:
+    - "center": [0.006, -0.008, 0.011]
+      "radius": 0.01409
+    - "center": [0.004, 0.008, 0.016]
+      "radius": 0.01409
+    - "center": [0.012, 0.011, 0.034]
+      "radius": 0.01347
+    - "center": [0.02, 0.007, 0.052]
+      "radius": 0.01285
+    - "center": [0.017, -0.008, 0.041]
+      "radius": 0.01285
+    - "center": [0.008, -0.01, 0.021]
+      "radius": 0.01347
+    - "center": [0.006, -0.004, 0.011]
+      "radius": 0.01409
