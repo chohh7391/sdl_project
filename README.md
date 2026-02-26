@@ -61,14 +61,13 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 200
 
     ```bash
     cd ~/
-    git clone git@github.com:chohh7391/sdl.git
+    git clone git@github.com:chohh7391/sdl_project.git
     ```
 
-    - create cutamp conda env
-
+    - create sdl_llama conda env
     ```bash
-    conda create -n cutamp python=3.10 -y
-    conda activate cutamp
+    cd ~/sdl_ws/src/sdl_project
+    conda env create -f environment.yml
     ```
 
     ```bash
@@ -87,8 +86,7 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 200
 
     # This can take up to 20 minutes to install
     # make sure cuda version 12.8
-    SETUPTOOLS_SCM_PRETEND_VERSION=0.1.0 pip install -e . --no-build-isolation
-    pip install lark
+    pip install -e . --no-build-isolation
     ```
 
     ```bash
@@ -117,7 +115,7 @@ ros2 launch isaacsim run_isaacsim.launch.py standalone:=$HOME/sdl_ws/src/sdl_pro
     ```bash
     source /opt/ros/humble/setup.bash
     source ~/sdl_ws/install/local_setup.bash
-    conda activate cutamp
+    conda activate sdl_llama
     export SYSTEM_LIBSTDCXX_PATH="/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
     ```
 
@@ -136,23 +134,23 @@ ros2 launch isaacsim run_isaacsim.launch.py standalone:=$HOME/sdl_ws/src/sdl_pro
 
     ```bash
     ros2 run tamp tamp_client.py
-    ```    
+    ```
     
     - set tamp env
 
-      - pouring
+      - transfer
         ```bash
         (csuite) set_tamp_env transfer
         ```
 
-      - stirring
+      - pouring
         ```bash
-        (csuite) set_tamp_env stir
+        (csuite) set_tamp_env pouring
         ```
 
-      - default
+      - stirring
         ```bash
-        (csuite) set_tamp_env default
+        (csuite) set_tamp_env stirring
         ```
 
     - plan

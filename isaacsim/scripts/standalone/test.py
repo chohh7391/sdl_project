@@ -16,7 +16,9 @@ from isaacsim.core.prims import SingleRigidPrim
 from isaacsim.core.utils.stage import add_reference_to_stage
 from isaacsim.core.prims import SingleXFormPrim
 from isaacsim.core.api.objects import FixedCuboid, DynamicCuboid, DynamicCylinder, DynamicSphere
+import os
 
+ASSET_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets")
 
 # --- Argument Parser ---
 parser = argparse.ArgumentParser()
@@ -94,26 +96,6 @@ def create_hybrid_beaker(stage, root_path, usd_path):
 
 # 현재 스테이지 가져오기
 stage = omni.usd.get_context().get_stage()
-# beaker_usd_path = "/home/home/sdl_cutamp_ws/src/tamp/content/assets/lab/beaker.usd"
-# beaker_prim_path = "/World/beaker"
-
-# stirrer_usd_path = "/home/home/sdl_cutamp_ws/src/tamp/content/assets/lab/stirrer.usd"
-# stirrer_prim_path = "/World/stirrer"
-
-# # 함수 호출하여 비커 생성
-# create_hybrid_beaker(stage, beaker_prim_path, beaker_usd_path)
-
-# # 3. Isaac Sim Core에 등록 (SingleRigidPrim으로 제어)
-# # 이제 /World/beaker는 RigidBody이므로 SingleRigidPrim으로 감쌀 수 있습니다.
-# beaker = SingleRigidPrim(
-#     prim_path=beaker_prim_path,
-#     name="beaker_rigid",
-#     position=np.array([0.0, 0.0, 0.0005]), # 초기 위치
-#     orientation=np.array([1.0, 0.0, 0.0, 0.0]) # 초기 회전 (w, x, y, z)
-# )
-
-# # World에 등록 (Reset시 초기화 등을 위해 필요)
-# my_world.scene.add(beaker)
 
 stirrer = my_world.scene.add(
     FixedCuboid(
@@ -126,8 +108,7 @@ stirrer = my_world.scene.add(
     )
 )
 
-stirrer_usd_path = "/home/home/sdl_cutamp_ws/src/tamp/content/assets/lab/stirrer/HeatingPlate.usd"
-# stirrer_usd_path = "/home/home/sdl_cutamp_ws/src/tamp/content/assets/lab/beaker.usd"
+stirrer_usd_path = os.path.join(ASSET_PATH, "lab", "stirrer", "HeatingPlate.usd")
 
 add_reference_to_stage(
     usd_path=stirrer_usd_path,

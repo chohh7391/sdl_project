@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
+#!/home/home/miniconda3/envs/sdl_llama/bin/python
 import argparse
 import time
 import xml.etree.ElementTree as ET
 import yaml
 import os
+import math
+import sys
 
 import rclpy
 from rclpy.client import Client
@@ -13,6 +15,13 @@ from tamp_interfaces.srv import (
     Plan, Execute, SetTampEnv, SetTampCfg, ToolChange, MoveToTarget, MoveToTargetJs, GetRobotInfo, GetToolInfo
 )
 from std_srvs.srv import SetBool
+from simulation_interfaces.srv import GetEntityState
+
+PROJECT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src", "sdl_project")
+
+sys.path.append(os.path.join(PROJECT_PATH, "LLM"))
+# Llama import
+from llama.script.tool_selector_action_reasoner.tool_llm import ToolLLM
 
 
 class TAMPClient(Node):
@@ -41,6 +50,8 @@ class TAMPClient(Node):
         self.get_robot_info_client = self.create_client(GetRobotInfo, "get_robot_info")
         self.get_tool_info_client = self.create_client(GetToolInfo, "get_tool_info")
 
+        self.get_entity_state_client = self.create_client(GetEntityState, 'get_entity_state')
+
         while (
             not self.plan_client.wait_for_service(timeout_sec=1.0)
             or not self.execute_client.wait_for_service(timeout_sec=1.0)
@@ -51,6 +62,7 @@ class TAMPClient(Node):
             or not self.move_to_target_client.wait_for_service(timeout_sec=1.0)
             or not self.get_tool_info_client.wait_for_service(timeout_sec=1.0)
             or not self.get_robot_info_client.wait_for_service(timeout_sec=1.0)
+            or not self.get_entity_state_client.wait_for_service(timeout_sec=1.0)
         ):
             self.get_logger().info('service not available, waiting again...')
 
@@ -62,8 +74,6 @@ class TAMPClient(Node):
         future = client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
         response = future.result()
-        # if response is None:
-        #     self.get_logger().error(f"[{name}] Exception: {future.exception()}")
         return response
 
     # ------------------------ TAMP -------------------------
@@ -110,7 +120,7 @@ class TAMPClient(Node):
             request.entities = [from_vessel, to_vessel, "magnet", "stirrer", "box"]
             request.movables = [from_vessel, to_vessel]
             request.statics = ["table", "goal_region", "stirrer", "magnet", "box"]
-            request.ex_collision = ["pour_region"]
+            request.ex_collision = ["pour_region", "rearrange_region"]
 
         elif tag_name == "stir":
             vessel = step_attrs.get("vessel")
@@ -120,7 +130,7 @@ class TAMPClient(Node):
             request.entities = [vessel, not_vessel, "magnet", "stirrer", "box"]
             request.movables = [vessel, "magnet"]
             request.statics = ["table", "stirrer", not_vessel, "goal_region", "box"]
-            request.ex_collision = ["beaker_region"]
+            request.ex_collision = ["beaker_region", "rearrange_region"]
 
         elif tag_name == "default":
             request.env_name = "default"
@@ -135,7 +145,19 @@ class TAMPClient(Node):
             request.entities = [object, "box_goal"]
             request.movables = [object]
             request.statics = ["table", "stirrer", "beaker", "flask", "box_goal"]
-            request.ex_collision = ["box_region"]
+            request.ex_collision = ["box_region", "rearrange_region"]
+
+        elif tag_name == "rearrange":
+            target_object = step_attrs.get("object") or step_attrs.get("to_vessel") or step_attrs.get("vessel")
+            request.env_name = "rearrange"
+            request.entities = [target_object]
+            request.movables = [target_object]
+            
+            # [수정된 부분] 타겟 물체가 무엇이든 statics 목록에서 자동으로 제외합니다.
+            base_statics = ["table", "stirrer", "beaker", "flask", "box_goal"]
+            request.statics = [obj for obj in base_statics if obj != target_object]
+            
+            request.ex_collision = ["pour_region", "beaker_region", "box_region", "rearrange_region"]
 
         else:
             raise ValueError("arg must be 'transfer' or 'stir' or 'default', 'move'")
@@ -153,7 +175,6 @@ class TAMPClient(Node):
             return
         request = Plan.Request()
         request.env_name = env_name
-        # TODO: We have to add another term that is related to SDL parserd pddlstream order
         response = self._call_service_and_wait(self.plan_client, request)
 
         if response:
@@ -243,7 +264,6 @@ class TAMPClient(Node):
             self.home()
         else:
             # move to home qpos -> move to current tool pose
-            # TODO: Visual Grippers are recognized as colliders
             # move to home position
             self.home()
             self.set_tamp_cfg("empty") # Change Robot Cfg
@@ -290,10 +310,78 @@ class XDLRunner(TAMPClient):
     def __init__(self):
         super().__init__()
 
+        self.llm = ToolLLM()
+    
+    # =======================================================================
+    # 물체 위치 조회 및 5cm 이내 충돌/접근 감지 함수 (2차원 평면 기준)
+    # =======================================================================
+    def check_entity_distances(self, step_attrs):
+        self.get_logger().info("🔍 [Entity Position & 2D Distance Check]")
+
+        is_space_constrained = False
+
+        # 1. 고정 엔티티 리스트
+        hardcoded_entities = ["beaker", "flask", "magnet", "stirrer", "box", "box_goal"]
+        
+        # 2. 이번 step과 관련된 타겟 엔티티 파악
+        target_entities = []
+        for key, entity_name in step_attrs.items():
+            if "vessel" in key or "object" in key or "place" in key:
+                target_entities.append(entity_name)
+
+        # 3. 위치를 조회할 전체 엔티티 (중복 제거)
+        all_entities_to_query = list(set(hardcoded_entities + target_entities))
+        positions = {}
+
+        # 4. 각 엔티티의 현재 좌표 조회
+        for entity_name in all_entities_to_query:
+            req = GetEntityState.Request()
+            req.entity = "/World/" + entity_name
+            res = self._call_service_and_wait(self.get_entity_state_client, req)
+            
+            if res and res.result.result == 1:
+                pos = res.state.pose.position
+                positions[entity_name] = pos
+                self.get_logger().info(
+                    f"  - {entity_name:10s} : x={pos.x:5.3f}, y={pos.y:5.3f}, z={pos.z:5.3f}"
+                )
+            else:
+                self.get_logger().warn(f"  - {entity_name:10s} : 위치 조회 실패")
+
+        # 5. 타겟 엔티티와 나머지 엔티티 사이의 2차원 거리 계산 (5cm 미만 감지)
+        for target in target_entities:
+            if target not in positions:
+                continue
+            
+            p1 = positions[target]
+            
+            # 고정 엔티티들을 순회하며 거리 검사
+            for other in hardcoded_entities:
+                # 자기 자신과의 비교는 제외
+                if target == other or other not in positions:
+                    continue
+                
+                p2 = positions[other]
+                
+                # ★ 3차원이 아닌 2차원(x, y 평면) 거리만 계산 ★
+                dist_2d = math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
+                
+                # 5cm (0.05m) 미만일 경우 출력
+                if dist_2d < 0.2:
+                    self.get_logger().warn(
+                        f"  ⚠️ [공간 협소 감지] '{target}' 주변 5cm 이내(평면 기준)에 '{other}'(이)가 있습니다! "
+                        f"(2D 거리: {dist_2d*100:.1f}cm)"
+                    )
+                    is_space_constrained = True
+        
+        self.get_logger().info("-" * 40)
+
+        return is_space_constrained
+
     def run_xdl(self):
         # XDL 경로
-        xdl_path = "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/content/configs/xdl/xdl.xml"
-        tool_map_path = "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/content/configs/xdl/tool_map.yml"
+        xdl_path = os.path.join(PROJECT_PATH, "TAMP", "tamp", "content", "configs", "xdl", "xdl.xml")
+        tool_map_path = os.path.join(PROJECT_PATH, "TAMP", "tamp", "content", "configs", "xdl", "tool_map.yml")
         ns = {"xdl": "http://www.xdl.org/schema/xdl"}
 
         # tool_map.yml 불러오기
@@ -328,21 +416,75 @@ class XDLRunner(TAMPClient):
             step_attrs = step.attrib
             self.get_logger().info(f"[Step {i}] Tag: {tag_name} | Attrs: {step_attrs}")
 
-            # tool_map.yml에서 tool 자동 선택
-            tool = tool_map.get(tag_name, None)
-            if not tool:
+            # =======================================================================
+            llm_attrs = {}
+            target_counts = {"beaker": 0, "flask": 0, "box": 0}
+            
+            for k, v in step_attrs.items():
+                if v in target_counts:
+                    # 첫 번째 등장은 _A, 두 번째 등장은 _B 부여
+                    suffix = "_A" if target_counts[v] == 0 else "_B"
+                    llm_attrs[k] = f"{v}{suffix}"
+                    target_counts[v] += 1
+                else:
+                    llm_attrs[k] = v
+
+            # LLM 전용 문자열 조합
+            attr_str = " ".join([f'{k}="{v}"' for k, v in llm_attrs.items()])
+            xdl_step_str = f'<{tag_name} {attr_str} />'
+            is_space_constrained = self.check_entity_distances(step_attrs)
+
+            self.get_logger().info("🧠 LLM에게 다음 행동을 질문합니다...")
+            llm_main, llm_need_move, llm_move_tool = self.llm.predict(
+                xdl_step=xdl_step_str, 
+                is_space_constrained=is_space_constrained
+            )
+            self.get_logger().info(f"💡 LLM 판단 결과 => Main Tool: {llm_main} | Need Move: {llm_need_move} | Move Tool: {llm_move_tool}")
+            # =======================================================================
+            
+            # 🚨 [NEW] 1. 공간이 좁아 치우기(rearrange)가 필요한 경우
+            if llm_need_move == "True":
+                self.get_logger().info("⚠️ 공간이 협소하여 방해물을 먼저 치웁니다 (rearrange 실행)")
+                
+                # 치우기용 툴 설정 및 교체
+                move_tool = llm_move_tool if llm_move_tool in {"ag95", "vgc10", "dh3"} else "empty"
+                if move_tool != current_tool:
+                    self.get_logger().info(f"치우기용 Tool 변경 필요: {current_tool} → {move_tool}")
+                    self.tool_change(move_tool)
+                    current_tool = move_tool
+                else:
+                    self.get_logger().info("치우기용 Tool 변경 없음")
+                
+                # rearrange 환경 세팅 및 실행
+                self.set_tamp_env("rearrange", step_attrs)
+                time.sleep(2.0)
+                
+                self.get_logger().info("Planning for rearrange...")
+                self.plan("rearrange")
+                
+                self.get_logger().info("Executing rearrange...")
+                self.execute("rearrange")
+
+                is_space_constrained = self.check_entity_distances(step_attrs)
+                
+                self.get_logger().info("✅ 방해물 치우기(rearrange) 완료")
+                time.sleep(2.0)
+
+            # 🛠️ 2. 본 작업 실행 (원래 XML 태그)
+            main_tool = llm_main if llm_main in {"ag95", "vgc10", "dh3"} else None
+            if not main_tool:
                 self.get_logger().warn(f"[{tag_name}]에 해당하는 tool이 tool_map.yml에 없습니다. 기본값 'empty' 사용.")
-                tool = "empty"
+                main_tool = "empty"
 
-            # tool 변경 필요 시 교체
-            if tool and tool != current_tool:
-                self.get_logger().info(f"Tool 변경 필요: {current_tool} → {tool}")
-                self.tool_change(tool)
-                current_tool = tool
+            # 본 작업용 툴로 변경 (치우느라 바뀌었다면 여기서 다시 돌아옵니다)
+            if main_tool != current_tool:
+                self.get_logger().info(f"본 작업용 Tool 변경 필요: {current_tool} → {main_tool}")
+                self.tool_change(main_tool)
+                current_tool = main_tool
             else:
-                self.get_logger().info("Tool 변경 없음")
+                self.get_logger().info("본 작업용 Tool 변경 없음")
 
-            # 환경 설정
+            # 환경 설정 (본 작업)
             env_name = tag_name.lower()
             self.get_logger().info(f"환경 설정: {env_name}")
             self.set_tamp_env(env_name, step_attrs)
@@ -360,10 +502,6 @@ class XDLRunner(TAMPClient):
             time.sleep(1.0)
 
         self.get_logger().info("=== 모든 procedure 단계 완료 ✅ ===")
-
-
-        
-
 
 def main():
 

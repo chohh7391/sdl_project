@@ -1,0 +1,56 @@
+<procedure>
+  <Add vessel="flask_A" reagent="water" volume="25 mL" />
+  <Stir vessel="flask_A" time="30 s" />
+  <Transfer from_vessel="flask_A" to_vessel="beaker_A" volume="10 mL" />
+  <CleanVessel vessel="beaker_A" />
+  <Move object="bottle_A" place="plate_A" />
+</procedure>
+<procedure>
+  <Add vessel="flask_A" reagent="water" volume="50 mL" />
+  <Move object="bottle_A" place="plate_A" />
+</procedure>
+<procedure>
+  <Add vessel="beaker_B" reagent="water" volume="50 mL" />
+  <Stir vessel="beaker_B" time="2 min" />
+  <HeatChill vessel="beaker_B" temp="25 C" active="true" />
+  <CleanVessel vessel="beaker_B" />
+  <Move object="bottle_A" place="plate_A" />
+</procedure>
+<procedure>
+  <Add vessel="flask_B" reagent="ethanol" volume="50 mL" />
+  <HeatChill vessel="flask_B" temp="0 C" active="true" />
+  <Transfer from_vessel="flask_B" to_vessel="flask_A" volume="25 mL" />
+  <CleanVessel vessel="flask_A" />
+</procedure>
+<procedure>
+  <Add vessel="beaker_B" reagent="ethanol" volume="50 mL" />
+  <Stir vessel="beaker_B" time="30 s" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+<procedure>
+  <Add vessel="beaker_A" reagent="water" volume="25 mL" />
+  <Stir vessel="beaker_A" time="2 min" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+<procedure>
+  <Add vessel="flask_A" reagent="water" volume="25 mL" />
+  <Stir vessel="flask_A" time="30 s" />
+  <HeatChill vessel="flask_A" temp="0 C" active="true" />
+  <Transfer from_vessel="flask_A" to_vessel="flask_B" volume="50 mL" />
+</procedure>
+<procedure>
+  <Add vessel="flask_A" reagent="water" volume="10 mL" />
+  <HeatChill vessel="flask_A" temp="25 C" active="true" />
+  <Move object="box_A" place="plate_A" />
+</procedure>
+<procedure>
+  <Add vessel="flask_B" reagent="water" volume="10 mL" />
+  <Stir vessel="flask_B" time="1 min" />
+  <HeatChill vessel="flask_B" temp="25 C" active="true" />
+  <Transfer from_vessel="flask_B" to_vessel="beaker_A" volume="10 mL" />
+</procedure>
+<procedure>
+  <Add vessel="beaker_B" reagent="ethanol" volume="25 mL" />
+  <Stir vessel="beaker_B" time="30 s" />
+  <CleanVessel vessel="beaker_B" />
+</procedure>

@@ -1,0 +1,1200 @@
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"box_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"2 min\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"box_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"beaker_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"box_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"beaker_A\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"box_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_A\" time=\"30 s\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"flask_B\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"beaker_A\" time=\"2 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"30 s\" />", "is_space_constrained": true}, "output": ["dh3", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10 mL\" />", "is_space_constrained": false}, "output": ["ag95", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_B\" to_vessel=\"flask_A\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />", "is_space_constrained": true}, "output": ["None", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"flask_B\" place=\"plate_A\" />", "is_space_constrained": true}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_B\" place=\"plate_B\" />", "is_space_constrained": true}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_A\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Move object=\"box_A\" place=\"plate_B\" />", "is_space_constrained": false}, "output": ["vgc10", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"box_B\" volume=\"50 mL\" />", "is_space_constrained": true}, "output": ["ag95", "True", "dh3"]}
+{"instruction": {"xdl": "<Stir vessel=\"flask_B\" time=\"1 min\" />", "is_space_constrained": false}, "output": ["dh3", "False", "None"]}
+{"instruction": {"xdl": "<Transfer from_vessel=\"box_A\" to_vessel=\"flask_B\" volume=\"50 mL\" />", "is_space_constrained": false}, "output": ["None", "False", "None"]}

@@ -41,6 +41,14 @@ from curobo.types.math import Pose as CuroboPose
 from curobo.types.base import TensorDeviceType
 from std_msgs.msg import Float32
 
+# Llama import
+import os
+os.environ["UNSLOTH_DISABLE_STATISTICS"] = "1"
+import unsloth
+from unsloth import FastLanguageModel
+import torch
+import time
+import re
 
 class TAMP:
 
@@ -93,8 +101,13 @@ class TAMP:
             statics=statics,
             ex_collision=ex_collision
         )
-        self.env = self.env_manager.load_env(name)
 
+        if name == "transfer" :
+            self.env, pour_region_pose = self.env_manager.load_env(name)
+            self._log.info(f"pour_region_pose : {pour_region_pose}")
+        else :
+            self.env = self.env_manager.load_env(name)
+        
     
     def plan(
         self,
@@ -354,6 +367,8 @@ class TAMPServer(Node):
             request.num_initial_plans = 1
         if request.opt_viz_interval == 0:
             request.opt_viz_interval = 10
+
+        self.get_logger().warn(f"grasp_dof: {request.grasp_dof}")
 
         config = TAMPConfiguration(
             num_particles=request.num_particles,

@@ -13,9 +13,10 @@
   </hardware>
 
   <procedure>
-    <Move object="box"/>
-    <Transfer from_vessel="beaker" to_vessel="flask"/>
-    <Stir vessel="flask"/>
+    <!-- <Move object="box" place="box_goal"/> -->
+    <!-- <Transfer from_vessel="beaker" to_vessel="flask" volume="10 mL"/> -->
+    <Transfer from_vessel="beaker" to_vessel="flask" volume="10 mL"/>
+    <Stir vessel="flask" time="1 min"/>
   </procedure>
 
 </XDL>

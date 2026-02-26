@@ -30,7 +30,7 @@ def load_Stir_env(
         type_to_objects={
             "Movable": movables,
             "Surface": [entities["table"], entities["stirrer"], entities["beaker_region"], entities["goal_region"]],
-            "ExCollision": [entities["beaker_region"]]
+            "ExCollision": [entities["beaker_region"], entities["rearrange_region"]]
         },
         goal_state=frozenset(
             {

@@ -7,7 +7,6 @@ from cutamp.envs.utils import unit_quat
 from cutamp.tamp_domain import HandEmpty, On, Poured, OnBeaker
 from cutamp.utils.shapes import MultiSphere
 
-
 def load_Transfer_env(
     entities: Dict[str, Any],
     movables: List[Obstacle],
@@ -18,12 +17,16 @@ def load_Transfer_env(
     """Pick-and-place environment with a cylindrical beaker and small MultiSphere near goal."""
 
     entities["pour_region"].pose = movables[1].pose.copy()
-    entities["pour_region"].pose[2] = 0.18
+    # entities["pour_region"].pose[2] = 0.18
+    entities["pour_region"].pose = [entities["pour_region"].pose[0], entities["pour_region"].pose[1], 0.18, *unit_quat]
     # entities["pour_region"].pose = [0.3, 0.2, 0.16, *unit_quat]
-    entities["goal_region"].pose = [0.35, -0.35, 0.015, *unit_quat] # custom beaker placepose
+    entities["goal_region"].pose = [0.35, -0.35, 0.015, *unit_quat] 
+    # entities["goal_region"].pose = [0.51, -0.17, 0.015, *unit_quat]
     # "beaker": np.array([0.51, -0.17, 0.015]),
 
     # entities["beaker"].pose[2] = 0.06
+
+    # entities["rearrange_region"].pose = [1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
 
     env = TAMPEnvironment(
         name="transfer",
@@ -33,7 +36,8 @@ def load_Transfer_env(
         type_to_objects={
             "Movable": movables,
             "Surface": [entities["table"], entities["pour_region"], entities["goal_region"]],
-            "ExCollision": [entities["pour_region"]]
+            "ExCollision": [entities["pour_region"], entities["rearrange_region"]]
+            # "ExCollision": [entities["pour_region"]]
         },
         goal_state=frozenset(
             { 
@@ -44,4 +48,4 @@ def load_Transfer_env(
         )
     )
 
-    return env
+    return env, entities["pour_region"].pose

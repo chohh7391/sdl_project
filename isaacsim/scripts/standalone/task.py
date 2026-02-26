@@ -19,11 +19,7 @@ from pxr import Usd, UsdGeom, Gf, PhysxSchema, UsdPhysics
 from isaacsim.core.api.materials.omni_pbr import OmniPBR
 from isaacsim.core.utils.prims import create_prim
 
-
-ASSET_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets"
-)
-
+ASSET_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets")
 
 class Task(ABC, BaseTask):
 
@@ -46,7 +42,8 @@ class Task(ABC, BaseTask):
             "stirrer": np.array([-0.04, 0.45, 0.038]),
             "stirrer_visual": np.array([0.01, 0.45, 0.045]),
             "beaker": np.array([0.51, -0.17, 0.015]),
-            "flask": np.array([0.23, 0.2, 0.085]), # 0.23
+            # "flask": np.array([0.21627, 0.2, 0.085]), 
+            "flask": np.array([0.43, -0.086, 0.085]), 
             "magnet": np.array([0.3, 0.416, 0.015]),
             "box" : np.array([0.35, -0.5, 0.06]),
             "box_goal" : np.array([-0.036, -0.52, 0.006]),
@@ -85,71 +82,6 @@ class Task(ABC, BaseTask):
         self.set_object(self.current_positions, self.current_orientations)
         self.set_robot(self.desired_tool)
     
-    # def _create_hybrid_beaker(self, prim_path, usd_path, position, orientation):
-    #     stage = get_current_stage()
-        
-    #     # 1. 부모 Xform 생성 (여기가 실제 움직이는 RigidBody)
-    #     beaker_xform = UsdGeom.Xform.Define(stage, prim_path)
-        
-    #     # RigidBody API 및 Mass API 적용
-    #     UsdPhysics.RigidBodyAPI.Apply(beaker_xform.GetPrim())
-    #     mass_api = UsdPhysics.MassAPI.Apply(beaker_xform.GetPrim())
-    #     mass_api.CreateMassAttr(0.1) 
-
-    #     # ---------------------------------------------------------
-        
-    #     # 2. Visual 부분 (USD 파일 로드)
-    #     visual_path = prim_path + "/visual"
-    #     add_reference_to_stage(usd_path=usd_path, prim_path=visual_path)
-
-    #     visual_prim = stage.GetPrimAtPath(visual_path)
-    #     xform_api = UsdGeom.XformCommonAPI(visual_prim)
-    #     # Visual 위치 보정 (실린더와 똑같이 올려줍니다)
-    #     xform_api.SetTranslate((0, 0, 0.06)) 
-        
-    #     # 불러온 USD 내부의 물리 속성 강제 삭제
-    #     conflict_prim_path = visual_path + "/mesh/mesh" 
-    #     conflict_prim = stage.GetPrimAtPath(conflict_prim_path)
-        
-    #     if conflict_prim.IsValid():
-    #         # RigidBody 제거 (부모와 충돌 방지)
-    #         if conflict_prim.HasAPI(UsdPhysics.RigidBodyAPI):
-    #             conflict_prim.RemoveAPI(UsdPhysics.RigidBodyAPI)
-                
-    #         # Collision 제거 (우리가 만든 실린더만 충돌체로 쓰기 위해)
-    #         if conflict_prim.HasAPI(UsdPhysics.CollisionAPI):
-    #             conflict_prim.RemoveAPI(UsdPhysics.CollisionAPI)
-                
-    #     # 혹시 모를 상위 그룹(/mesh)에도 있을 수 있으니 체크
-    #     parent_mesh_path = visual_path + "/mesh"
-    #     parent_mesh_prim = stage.GetPrimAtPath(parent_mesh_path)
-    #     if parent_mesh_prim.IsValid() and parent_mesh_prim.HasAPI(UsdPhysics.RigidBodyAPI):
-    #         parent_mesh_prim.RemoveAPI(UsdPhysics.RigidBodyAPI)
-
-    #     # ---------------------------------------------------------
-
-    #     # 3. Collision 부분 (Cylinder 생성)
-    #     collision_path = prim_path + "/collision"
-    #     cylinder = UsdGeom.Cylinder.Define(stage, collision_path)
-        
-    #     radius = 0.038
-    #     height = 0.12
-    #     cylinder.CreateRadiusAttr(radius)
-    #     cylinder.CreateHeightAttr(height)
-    #     cylinder.CreateAxisAttr("Z") 
-    #     UsdGeom.XformCommonAPI(cylinder).SetTranslate((0, 0, height/2))
-
-    #     UsdPhysics.CollisionAPI.Apply(cylinder.GetPrim())
-    #     imageable = UsdGeom.Imageable(cylinder.GetPrim())
-    #     imageable.MakeInvisible()
-
-    #     # 4. SingleRigidPrim으로 래핑하여 반환
-    #     return SingleRigidPrim(
-    #         prim_path=prim_path,
-    #         name="beaker_rigid",
-    #         position=position,
-    #         orientation=orientation
-    #     )
     def _create_hybrid_beaker(self, prim_path, usd_path, position, orientation):
         stage = get_current_stage()
         
@@ -190,7 +122,7 @@ class Task(ABC, BaseTask):
         
         # 기존 Cylinder 제원: radius=0.038, height=0.12
         # Box 제원 변환: width/depth = 0.038 * 2 = 0.076
-        side_length = 0.05
+        side_length = 0.055
         height = 0.12
         
         # UsdGeom.Cube의 기본 size는 2.0이므로 scale을 (목표크기 / 2.0)으로 설정
@@ -378,6 +310,7 @@ class Task(ABC, BaseTask):
             desired_tool = desired_tool.lower()
 
         if desired_tool == "empty":
+
             robot_asset_path = os.path.join(ASSET_PATH, "robot", "dcp_description", "usd", "fr5", "fr5.usd")
             robot_prim_path = find_unique_string_name(
                 initial_name=self._robot_prim_path, is_unique_fn=lambda x: not is_prim_path_valid(x)
@@ -515,6 +448,7 @@ class Task(ABC, BaseTask):
         )
 
         stirrer_usd_path = os.path.join(ASSET_PATH, "lab", "heat_device.usd")
+        
         add_reference_to_stage(
             usd_path=stirrer_usd_path,
             prim_path="/World/stirrer_visual"
@@ -529,6 +463,7 @@ class Task(ABC, BaseTask):
         )
 
         beaker_usd_path = os.path.join(ASSET_PATH, "lab", "beaker.usd")
+        
         self.beaker = self._create_hybrid_beaker(
             prim_path="/World/beaker",
             usd_path=beaker_usd_path,
@@ -599,7 +534,7 @@ class Task(ABC, BaseTask):
 
 
         gripper_visual_asset_path = os.path.join(ASSET_PATH, "robot", "dcp_description", "usd", "gripper_visual")
-
+        
         # ag95
         add_reference_to_stage(
             usd_path=os.path.join(gripper_visual_asset_path, "ag95", "ag95.usd"),

@@ -9,6 +9,7 @@
 
 from dataclasses import dataclass
 from typing import Literal, Optional
+import os
 
 
 @dataclass(frozen=True)
@@ -91,12 +92,12 @@ class TAMPConfiguration:
     # Whether to visualize the robot mesh, set to False if you want to save network bandwidth (~10MB)
     viz_robot_mesh: bool = True
     # Spawn the rerun visualizer
-    rr_spawn: bool = True
+    rr_spawn: bool = False
 
     ## Logging Args
     enable_experiment_logging: bool = True
     # Root directory for logging experiments
-    experiment_root: str = "/home/home/sdl_ws/src/sdl_project/TAMP/cuTAMP/cutamp/cutamp_experiments"
+    experiment_root: str = os.path.join(os.path.dirname(__file__), "cutamp_experiments")
 
 
 def validate_tamp_config(config: TAMPConfiguration):

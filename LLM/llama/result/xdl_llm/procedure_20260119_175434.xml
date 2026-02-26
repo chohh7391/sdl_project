@@ -1,0 +1,6 @@
+<procedure>
+  <Add vessel="beaker_B" reagent="water" volume="10 mL" />
+  <Stir vessel="beaker_B" time="2 min" />
+  <Transfer from_vessel="beaker_B" to_vessel="flask_A" volume="50 mL" />
+  <CleanVessel vessel="flask_A" />
+</procedure>

@@ -30,7 +30,7 @@ def load_Moving_env(
         type_to_objects={
             "Movable": movables,
             "Surface": [entities["table"], entities["box_goal"], entities["box_region"]],
-            "ExCollision": [entities["box_region"]]
+            "ExCollision": [entities["box_region"], entities["rearrange_region"]]
         },
         goal_state=frozenset(
             {

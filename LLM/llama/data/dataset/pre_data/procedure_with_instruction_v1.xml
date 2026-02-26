@@ -1,0 +1,90 @@
+<instruction>Pour 10 mL of ethanol into beaker_B. Agitate beaker_B for 2 min. Pour 50 mL from beaker_B into beaker_A. Move box_A to plate_A.</instruction>
+
+<procedure>
+  <Add vessel="beaker_B" reagent="ethanol" volume="10 mL" />
+  <Stir vessel="beaker_B" time="2 min" />
+  <Transfer from_vessel="beaker_B" to_vessel="beaker_A" volume="50 mL" />
+  <Move object="box_A" place="plate_A" />
+</procedure>
+
+<instruction>Pour 25 mL of water into flask_B. Heat flask_B to 0 C. Move box_A to plate_B.</instruction>
+
+<procedure>
+  <Add vessel="flask_B" reagent="water" volume="25 mL" />
+  <HeatChill vessel="flask_B" temp="0 C" active="true" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+
+<instruction>Add 50 mL of water to beaker_B. Agitate beaker_B for 2 min. Relocate box_A onto plate_A.</instruction>
+
+<procedure>
+  <Add vessel="beaker_B" reagent="water" volume="50 mL" />
+  <Stir vessel="beaker_B" time="2 min" />
+  <Move object="box_A" place="plate_A" />
+</procedure>
+
+<instruction>Pour 25 mL of water into flask_B. Agitate flask_B for 1 min. Pour 50 mL from flask_B into flask_A. Place box_A on plate_A.</instruction>
+
+<procedure>
+  <Add vessel="flask_B" reagent="water" volume="25 mL" />
+  <Stir vessel="flask_B" time="1 min" />
+  <Transfer from_vessel="flask_B" to_vessel="flask_A" volume="50 mL" />
+  <Move object="box_A" place="plate_A" />
+</procedure>
+
+<instruction>Pour 25 mL of ethanol into flask_B. Bring flask_B to 25 C. Send 50 mL from flask_B to beaker_B. Clean beaker_B.</instruction>
+
+<procedure>
+  <Add vessel="flask_B" reagent="ethanol" volume="25 mL" />
+  <HeatChill vessel="flask_B" temp="25 C" active="true" />
+  <Transfer from_vessel="flask_B" to_vessel="beaker_B" volume="50 mL" />
+  <CleanVessel vessel="beaker_B" />
+</procedure>
+
+<instruction>Add 10 mL of water to flask_B. Stir the solution in flask_B for 30 s. Pour 10 mL from flask_B into beaker_A. Clean beaker_A. Put bottle_A on top of plate_A.</instruction>
+
+<procedure>
+  <Add vessel="flask_B" reagent="water" volume="10 mL" />
+  <Stir vessel="flask_B" time="30 s" />
+  <Transfer from_vessel="flask_B" to_vessel="beaker_A" volume="10 mL" />
+  <CleanVessel vessel="beaker_A" />
+  <Move object="bottle_A" place="plate_A" />
+</procedure>
+
+<instruction>Place 50 mL of water into beaker_A. Heat beaker_A to 25 C. Move 50 mL of liquid from beaker_A into beaker_B.</instruction>
+
+<procedure>
+  <Add vessel="beaker_A" reagent="water" volume="50 mL" />
+  <HeatChill vessel="beaker_A" temp="25 C" active="true" />
+  <Transfer from_vessel="beaker_A" to_vessel="beaker_B" volume="50 mL" />
+</procedure>
+
+<instruction>Pour 25 mL of ethanol into flask_A. Pour 25 mL from flask_A into beaker_A. Clean beaker_A.</instruction>
+
+<procedure>
+  <Add vessel="flask_A" reagent="ethanol" volume="25 mL" />
+  <Transfer from_vessel="flask_A" to_vessel="beaker_A" volume="25 mL" />
+  <CleanVessel vessel="beaker_A" />
+</procedure>
+
+<instruction>Add 25 mL of water to flask_A. Stir the solution in flask_A for 1 min. Send 10 mL from flask_A to beaker_A. Rinse and clean beaker_A. Move bottle_A to plate_B.</instruction>
+
+<procedure>
+  <Add vessel="flask_A" reagent="water" volume="25 mL" />
+  <Stir vessel="flask_A" time="1 min" />
+  <Transfer from_vessel="flask_A" to_vessel="beaker_A" volume="10 mL" />
+  <CleanVessel vessel="beaker_A" />
+  <Move object="bottle_A" place="plate_B" />
+</procedure>
+
+<instruction>Place 50 mL of ethanol into flask_A. Stir flask_A for 1 min. Set the temperature of flask_A to 60 C. Pour 10 mL from flask_A into beaker_A. Clean beaker_A. Relocate box_A onto plate_A.</instruction>
+
+<procedure>
+  <Add vessel="flask_A" reagent="ethanol" volume="50 mL" />
+  <Stir vessel="flask_A" time="1 min" />
+  <HeatChill vessel="flask_A" temp="60 C" active="true" />
+  <Transfer from_vessel="flask_A" to_vessel="beaker_A" volume="10 mL" />
+  <CleanVessel vessel="beaker_A" />
+  <Move object="box_A" place="plate_A" />
+</procedure>
+

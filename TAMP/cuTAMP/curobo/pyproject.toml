@@ -15,13 +15,6 @@ build-backend = "setuptools.build_meta"
 line-length = 100
 extend-exclude = "deprecated/"
 
-# See the `setuptools_scm` documentation for the description of the schemes used below.
-# https://pypi.org/project/setuptools-scm/
-# NOTE: If these values are updated, they need to be also updated in `__init__.py`.
-[tool.setuptools_scm]
-version_scheme = "no-guess-dev"
-local_scheme = "dirty-tag"
-
 [tool.isort]
 # see https://github.com/PyCQA/isort#multi-line-output-modes
 multi_line_output = 2
