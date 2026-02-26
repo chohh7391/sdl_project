@@ -123,6 +123,11 @@ ros2 launch isaacsim run_isaacsim.launch.py standalone:=$HOME/sdl_ws/src/sdl_pro
     LD_PRELOAD="${SYSTEM_LIBSTDCXX_PATH}" ros2 run tamp tamp_server.py
     ```
 
+- Run TAMP with Xdl Parser
+```bash
+ros2 run tamp tamp_xdl_phaser
+```
+
 - Run TAMP Client
 
     - run client

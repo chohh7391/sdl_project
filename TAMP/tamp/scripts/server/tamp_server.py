@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectoryPoint
-from rclpy.duration import Duration as RclpyDuration # 이름 충돌을 피하기 위해 별칭 사용
+from rclpy.duration import Duration as RclpyDuration
 
 from tamp_interfaces.msg import PlanStep
 from tamp_interfaces.srv import Plan, Execute, SetTampEnv, MoveToTarget, MoveToTargetJs, SetTampCfg
@@ -28,7 +27,6 @@ from cutamp.scripts.utils import (
     setup_logging,
     get_tetris_tuned_constraint_to_mult,
 )
-from cutamp.task_planning.base_structs import State
 import logging
 from cutamp.cost_reduction import CostReducer
 
@@ -44,11 +42,6 @@ from std_msgs.msg import Float32
 # Llama import
 import os
 os.environ["UNSLOTH_DISABLE_STATISTICS"] = "1"
-import unsloth
-from unsloth import FastLanguageModel
-import torch
-import time
-import re
 
 class TAMP:
 

@@ -17,7 +17,7 @@ install(DIRECTORY
 install(PROGRAMS
   scripts/server/tamp_server.py
   scripts/client/tamp_client.py
-  scripts/xdl/tamp_xdl_phaser.py
+  scripts/xdl/tamp_xdl_parser.py
   DESTINATION lib/${PROJECT_NAME}
 )
 ament_package()
