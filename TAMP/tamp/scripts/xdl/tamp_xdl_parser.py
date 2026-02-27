@@ -1,4 +1,4 @@
-#!/home/home/miniconda3/envs/sdl/bin/python
+#!/home/home/anaconda3/envs/sdl/bin/python
 import argparse
 import time
 import xml.etree.ElementTree as ET

@@ -6,7 +6,7 @@
 
 ## Overview
 
-This project utilizes cuTAMP within Isaac Sim to perform **S**elf-**D**riving **L**aboratories
+This project utilizes cuTAMP & LLM & Tool Changer within Isaac Sim to perform **S**elf-**D**riving **L**aboratories
 
 
 # Installation
@@ -68,6 +68,7 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 200
     ```bash
     cd ~/sdl_ws/src/sdl_project
     conda env create -f environment.yml
+    conda activate sdl
     ```
 
     ```bash
@@ -191,4 +192,4 @@ ros2 run tamp tamp_xdl_phaser
 
 # Trouble Shooting
 - can not import llama
-In sdl_project/TAMP/tamp/scripts/xdl/tamp_xdl_parser.py, change `#!/home/home/miniconda3/envs/sdl/bin/python`
+In sdl_project/TAMP/tamp/scripts/xdl/tamp_xdl_parser.py, change `#!/home/home/anaconda3/envs/sdl/bin/python`

@@ -1,4 +1,4 @@
-name: sdl_llama
+name: sdl
 channels:
   - conda-forge
   - defaults
@@ -180,4 +180,4 @@ dependencies:
       - yourdfpy==0.0.58
       - zipp==3.23.0
       - lark
-prefix: /home/home/anaconda3/envs/sdl_llama
+prefix: /home/home/anaconda3/envs/sdl
