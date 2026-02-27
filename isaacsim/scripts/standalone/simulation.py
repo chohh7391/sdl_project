@@ -8,7 +8,6 @@ from std_srvs.srv import SetBool
 from std_msgs.msg import Float32
 from tamp_interfaces.srv import ToolChange, GetRobotInfo, GetToolInfo
 import time
-# from pxr import Usd
 
 ROBOT_STAGE_PATH = "/World/Robot"
 ROOT_JOINT_PATH = ROBOT_STAGE_PATH + "/root_joint"
@@ -46,7 +45,7 @@ class Simulation(Node):
         # Preparing stage
         viewports.set_camera_view(eye=np.array([1.2, 1.2, 0.8]), target=np.array([0, 0, 0.5]))
 
-        from task import Task
+        from task_camera import Task
 
         self.task = Task(name="task", robot_prim_path=ROBOT_STAGE_PATH, robot_name="fr5")
         self.world.add_task(self.task)
