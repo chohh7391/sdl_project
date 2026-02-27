@@ -60,11 +60,11 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 200
 - create workspace
 
     ```bash
-    cd ~/
+    cd ~/sdl_ws/src
     git clone git@github.com:chohh7391/sdl_project.git
     ```
 
-    - create sdl_llama conda env
+    - create sdl conda env
     ```bash
     cd ~/sdl_ws/src/sdl_project
     conda env create -f environment.yml
@@ -115,7 +115,7 @@ ros2 launch isaacsim run_isaacsim.launch.py standalone:=$HOME/sdl_ws/src/sdl_pro
     ```bash
     source /opt/ros/humble/setup.bash
     source ~/sdl_ws/install/local_setup.bash
-    conda activate sdl_llama
+    conda activate sdl
     export SYSTEM_LIBSTDCXX_PATH="/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
     ```
 
