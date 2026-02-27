@@ -39,13 +39,6 @@ set(SERVICE_FILES
   srv/get_ft_data.srv
 )
 
-# set(MESSAGE_FILES
-#   msg/BoundingBox.msg
-#   msg/BoundingBoxArray.msg
-#   msg/CameraInfo.msg
-#   msg/PointCloud2.msg
-# )
-
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/JointPosture.action"
   "action/SE3.action"
@@ -59,7 +52,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   DEPENDENCIES std_msgs geometry_msgs builtin_interfaces sensor_msgs)
 
 install(
-  DIRECTORY action srv msg
+  DIRECTORY action srv
   DESTINATION share/${PROJECT_NAME}
 )
 
