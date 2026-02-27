@@ -113,20 +113,20 @@ ros2 launch isaacsim run_isaacsim.launch.py standalone:=$HOME/sdl_ws/src/sdl_pro
 ## TAMP
 
 - Run TAMP Server
-    ```bash
-    source /opt/ros/humble/setup.bash
-    source ~/sdl_ws/install/local_setup.bash
-    conda activate sdl
-    export SYSTEM_LIBSTDCXX_PATH="/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
-    ```
+```bash
+source /opt/ros/humble/setup.bash
+source ~/sdl_ws/install/local_setup.bash
+conda activate sdl
+export SYSTEM_LIBSTDCXX_PATH="/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
+```
 
-    ```bash
-    LD_PRELOAD="${SYSTEM_LIBSTDCXX_PATH}" ros2 run tamp tamp_server.py
-    ```
+```bash
+LD_PRELOAD="${SYSTEM_LIBSTDCXX_PATH}" ros2 run tamp tamp_server.py
+```
 
 - Run TAMP with Xdl Parser
 ```bash
-ros2 run tamp tamp_xdl_phaser
+ros2 run tamp tamp_xdl_parser.py
 ```
 
 - Run TAMP Client
