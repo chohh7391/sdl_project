@@ -188,3 +188,7 @@ ros2 run tamp tamp_xdl_phaser
         ```bash
         (csuite) tool_change empty
         ```
+
+# Trouble Shooting
+- can not import llama
+In sdl_project/TAMP/tamp/scripts/xdl/tamp_xdl_parser.py, change `#!/home/home/miniconda3/envs/sdl/bin/python`
