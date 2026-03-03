@@ -8,7 +8,7 @@ from launch.substitutions import PathJoinSubstitution
 def generate_launch_description():
     # Define the camera names
     # cameras = ["camera_wrist", "camera_fixed_front", "camera_fixed_back"]
-    cameras = ["camera_fixed_front"]
+    cameras = ["camera_1", "camera_2", "camera_3", "camera_4"]
     
     # Get the path to the parameter file
     apriltag_params = PathJoinSubstitution([

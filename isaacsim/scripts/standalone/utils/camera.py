@@ -20,7 +20,6 @@ class CameraInfo:
         K: [601.46000163, 0.0, 334.89998372, 0.0, 601.5933431, 248.15334066, 0.0, 0.0, 1.0]
     """
     
-    # [중요] 1.4um * (1920/640) = 4.2um
     pixel_size: float = 4.2
     f_stop: float = 2.0
     focus_distance: float = 0.8
@@ -70,6 +69,32 @@ class CameraInfo:
 
         self.diagonal = 2 * math.sqrt(max(self.cx, self.width - self.cx) ** 2 + max(self.cy, self.height - self.cy) ** 2)
         self.diagonal_fov = 2 * math.atan2(self.diagonal, self.fx + self.fy) * 180 / math.pi
+
+
+def initialize_camera(camera):
+    
+    camera.initialize()
+
+    camera_info = CameraInfo()
+    camera.set_focal_length(camera_info.focal_length / 10.0)
+    camera.set_focus_distance(camera_info.focus_distance)
+    camera.set_lens_aperture(camera_info.f_stop * 100.0)
+    camera.set_horizontal_aperture(camera_info.horizontal_aperture / 10.0)
+    camera.set_vertical_aperture(camera_info.vertical_aperture / 10.0)
+    camera.set_clipping_range(0.05, 1.0e5)
+
+    camera.set_projection_type("fisheyePolynomial")
+    
+    camera.set_rational_polynomial_properties(
+        camera_info.width, camera_info.height,
+        camera_info.cx, camera_info.cy,
+        camera_info.diagonal_fov, camera_info.D
+    )
+    
+    # camera.set_lens_distortion_model("pinhole")
+    # camera.add_normals_to_frame()
+    # camera.add_motion_vectors_to_frame()
+    # camera.add_distance_to_image_plane_to_frame()
 
 
 def set_world_pose_from_view(

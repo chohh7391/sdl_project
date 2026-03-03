@@ -1,8 +1,8 @@
 from abc import ABC
-from typing import Dict, List
-import math
-
+from typing import Dict
+import os, sys
 import numpy as np
+
 from isaacsim.core.api.scenes.scene import Scene
 from isaacsim.core.api.tasks import BaseTask
 from isaacsim.core.prims import SingleXFormPrim
@@ -10,16 +10,16 @@ from isaacsim.core.utils.prims import is_prim_path_valid
 from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
 from isaacsim.core.utils.string import find_unique_string_name
 from isaacsim.storage.native import get_assets_root_path
-import numpy as np
+from isaacsim.sensors.camera import Camera
 from isaacsim.core.api.objects import FixedCuboid, DynamicCylinder, VisualCuboid
-from fr5 import FR5
-import os, sys
-import yaml
 from isaacsim.core.api.materials.omni_pbr import OmniPBR
+from isaacsim.ros2.bridge import read_camera_info
+
+from fr5 import FR5
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
 from object import create_hybrid_beaker, create_hybrid_box, create_hollow_flask
-from camera import CameraInfo
+from camera import CameraInfo, set_world_pose_from_view
 
 ASSET_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets")
 
@@ -36,6 +36,12 @@ class Task(ABC, BaseTask):
         self._robot_name = robot_name
 
         self.camera_info = CameraInfo()
+        self.camera_eyes = [
+            np.array([1.0, 1.0, 1.0]),
+            np.array([-1.0, -1.0, 1.0]),
+            np.array([-1.0, 1.0, 1.0]),
+            np.array([1.0, -1.0, 1.0]),
+        ]
 
         self.current_positions = None
         self.current_orientations = None
@@ -86,6 +92,7 @@ class Task(ABC, BaseTask):
 
         self.set_object(self.current_positions, self.current_orientations)
         self.set_robot(self.desired_tool)
+        self.set_camera()
     
 
     def set_robot(self, desired_tool = None) -> FR5:
@@ -380,6 +387,25 @@ class Task(ABC, BaseTask):
         self.create_gripper_stand()
         self.create_apriltag()
 
+
+    def set_camera(self):
+        self.cameras = []
+        for i in range(4):
+            camera = Camera(
+                prim_path=f"/World/camera_{i+1}",
+                position=np.array([0.0, 0.0, 25.0]),
+                frequency=30,
+                resolution=(self.camera_info.width, self.camera_info.height),
+            )
+            
+            set_world_pose_from_view(
+                camera=camera,
+                eye=self.camera_eyes[i],
+                target=np.array([0, 0, 0])
+            )
+            self.cameras.append(camera)
+
+
     def create_gripper_stand(self):
         asset_path = os.path.join(ASSET_PATH, "lab", "texture", "propile.jpg")
         aluminum_material = OmniPBR(
@@ -518,9 +544,6 @@ class Task(ABC, BaseTask):
             orientation=[1, 0, 0, 0],
         )
         
-
-
-
 
     def get_observations(self) -> Dict:
         
