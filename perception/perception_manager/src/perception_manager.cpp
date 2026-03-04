@@ -1,186 +1,223 @@
 #include "perception_manager/perception_manager.hpp"
-#include <thread>
 
 using namespace std::chrono_literals;
 
 PerceptionManager::PerceptionManager() : Node("perception_manager")
 {
-    RCLCPP_INFO(this->get_logger(), "Loading object configurations from parameter server...");
+    RCLCPP_INFO(this->get_logger(), "Starting Perception Manager ...");
 
-    // YAML 파일의 파라미터 key-value 쌍을 읽기
-    this->declare_parameter("object_names", rclcpp::ParameterValue(std::vector<std::string>()));
-    std::vector<std::string> object_names = this->get_parameter("object_names").as_string_array();
+    // 추적할 대상 지정
+    target_objects_ = {"beaker", "flask"};
 
-    for (size_t i = 0; i < object_names.size(); ++i)
-    {
-        // === 데이터 구조 개선: object_data_map_을 기본 저장소로 사용 ===
-        int object_id = i;
-        const auto& object_name = object_names[i];
-        
-        object_data_map_[object_id].name = object_name;
-        object_data_map_[object_id].frame_id = object_name;
-        object_id_to_name_map_[object_id] = object_name; // 기존 맵도 유지
-
-        // === 주요 변경점: 파라미터 이름 수정 ===
-        std::string param_name = "grasping_offsets." + object_name; // "grasping_offsets." 접두사 추가
-        this->declare_parameter(param_name, rclcpp::ParameterValue(std::vector<double>()));
-        std::vector<double> pose_vector = this->get_parameter(param_name).as_double_array();
-
-        if (pose_vector.size() == 7)
-        {
-            geometry_msgs::msg::Pose pose;
-            pose.position.x = pose_vector[0];
-            pose.position.y = pose_vector[1];
-            pose.position.z = pose_vector[2];
-            pose.orientation.x = pose_vector[3];
-            pose.orientation.y = pose_vector[4];
-            pose.orientation.z = pose_vector[5];
-            pose.orientation.w = pose_vector[6];
-            
-            // === 데이터 구조 개선: map에 grasping_offset 직접 저장 ===
-            object_data_map_[object_id].grasping_offset = pose;
-
-            RCLCPP_INFO(this->get_logger(), "Loaded grasping offset for %s: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f]",
-                object_name.c_str(), pose.position.x, pose.position.y, pose.position.z,
-                pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
-        }
-        else
-        {
-            RCLCPP_WARN(this->get_logger(), "Failed to load valid grasping_offset for %s. Parameter '%s' should be a vector of 7 doubles.", object_name.c_str(), param_name.c_str());
-        }
-    }
-
-    // TF 버퍼와 리스너 초기화
+    auto update_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    auto process_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    auto publish_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-    // 오브젝트 위치 정보 서비스 생성
-    get_object_info_service_ = this->create_service<perception_interfaces::srv::GetObjectInfo>(
-        "perception_manager/get_object_info",
-        std::bind(&PerceptionManager::get_object_info_callback, this, std::placeholders::_1, std::placeholders::_2));
+    tf_pub_ = this->create_publisher<geometry_msgs::msg::TransformStamped>("/perception/fused_pose", 10);
+    ft_pub_ = this->create_publisher<geometry_msgs::msg::Wrench>("/perception/filtered_ft", 10);
+    scale_pub_ = this->create_publisher<std_msgs::msg::Float64>("/perception/fusion_scale", 10);
 
-    ft_sensor_subscriber_ = this->create_subscription<geometry_msgs::msg::Wrench>(
-        "/ft_sensor", 10, std::bind(&PerceptionManager::ft_sensor_callback, this, std::placeholders::_1));
+    // TF가 콜백으로 들어오므로 update_timer_는 삭제하여 최적화했습니다.
+    process_timer_ = this->create_wall_timer(
+        20ms, std::bind(&PerceptionManager::process_raw_data, this));
+    publish_timer_ = this->create_wall_timer(
+        33ms, std::bind(&PerceptionManager::publish_processed_data, this));
 
-    // F/T 센서 데이터 서비스 생성
-    get_ft_data_service_ = this->create_service<perception_interfaces::srv::GetFtData>(
-        "perception_manager/get_ft_data",
-        std::bind(&PerceptionManager::get_ft_data_callback, this, std::placeholders::_1, std::placeholders::_2));
-    
-    // 주기적으로 TF를 조회하고 업데이트하는 타이머
-    auto timer_period = 100ms;
-    object_info_timer_ = this->create_wall_timer(
-        timer_period, std::bind(&PerceptionManager::timer_callback, this));
+    auto sub_opt = rclcpp::SubscriptionOptions();
+    sub_opt.callback_group = update_cb_group;
+
+    // TF 토픽 직접 구독 (AprilTag의 데이터를 가로챔)
+    tf_sub_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
+        "/tf", 10, 
+        [this](const tf2_msgs::msg::TFMessage::SharedPtr msg) { this->tf_callback(msg); }, 
+        sub_opt);
+    ft_sub_ = this->create_subscription<geometry_msgs::msg::Wrench>(
+        "/ft_data", 10, 
+        [this](const geometry_msgs::msg::Wrench::SharedPtr msg) { this->update_raw_ft(msg); }, 
+        sub_opt);
+    scale_sub_ = this->create_subscription<std_msgs::msg::Float64>(
+        "/scale_data", 10, 
+        [this](const std_msgs::msg::Float64::SharedPtr msg) { this->update_raw_scale(msg); }, 
+        sub_opt);
 
     RCLCPP_INFO(this->get_logger(), "Perception Manager Node has been started.");
 }
 
-void PerceptionManager::timer_callback()
-{
-    // 등록된 모든 오브젝트에 대해 TF를 조회
-    for (const auto& pair : object_id_to_name_map_)
-    {
-        int tag_id = pair.first;
-        std::string object_name = pair.second;
+void PerceptionManager::process_raw_data() {
+    process_raw_tf();
+    process_raw_ft();
+    process_raw_scale();
+}
 
-        try
-        {
-            // base_link 기준으로 오브젝트의 트랜스폼을 찾음
-            geometry_msgs::msg::TransformStamped transform_stamped = tf_buffer_->lookupTransform(
-                "base_link", object_name, tf2::TimePointZero);
+void PerceptionManager::publish_processed_data() {
+    RCLCPP_INFO(this->get_logger(), "no response");
+    publish_processed_tf();
+    publish_processed_ft();
+    publish_processed_scale();
+}
 
-            // 오브젝트 데이터 업데이트
-            object_data_map_[tag_id].current_transform = transform_stamped;
-        }
-        catch (const tf2::TransformException &ex)
-        {
-            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Could not transform from 'base_link' to '%s': %s", object_name.c_str(), ex.what());
+// ==========================================
+// TF 가로채기 (핵심 로직)
+// ==========================================
+void PerceptionManager::tf_callback(const tf2_msgs::msg::TFMessage::SharedPtr msg) {
+    for (const auto& transform : msg->transforms) {
+        std::string child = transform.child_frame_id;
+        std::string parent = transform.header.frame_id;
+
+        if (std::find(target_objects_.begin(), target_objects_.end(), child) != target_objects_.end()) {
+            // [디버그] 어떤 데이터가 들어오는지 확인
+            // RCLCPP_INFO(this->get_logger(), "Detected: %s from %s", child.c_str(), parent.c_str());
+
+            auto& obj = objects_[child];
+            try {
+                // 이 부분이 실패하면 cam1_valid가 절대 true가 되지 않습니다.
+                auto base_to_cam = tf_buffer_->lookupTransform("base_link", parent, tf2::TimePointZero);
+                
+                tf2::Transform tf_base_to_cam, tf_cam_to_obj;
+                tf2::fromMsg(base_to_cam.transform, tf_base_to_cam);
+                tf2::fromMsg(transform.transform, tf_cam_to_obj);
+                
+                tf2::Transform tf_base_to_obj = tf_base_to_cam * tf_cam_to_obj;
+                
+                geometry_msgs::msg::TransformStamped base_to_obj_msg;
+                base_to_obj_msg.header.stamp = transform.header.stamp;
+                base_to_obj_msg.header.frame_id = "base_link";
+                base_to_obj_msg.child_frame_id = child + "_fused";
+                base_to_obj_msg.transform = tf2::toMsg(tf_base_to_obj);
+
+                double dist = std::sqrt(std::pow(transform.transform.translation.x, 2) + 
+                                        std::pow(transform.transform.translation.y, 2) + 
+                                        std::pow(transform.transform.translation.z, 2));
+
+                if (parent == "camera_1") {
+                    obj.cam1_raw_base = base_to_obj_msg;
+                    obj.dist_to_cam1 = dist;
+                    obj.cam1_valid = true;
+                } else if (parent == "camera_2") {
+                    obj.cam2_raw_base = base_to_obj_msg;
+                    obj.dist_to_cam2 = dist;
+                    obj.cam2_valid = true;
+                }
+            } catch (const tf2::TransformException & ex) {
+                // 여기서 에러가 난다면 base_link <-> camera_1 사이의 TF가 없는 것입니다.
+                RCLCPP_ERROR(this->get_logger(), "TF Error in callback: %s", ex.what());
+            }
         }
     }
 }
 
-void PerceptionManager::get_object_info_callback(
-    const std::shared_ptr<perception_interfaces::srv::GetObjectInfo::Request> request,
-    const std::shared_ptr<perception_interfaces::srv::GetObjectInfo::Response> response)
-{
-    int requested_id = request->object_id;
+void PerceptionManager::update_raw_ft(const geometry_msgs::msg::Wrench::SharedPtr msg) {
+    ft_data_.raw_data = *msg;
+}
+void PerceptionManager::update_raw_scale(const std_msgs::msg::Float64::SharedPtr msg) {
+    scale_data_.raw_data = *msg;
+}
 
-    // === 주요 변경점: object_data_map_에서 데이터 확인 ===
-    if (object_data_map_.count(requested_id) == 0)
-    {
-        response->success = false;
-        RCLCPP_WARN(this->get_logger(), "Object with ID %d not configured.", requested_id);
-        return;
+// ==========================================
+// 센서 퓨전 (타임아웃 및 가중치)
+// ==========================================
+void PerceptionManager::process_raw_tf() {
+    // rclcpp::Time now = this->get_clock()->now();
+    // double timeout = 0.5; // 0.5초 이상 안 보이면 유효하지 않음 처리
+
+    for (const auto& obj_name : target_objects_) {
+        auto& obj = objects_[obj_name];
+        
+        // Timeout 검사 (로봇의 안전한 조작을 위해 필수)
+        // if (obj.cam1_valid) {
+        //     rclcpp::Time cam1_time(obj.cam1_raw_base.header.stamp);
+        //     if ((now - cam1_time).seconds() > timeout) obj.cam1_valid = false;
+        // }
+        // if (obj.cam2_valid) {
+        //     rclcpp::Time cam2_time(obj.cam2_raw_base.header.stamp);
+        //     if ((now - cam2_time).seconds() > timeout) obj.cam2_valid = false;
+        // }
+
+        geometry_msgs::msg::TransformStamped fused_tf;
+        // fused_tf.header.stamp = now;
+        fused_tf.header.frame_id = "base_link";
+        fused_tf.child_frame_id = obj_name + "_fused";
+
+        // 케이스 1: 두 카메라 모두 물체를 볼 때
+        if (obj.cam1_valid && obj.cam2_valid) {
+            double eps = 1e-6;
+            double w1 = 1.0 / (obj.dist_to_cam1 * obj.dist_to_cam1 + eps);
+            double w2 = 1.0 / (obj.dist_to_cam2 * obj.dist_to_cam2 + eps);
+            
+            double W1 = w1 / (w1 + w2);
+            double W2 = w2 / (w1 + w2);
+
+            auto& t1 = obj.cam1_raw_base.transform.translation;
+            auto& t2 = obj.cam2_raw_base.transform.translation;
+            fused_tf.transform.translation.x = (t1.x * W1) + (t2.x * W2);
+            fused_tf.transform.translation.y = (t1.y * W1) + (t2.y * W2);
+            fused_tf.transform.translation.z = (t1.z * W1) + (t2.z * W2);
+
+            tf2::Quaternion q1, q2, q_fused;
+            tf2::fromMsg(obj.cam1_raw_base.transform.rotation, q1);
+            tf2::fromMsg(obj.cam2_raw_base.transform.rotation, q2);
+            q_fused = q1.slerp(q2, W2);
+            fused_tf.transform.rotation = tf2::toMsg(q_fused);
+
+            obj.processed_data = fused_tf;
+        } 
+        // 케이스 2: 한 대의 카메라만 볼 때
+        else if (obj.cam1_valid) {
+            obj.processed_data = obj.cam1_raw_base;
+            obj.processed_data.child_frame_id = obj_name + "_fused";
+        } 
+        else if (obj.cam2_valid) {
+            obj.processed_data = obj.cam2_raw_base;
+            obj.processed_data.child_frame_id = obj_name + "_fused";
+        }
     }
-
-    const auto& object_data = object_data_map_.at(requested_id);
-    std::string target_frame = object_data.frame_id;
-    std::string source_frame = "world";
-
-    response->success = true;
-    response->object_pose.header.stamp = this->now();
-    response->object_pose.header.frame_id = object_data.frame_id;
-    response->object_pose.pose.position.x = object_data.current_transform.transform.translation.x;
-    response->object_pose.pose.position.y = object_data.current_transform.transform.translation.y;
-    response->object_pose.pose.position.z = object_data.current_transform.transform.translation.z;
-    response->object_pose.pose.orientation = object_data.current_transform.transform.rotation;
-
-    response->grasping_offset = object_data.grasping_offset;
-
-    RCLCPP_INFO(this->get_logger(), "Object ID %d: Name='%s', Frame ID='%s'",
-                requested_id, object_data.name.c_str(), object_data.frame_id.c_str());
-    RCLCPP_INFO(this->get_logger(), "Object position for ID %d: x=%.2f, y=%.2f, z=%.2f",
-                requested_id,
-                response->object_pose.pose.position.x,
-                response->object_pose.pose.position.y,
-                response->object_pose.pose.position.z);
-    RCLCPP_INFO(this->get_logger(), "Object orientation for ID %d: x=%.2f, y=%.2f, z=%.2f, w=%.2f",
-                requested_id,
-                response->object_pose.pose.orientation.x,
-                response->object_pose.pose.orientation.y,
-                response->object_pose.pose.orientation.z,
-                response->object_pose.pose.orientation.w);
-
-    RCLCPP_INFO(this->get_logger(), "Grasping orientation for object ID %d: x=%.2f, y=%.2f, z=%.2f, w=%.2f",
-                requested_id,
-                response->grasping_offset.orientation.x,
-                response->grasping_offset.orientation.y,
-                response->grasping_offset.orientation.z,
-                response->grasping_offset.orientation.w);
-
-    RCLCPP_INFO(this->get_logger(), "Grasping offset for object ID %d: x=%.2f, y=%.2f, z=%.2f",
-                requested_id,
-                response->grasping_offset.position.x,
-                response->grasping_offset.position.y,
-                response->grasping_offset.position.z);
-    
-
 }
 
-// F/T 센서 콜백 함수 구현
-void PerceptionManager::ft_sensor_callback(const geometry_msgs::msg::Wrench::SharedPtr msg)
-{
-    latest_ft_data_ = *msg;
+void PerceptionManager::process_raw_ft() {
+    double alpha = 0.2;
+    auto& raw = ft_data_.raw_data.force;
+    auto& proc = ft_data_.processed_data.force;
+    proc.x = alpha * raw.x + (1.0 - alpha) * proc.x;
+    proc.y = alpha * raw.y + (1.0 - alpha) * proc.y;
+    proc.z = alpha * raw.z + (1.0 - alpha) * proc.z;
+
+    auto& raw_t = ft_data_.raw_data.torque;
+    auto& proc_t = ft_data_.processed_data.torque;
+    proc_t.x = alpha * raw_t.x + (1.0 - alpha) * proc_t.x;
+    proc_t.y = alpha * raw_t.y + (1.0 - alpha) * proc_t.y;
+    proc_t.z = alpha * raw_t.z + (1.0 - alpha) * proc_t.z;
 }
 
-// F/T 센서 데이터 서비스 콜백 함수 구현
-void PerceptionManager::get_ft_data_callback(
-    const std::shared_ptr<perception_interfaces::srv::GetFtData::Request> request,
-    const std::shared_ptr<perception_interfaces::srv::GetFtData::Response> response)
-{
-    (void)request;
-    response->ft_data = latest_ft_data_;
-    response->success = true;
-    RCLCPP_INFO(this->get_logger(), "Provided latest F/T sensor data.");
+void PerceptionManager::process_raw_scale() {
+    scale_data_.processed_data = scale_data_.raw_data;
 }
 
-int main(int argc, char * argv[])
-{
-    rclcpp::init(argc, argv);
-    rclcpp::executors::MultiThreadedExecutor executor;
-    auto node = std::make_shared<PerceptionManager>();
-    executor.add_node(node);
-    executor.spin();
-    rclcpp::shutdown();
-    return 0;
+void PerceptionManager::publish_processed_tf() {
+    for (const auto& obj_name : target_objects_) {
+        auto& obj = objects_[obj_name];
+
+        RCLCPP_INFO(this->get_logger(), "Object: %s | Cam1: %d | Cam2: %d", 
+                    obj_name.c_str(), obj.cam1_valid, obj.cam2_valid);
+        
+        // [디버그 로그 추가]
+        if (!obj.cam1_valid && !obj.cam2_valid) {
+            // 이 로그가 계속 뜬다면 데이터가 valid로 판정되지 못하고 있는 겁니다.
+            RCLCPP_DEBUG(this->get_logger(), "Object %s is not valid yet.", obj_name.c_str());
+        }
+
+        if (obj.cam1_valid || obj.cam2_valid) {
+            tf_pub_->publish(obj.processed_data);
+        }
+    }
+}
+
+void PerceptionManager::publish_processed_ft() {
+    ft_pub_->publish(ft_data_.processed_data);
+}
+
+void PerceptionManager::publish_processed_scale() {
+    scale_pub_->publish(scale_data_.processed_data);
 }

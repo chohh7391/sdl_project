@@ -44,7 +44,6 @@ launch_args = [
     DeclareLaunchArgument('custom_args', default_value='', description='Add any custom Isaac Sim args that you want to forward to isaac-sim.sh during run time.'),
 
     DeclareLaunchArgument('exclude_install_path', default_value='', description='Comma-separated list of installation paths to exclude from LD_LIBRARY_PATH, PYTHONPATH, and PATH environment variables.'),
-
 ]
 
 def launch_setup(context):

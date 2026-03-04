@@ -1,35 +1,40 @@
-#ifndef PERCEPTION_MANAGER_HPP
-#define PERCEPTION_MANAGER_HPP
-
-#include "rclcpp/rclcpp.hpp"
-
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
-#include "tf2_ros/transform_broadcaster.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#include "tf2/LinearMath/Matrix3x3.h"
-#include "tf2/LinearMath/Quaternion.h"
-#include "geometry_msgs/msg/pose.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"
-#include "geometry_msgs/msg/wrench.hpp"
-
-#include "perception_interfaces/srv/get_object_info.hpp" // 사용자 정의 서비스 메시지
-#include "perception_interfaces/srv/get_ft_data.hpp"
+#pragma once
 
 #include <string>
 #include <map>
-#include "rclcpp/executors/multi_threaded_executor.hpp"
+#include <vector>
+#include <cmath>
+#include <algorithm> // std::find
 
+#include <rclcpp/rclcpp.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2_msgs/msg/tf_message.hpp> // TF 메시지 직접 구독용
+#include <std_msgs/msg/float64.hpp>
+#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/wrench.hpp>
+#include <rclcpp/executors/multi_threaded_executor.hpp>
 
-// 오브젝트 정보를 저장할 구조체
 struct ObjectData
 {
-    std::string name;
-    std::string frame_id;
-
-    geometry_msgs::msg::Pose grasping_offset;
-    geometry_msgs::msg::TransformStamped current_transform;
+    geometry_msgs::msg::TransformStamped cam1_raw_base; 
+    geometry_msgs::msg::TransformStamped cam2_raw_base; 
+    double dist_to_cam1; 
+    double dist_to_cam2; 
+    bool cam1_valid = false;
+    bool cam2_valid = false;
+    
+    geometry_msgs::msg::TransformStamped processed_data; 
 };
+
+struct FTData { geometry_msgs::msg::Wrench raw_data; geometry_msgs::msg::Wrench processed_data; };
+struct ScaleData { std_msgs::msg::Float64 raw_data; std_msgs::msg::Float64 processed_data; };
 
 class PerceptionManager : public rclcpp::Node
 {
@@ -37,39 +42,38 @@ public:
     PerceptionManager();
 
 private:
-    void timer_callback();
-    void get_object_info_callback(
-        const std::shared_ptr<perception_interfaces::srv::GetObjectInfo::Request> request,
-        const std::shared_ptr<perception_interfaces::srv::GetObjectInfo::Response> response);
-    // F/T 센서 데이터를 받을 콜백 함수
-    void ft_sensor_callback(const geometry_msgs::msg::Wrench::SharedPtr msg);
-    
-    // F/T 센서 데이터를 제공할 서비스 콜백 함수
-    void get_ft_data_callback(
-        const std::shared_ptr<perception_interfaces::srv::GetFtData::Request> request,
-        const std::shared_ptr<perception_interfaces::srv::GetFtData::Response> response);
+    void process_raw_data();
+    void publish_processed_data();
 
-    // Configuration
-    std::map<int, std::string> object_id_to_name_map_;
-    geometry_msgs::msg::Wrench latest_ft_data_;
+    // 콜백 함수들
+    void tf_callback(const tf2_msgs::msg::TFMessage::SharedPtr msg);
+    void update_raw_ft(const geometry_msgs::msg::Wrench::SharedPtr msg);
+    void update_raw_scale(const std_msgs::msg::Float64::SharedPtr msg);
 
-    // Latest Data
-    std::map<int, ObjectData> object_data_map_; // key: AprilTag/QR ID
-    std::vector<geometry_msgs::msg::Pose> grasping_offsets_;
+    void process_raw_tf();
+    void process_raw_ft();
+    void process_raw_scale();
 
-    // TF
+    void publish_processed_tf();
+    void publish_processed_ft();
+    void publish_processed_scale();
+
+    rclcpp::TimerBase::SharedPtr process_timer_;
+    rclcpp::TimerBase::SharedPtr publish_timer_;
+
+    rclcpp::Publisher<geometry_msgs::msg::TransformStamped>::SharedPtr tf_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Wrench>::SharedPtr ft_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr scale_pub_;
+
+    rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr tf_sub_; // TF 직접 구독
+    rclcpp::Subscription<geometry_msgs::msg::Wrench>::SharedPtr ft_sub_;
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr scale_sub_;
+
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
 
-    // Services
-    rclcpp::Service<perception_interfaces::srv::GetObjectInfo>::SharedPtr get_object_info_service_;
-    rclcpp::Service<perception_interfaces::srv::GetFtData>::SharedPtr get_ft_data_service_;
-
-    // Force Torque Sensor Subscription
-    rclcpp::Subscription<geometry_msgs::msg::Wrench>::SharedPtr ft_sensor_subscriber_;
-
-    // Timer
-    rclcpp::TimerBase::SharedPtr object_info_timer_;
+    std::vector<std::string> target_objects_;
+    std::map<std::string, ObjectData> objects_;
+    FTData ft_data_;
+    ScaleData scale_data_;
 };
-
-#endif // PERCEPTION_MANAGER_HPP

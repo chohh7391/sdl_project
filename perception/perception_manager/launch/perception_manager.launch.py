@@ -14,7 +14,7 @@ def generate_launch_description():
 
     # [핵심] 여기에 사용할 카메라들을 쉼표로 구분해서 적어줍니다.
     # 나중에 카메라를 추가하거나 뺄 때 여기서만 문자열을 수정하면 됩니다.
-    target_cameras = 'camera_1,camera_2,camera_3,camera_4'
+    target_cameras = 'camera_1,camera_2'
 
     apriltag_launch_file = PathJoinSubstitution([
         FindPackageShare('apriltag_ros'),
@@ -41,6 +41,6 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     ld.add_action(apriltag_launch) # For Debugging easily
-    # ld.add_action(perception_manager_node)
+    ld.add_action(perception_manager_node)
 
     return ld

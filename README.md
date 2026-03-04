@@ -110,6 +110,13 @@ source ~/sdl_ws/install/local_setup.bash
 ros2 launch isaacsim run_isaacsim.launch.py standalone:=$HOME/sdl_ws/src/sdl_project/isaacsim/scripts/standalone/simulation.py install_path:=$HOME/isaacsim/_build/linux-x86_64/release exclude_install_path:=home/home/sdl_ws/install ros_installation_path:="/home/home/IsaacSim-ros_workspaces/build_ws/humble/humble_ws/install/local_setup.bash,/home/home/IsaacSim-ros_workspaces/build_ws/humble/isaac_sim_ros_ws/install/local_setup.bash"
 ```
 
+## Perception Manager
+- Run Perception Manager node
+```bash
+source ~/sdl_ws/install/setup.bash
+ros2 launch perception_manager perception_manager.launch.py
+```
+
 ## TAMP
 
 - Run TAMP Server

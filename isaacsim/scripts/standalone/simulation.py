@@ -49,7 +49,7 @@ class Simulation(Node):
         # Preparing stage
         viewports.set_camera_view(eye=np.array([1.2, 1.2, 0.8]), target=np.array([0, 0, 0.5]))
 
-        from task_camera import Task
+        from task import Task
 
         sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
         from camera import initialize_camera
