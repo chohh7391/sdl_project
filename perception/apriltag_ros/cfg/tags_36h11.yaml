@@ -8,7 +8,7 @@
         # see "apriltag.h" 'struct apriltag_detector' for more documentation on these optional parameters
         detector:
             threads: 1          # number of threads
-            decimate: 2.0       # decimate resolution for quad detection
+            decimate: 1.0       # decimate resolution for quad detection
             blur: 0.0           # sigma of Gaussian blur for quad detection
             refine: True        # snap to strong gradients
             sharpening: 0.25    # sharpening of decoded images
@@ -19,6 +19,6 @@
 
         # optional list of tags
         tag:
-            ids: [0, 1, 2, 3]            # tag ID
-            frames: [beaker1, beaker2, flask1, flask2]  # optional frame name
-            sizes: [0.08, 0.08, 0.08, 0.08]   # optional tag-specific edge size # isaacsim cube size * 0.8
+            ids: [0, 1]            # tag ID
+            frames: [beaker, flask]  # optional frame name
+            sizes: [0.08, 0.08]   # optional tag-specific edge size # isaacsim cube size * 0.8

@@ -39,8 +39,6 @@ class Task(ABC, BaseTask):
         self.camera_eyes = [
             np.array([1.0, 1.0, 1.0]),
             np.array([-1.0, -1.0, 1.0]),
-            np.array([-1.0, 1.0, 1.0]),
-            np.array([1.0, -1.0, 1.0]),
         ]
 
         self.current_positions = None
@@ -385,12 +383,12 @@ class Task(ABC, BaseTask):
         )
 
         self.create_gripper_stand()
-        self.create_apriltag()
+        # self.create_apriltag()
 
 
     def set_camera(self):
         self.cameras = []
-        for i in range(4):
+        for i in range(2):
             camera = Camera(
                 prim_path=f"/World/camera_{i+1}",
                 position=np.array([0.0, 0.0, 25.0]),

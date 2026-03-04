@@ -70,18 +70,8 @@ class Simulation(Node):
 
         self.simulation_app.update()
 
-        # action graphs
-        self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-        target_prim_paths = [f"/World/camera_{i}" for i in range(1, 5)]
-        self.tf_graph = self.create_tf_graph(
-            target_prim_paths=target_prim_paths,
-            parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
-        )
-
-        self.simulation_app.update()
-
         # initialize camera
-        for i in range(4):
+        for i in range(2):
             self.initialize_camera(self.task.cameras[i])
         
         self.robot = self.world.scene.get_object("fr5")
@@ -98,9 +88,17 @@ class Simulation(Node):
         # need to initialize physics getting any articulation etc.
         self.world.initialize_physics()
 
-        self.camera_data_graph = self.create_ros_camera_graph(
-            camera_path="/World/camera_1", camera_name="camera_1")
+        # action graphs
+        camera_paths = ["/World/camera_1", "/World/camera_2"]
+        camera_names = ["camera_1", "camera_2"]
+        self.camera_data_graph = self.create_ros_camera_graph(camera_paths=camera_paths, camera_names=camera_names)
         self.og.Controller.evaluate_sync(self.camera_data_graph)
+        self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
+        target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
+        self.tf_graph = self.create_tf_graph(
+            target_prim_paths=target_prim_paths,
+            parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
+        )
 
         self.arm_joint_names = ["j1", "j2", "j3", "j4", "j5", "j6"]
         self.arm_joint_ids = []
@@ -304,31 +302,33 @@ class Simulation(Node):
             
             self.world = self.World(stage_units_in_meters=1.0)
             self.world.add_task(self.task)
-
             self.world.reset()
-            self.world.initialize_physics()
-
+            
             self.simulation_app.update() 
 
-            # action graphs
-            self.camera_data_graph = self.create_ros_camera_graph(camera_path="/World/camera_1", camera_name="camera_1")
-            self.og.Controller.evaluate_sync(self.camera_data_graph)
-            self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-            target_prim_paths = [f"/World/camera_{i}" for i in range(1, 5)]
-            self.tf_graph = self.create_tf_graph(
-                target_prim_paths=target_prim_paths,
-                parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
-            )
-            
-            self.simulation_app.update()
-
             # initialize camera
-            for i in range(4):
+            for i in range(2):
                 self.initialize_camera(self.task.cameras[i])
 
             self.robot = self.world.scene.get_object("fr5")
             
             self.robot.post_reset()
+
+            self.simulation_app.update()
+
+            self.world.initialize_physics()
+
+            # action graphs
+            camera_paths = ["/World/camera_1", "/World/camera_2"]
+            camera_names = ["camera_1", "camera_2"]
+            self.camera_data_graph = self.create_ros_camera_graph(camera_paths=camera_paths, camera_names=camera_names)
+            self.og.Controller.evaluate_sync(self.camera_data_graph)
+            self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
+            target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
+            self.tf_graph = self.create_tf_graph(
+                target_prim_paths=target_prim_paths,
+                parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
+            )
 
             self.robot.set_joint_positions(
                 positions=self._saved_robot_joint_positions,
