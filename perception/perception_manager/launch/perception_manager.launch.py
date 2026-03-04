@@ -34,7 +34,8 @@ def generate_launch_description():
         name='perception_manager',
         output='screen',
         parameters=[
-            config_file_path # YAML 파일을 파라미터로 로드
+            config_file_path,
+            {"publish_tf": False}
         ]
     )
 

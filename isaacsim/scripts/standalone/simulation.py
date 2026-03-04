@@ -6,6 +6,7 @@ from isaacsim import SimulationApp
 from sensor_msgs.msg import JointState, CameraInfo, Image
 from std_srvs.srv import SetBool
 from std_msgs.msg import Float32
+from geometry_msgs.msg import Wrench
 from tamp_interfaces.srv import ToolChange, GetRobotInfo, GetToolInfo
 import time
 import sys, os
@@ -94,7 +95,7 @@ class Simulation(Node):
         self.camera_data_graph = self.create_ros_camera_graph(camera_paths=camera_paths, camera_names=camera_names)
         self.og.Controller.evaluate_sync(self.camera_data_graph)
         self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-        target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
+        target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)] # + ["/World/beaker", "/World/flask"]
         self.tf_graph = self.create_tf_graph(
             target_prim_paths=target_prim_paths,
             parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
@@ -120,10 +121,9 @@ class Simulation(Node):
         self.get_tool_info_srv = self.create_service(GetToolInfo, "get_tool_info", self.get_tool_info_cb)
         self.tool_change_srv = self.create_service(ToolChange, "tool_change", self.tool_change_cb)
 
-        self.scale_pub = self.create_publisher(Float32, "scale", 10)
+        self.ft_pub = self.create_publisher(Wrench, "raw_ft_data", 10)
+        self.scale_pub = self.create_publisher(Float32, "raw_scale_data", 10)
         self.scale_start_angle = None
-        self.scale_value = 0.0
-        self.scale_gain = 50.0
 
         self.step = 0
 
@@ -160,43 +160,20 @@ class Simulation(Node):
             
             if self.robot and self.robot.is_valid():
 
-                joint_positions = self.robot.get_joint_positions()
-                wrist_angle = joint_positions[self.arm_joint_ids[5]]
-
+                # robot control command
                 self.og.Controller.set(self.og.Controller.attribute("/ActionGraph/RobotControl/OnImpulseEvent.state:enableImpulse"), True)
-
-                self.compute_and_publish_scale(wrist_angle)
-
-                # obs = self.task.get_observations()
-                # info = obs["camera_1"]["info"]
-
-                # # ROS2 CameraInfo 메시지 생성 및 필드 채우기
-                # msg = CameraInfo()
-                # msg.header.stamp = self.node.get_clock().now().to_msg() # 시뮬레이션 타임 혹은 시스템 타임
-                # msg.header.frame_id = "camera_1"
                 
-                # msg.height = int(info.height)
-                # msg.width = int(info.width)
-                # msg.distortion_model = info.distortion_model
-                
-                # # D, K, R, P 행렬 매핑 (numpy array를 list로 변환하여 입력)
-                # msg.d = info.d.tolist() if hasattr(info.d, "tolist") else list(info.d)
-                # msg.k = info.k.flatten().tolist() if hasattr(info.k, "flatten") else list(info.k)
-                # msg.r = info.r.flatten().tolist() if hasattr(info.r, "flatten") else list(info.r)
-                # msg.p = info.p.flatten().tolist() if hasattr(info.p, "flatten") else list(info.p)
-                
-                # # binning 및 ROI 초기화 (기본값)
-                # msg.binning_x = 0
-                # msg.binning_y = 0
-                # msg.roi.x_offset = 0
-                # msg.roi.y_offset = 0
-                # msg.roi.height = 0
-                # msg.roi.width = 0
-                # msg.roi.do_rectify = False
+                # compute observations
+                observations = self.world.get_observations()
 
-                # # 정의하신 퍼블리셔를 통해 메시지 송출
-                # self.camera_info_pub.publish(msg)
-
+                ft_data = observations["ft_data"]
+                scale_data = observations["scale_data"]
+                
+                # publish
+                if ft_data is not None:
+                    self.publish_ft(ft_data)
+                if scale_data is not None:
+                    self.publish_scale(scale_data)
 
             self.step += 1
 
@@ -204,35 +181,22 @@ class Simulation(Node):
             self.get_logger().info("Quit ROS2 Node")
             rclpy.try_shutdown()
 
-    def compute_and_publish_scale(self, wrist_angle: float):
-
-        try:
-            observations = self.world.get_observations()
-            beaker_start_pos = self.task.default_positions["beaker"]
-            beaker_pos = observations["current_positions"]["beaker"]
-            beaker_moved_distance = np.linalg.norm(np.array(beaker_pos) - np.array(beaker_start_pos))
-
-        except Exception as e:
-            self.get_logger().warn(f"Failed to compute scale: {e}")
-            return
-
-        if beaker_moved_distance <= 0.022:
-            self.scale_value = 0.0
-            self.max_pour_angle = None
-            return
-
-        if self.max_pour_angle is None:
-            self.max_pour_angle = wrist_angle
-            return
-
-        if wrist_angle > self.max_pour_angle:
-            delta_angle = wrist_angle - self.max_pour_angle
-            flow = delta_angle * self.scale_gain
-            self.scale_value += max(0.0, flow)
-            self.max_pour_angle = wrist_angle
+    def publish_ft(self, ft_data: np.ndarray):
         
+        msg = Wrench()
+        msg.force.x = float(ft_data[0])
+        msg.force.y = float(ft_data[1])
+        msg.force.z = float(ft_data[2])
+        msg.torque.x = float(ft_data[3])
+        msg.torque.y = float(ft_data[4])
+        msg.torque.z = float(ft_data[5])
+        
+        self.ft_pub.publish(msg)
+
+    def publish_scale(self, scale_data: float):
+
         msg = Float32()
-        msg.data = float(self.scale_value)
+        msg.data = float(scale_data)
         self.scale_pub.publish(msg)
 
     def arm_commands_cb(self, msg):

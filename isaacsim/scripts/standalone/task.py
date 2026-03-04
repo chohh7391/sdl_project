@@ -67,6 +67,9 @@ class Task(ABC, BaseTask):
             "box_goal": np.array([1.0, 0.0, 0.0, 0.0]),
         }
 
+        self.scale_data = 0.0
+        self.scale_gain = 50.0
+
         return
     
     def set_up_scene(self, scene: Scene) -> None:
@@ -202,6 +205,7 @@ class Task(ABC, BaseTask):
             raise ValueError("Available Grippers are only 'empty', 'ag95', 'vgc10', 'dh3'")
 
         self.current_tool = desired_tool
+        self._ee_joint_idx = self._robot.get_dof_index("j6")
         
         self.scene.add(self._robot)
 
@@ -558,6 +562,14 @@ class Task(ABC, BaseTask):
         gripper_base_ag95_pos, gripper_base_ag95_ori = self.gripper_base_ag95.get_world_pose()
         gripper_base_vgc10_pos, gripper_base_vgc10_ori = self.gripper_base_vgc10.get_world_pose()
         gripper_base_dh3_pos, gripper_base_dh3_ori = self.gripper_base_dh3.get_world_pose()
+
+        
+        ft_data = self._robot.get_measured_joint_forces(self._ee_joint_idx)[0]
+        scale_data = self.compute_scale_data(
+            wrist_angle=self._robot.get_joint_positions(self._ee_joint_idx),
+            default_beaker_position=self.default_positions["beaker"],
+            current_beaker_position=beaker_pos,
+        )
         
         # observation dict
         observations = {
@@ -593,7 +605,41 @@ class Task(ABC, BaseTask):
                 "vgc10": gripper_base_vgc10_ori.tolist(),
                 "dh3": gripper_base_dh3_ori.tolist(),
             },
+            "ft_data": ft_data,
+            "scale_data": scale_data if scale_data is not None else 0.0,
         }
 
         return observations
     
+    def compute_scale_data(self, wrist_angle, default_beaker_position, current_beaker_position):
+        try:
+            beaker_start_pos = np.array(default_beaker_position)
+            beaker_pos = np.array(current_beaker_position)
+            beaker_moved_distance = np.linalg.norm(beaker_pos - beaker_start_pos)
+        except Exception as e:
+            print(f"[Warning] compute_scale_data error: {e}")
+            return self.scale_data # 에러 시에도 기존 값 반환 보장
+
+        if beaker_moved_distance <= 0.022:
+            self.scale_data = 0.0
+            self.max_pour_angle = None
+            return self.scale_data # None 대신 self.scale_data (0.0) 반환
+            
+        if self.max_pour_angle is None:
+            # wrist_angle이 배열일 경우 스칼라 값으로 안전하게 추출 (로봇 설정에 따라 인덱스가 다를 수 있음)
+            if isinstance(wrist_angle, (np.ndarray, list)):
+                 self.max_pour_angle = float(wrist_angle[0]) 
+            else:
+                 self.max_pour_angle = float(wrist_angle)
+            return self.scale_data # None 대신 self.scale_data 반환
+        
+        # 각도 비교 시에도 스칼라 변환 확인
+        current_wrist_angle = float(wrist_angle[0]) if isinstance(wrist_angle, (np.ndarray, list)) else float(wrist_angle)
+
+        if current_wrist_angle > self.max_pour_angle:
+            delta_angle = current_wrist_angle - self.max_pour_angle
+            flow = delta_angle * self.scale_gain
+            self.scale_data += max(0.0, flow)
+            self.max_pour_angle = current_wrist_angle
+        
+        return self.scale_data
