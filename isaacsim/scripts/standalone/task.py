@@ -14,6 +14,7 @@ from isaacsim.sensors.camera import Camera
 from isaacsim.core.api.objects import FixedCuboid, DynamicCylinder, VisualCuboid
 from isaacsim.core.api.materials.omni_pbr import OmniPBR
 from isaacsim.ros2.bridge import read_camera_info
+import isaacsim.core.utils.numpy.rotations as rot_utils
 
 from fr5 import FR5
 
@@ -36,9 +37,13 @@ class Task(ABC, BaseTask):
         self._robot_name = robot_name
 
         self.camera_info = CameraInfo()
-        self.camera_eyes = [
-            np.array([1.0, 1.0, 1.0]),
-            np.array([-1.0, -1.0, 1.0]),
+        self.camera_positions = [
+            np.array([0.375, 0.0, 1.4]),
+            np.array([-0.375, 0.0, 1.4]),
+        ]
+        self.camera_orientations = [
+            rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True),
+            rot_utils.euler_angles_to_quats(np.array([0, 90, 180]), degrees=True),
         ]
 
         self.current_positions = None
@@ -50,8 +55,8 @@ class Task(ABC, BaseTask):
             "table": np.array([0.0, 0.0, -0.01]),
             "stirrer": np.array([-0.04, 0.45, 0.038]),
             "stirrer_visual": np.array([0.01, 0.45, 0.045]),
-            "beaker": np.array([0.51, -0.17, 0.015]),
-            "flask": np.array([0.43, -0.086, 0.085]), 
+            "beaker": np.array([0.51, -0.17, 0.01]),
+            "flask": np.array([0.43, -0.086, 0.05]), 
             "magnet": np.array([0.3, 0.416, 0.015]),
             "box" : np.array([0.35, -0.5, 0.06]),
             "box_goal" : np.array([-0.036, -0.52, 0.006]),
@@ -389,21 +394,34 @@ class Task(ABC, BaseTask):
         # self.create_apriltag()
 
 
+    # def set_camera(self):
+    #     self.cameras = []
+    #     for i in range(2):
+    #         camera = Camera(
+    #             prim_path=f"/World/camera_{i+1}",
+    #             position=np.array([0.0, 0.0, 25.0]),
+    #             frequency=30,
+    #             resolution=(self.camera_info.width, self.camera_info.height),
+    #         )
+            
+    #         set_world_pose_from_view(
+    #             camera=camera,
+    #             eye=self.camera_eyes[i],
+    #             target=self.camera_targets[i],
+    #         )
+    #         self.cameras.append(camera)
+
     def set_camera(self):
         self.cameras = []
         for i in range(2):
             camera = Camera(
                 prim_path=f"/World/camera_{i+1}",
-                position=np.array([0.0, 0.0, 25.0]),
                 frequency=30,
                 resolution=(self.camera_info.width, self.camera_info.height),
+                position=self.camera_positions[i],
+                orientation=self.camera_orientations[i],
             )
             
-            set_world_pose_from_view(
-                camera=camera,
-                eye=self.camera_eyes[i],
-                target=np.array([0, 0, 0])
-            )
             self.cameras.append(camera)
 
 
