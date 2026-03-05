@@ -210,7 +210,6 @@ class Task(ABC, BaseTask):
             raise ValueError("Available Grippers are only 'empty', 'ag95', 'vgc10', 'dh3'")
 
         self.current_tool = desired_tool
-        self._ee_joint_idx = self._robot.get_dof_index("j6")
         
         self.scene.add(self._robot)
 
@@ -391,25 +390,7 @@ class Task(ABC, BaseTask):
         )
 
         self.create_gripper_stand()
-        # self.create_apriltag()
 
-
-    # def set_camera(self):
-    #     self.cameras = []
-    #     for i in range(2):
-    #         camera = Camera(
-    #             prim_path=f"/World/camera_{i+1}",
-    #             position=np.array([0.0, 0.0, 25.0]),
-    #             frequency=30,
-    #             resolution=(self.camera_info.width, self.camera_info.height),
-    #         )
-            
-    #         set_world_pose_from_view(
-    #             camera=camera,
-    #             eye=self.camera_eyes[i],
-    #             target=self.camera_targets[i],
-    #         )
-    #         self.cameras.append(camera)
 
     def set_camera(self):
         self.cameras = []
@@ -497,74 +478,11 @@ class Task(ABC, BaseTask):
                 visual_material=aluminum_material,
             )
         )
-
-    def create_apriltag(self):
-        prim_name = "apriltag_0"
-        prim_path = f"/World/apriltag/{prim_name}"
-        usd_path = os.path.join(ASSET_PATH, "apriltag", f"{prim_name}.usd")
-        add_reference_to_stage(
-            usd_path=usd_path,
-            prim_path=prim_path
-        )
-        self.backgound = SingleXFormPrim(
-            prim_path=prim_path,
-            name="prim_name"
-        )
-        self.backgound.set_world_pose(
-            position=[0.4, 0.4, 0.01],
-            orientation=[1, 0, 0, 0],
-        )
-
-        prim_name = "apriltag_1"
-        prim_path = f"/World/apriltag/{prim_name}"
-        usd_path = os.path.join(ASSET_PATH, "apriltag", f"{prim_name}.usd")
-        add_reference_to_stage(
-            usd_path=usd_path,
-            prim_path=prim_path
-        )
-        self.backgound = SingleXFormPrim(
-            prim_path=prim_path,
-            name="prim_name"
-        )
-        self.backgound.set_world_pose(
-            position=[-0.4, -0.4, 0.01],
-            orientation=[1, 0, 0, 0],
-        )
-
-        prim_name = "apriltag_2"
-        prim_path = f"/World/apriltag/{prim_name}"
-        usd_path = os.path.join(ASSET_PATH, "apriltag", f"{prim_name}.usd")
-        add_reference_to_stage(
-            usd_path=usd_path,
-            prim_path=prim_path
-        )
-        self.backgound = SingleXFormPrim(
-            prim_path=prim_path,
-            name="prim_name"
-        )
-        self.backgound.set_world_pose(
-            position=[-0.4, 0.4, 0.01],
-            orientation=[1, 0, 0, 0],
-        )
-
-        prim_name = "apriltag_3"
-        prim_path = f"/World/apriltag/{prim_name}"
-        usd_path = os.path.join(ASSET_PATH, "apriltag", f"{prim_name}.usd")
-        add_reference_to_stage(
-            usd_path=usd_path,
-            prim_path=prim_path
-        )
-        self.backgound = SingleXFormPrim(
-            prim_path=prim_path,
-            name="prim_name"
-        )
-        self.backgound.set_world_pose(
-            position=[0.4, -0.4, 0.01],
-            orientation=[1, 0, 0, 0],
-        )
         
 
     def get_observations(self) -> Dict:
+
+        self._ee_joint_idx = self._robot.get_dof_index("j6")
         
         # object pose
         table_pos, table_ori = self.table.get_world_pose()
@@ -581,7 +499,6 @@ class Task(ABC, BaseTask):
         gripper_base_vgc10_pos, gripper_base_vgc10_ori = self.gripper_base_vgc10.get_world_pose()
         gripper_base_dh3_pos, gripper_base_dh3_ori = self.gripper_base_dh3.get_world_pose()
 
-        
         ft_data = self._robot.get_measured_joint_forces(self._ee_joint_idx)[0]
         scale_data = self.compute_scale_data(
             wrist_angle=self._robot.get_joint_positions(self._ee_joint_idx),
