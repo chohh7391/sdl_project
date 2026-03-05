@@ -293,7 +293,7 @@ class TAMPServer(Node):
 
         self.scale = 0.0
         self.scale_sub = self.create_subscription(
-            Float32, "scale",
+            Float32, "raw_scale_data",
             self.scale_cb, 10
         )
 

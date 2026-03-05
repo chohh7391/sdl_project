@@ -22,6 +22,8 @@ PROJECT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "
 sys.path.append(os.path.join(PROJECT_PATH, "LLM"))
 # Llama import
 from llama.script.tool_selector_action_reasoner.tool_llm import ToolLLM
+from tf2_ros import Buffer, TransformListener
+from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
 
 
 class TAMPClient(Node):
@@ -38,6 +40,9 @@ class TAMPClient(Node):
             ]
         )
 
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         # Service Clients
         self.plan_client = self.create_client(Plan, 'tamp_plan')
         self.execute_client = self.create_client(Execute, 'plan_execute')
@@ -50,8 +55,6 @@ class TAMPClient(Node):
         self.get_robot_info_client = self.create_client(GetRobotInfo, "get_robot_info")
         self.get_tool_info_client = self.create_client(GetToolInfo, "get_tool_info")
 
-        self.get_entity_state_client = self.create_client(GetEntityState, 'get_entity_state')
-
         while (
             not self.plan_client.wait_for_service(timeout_sec=1.0)
             or not self.execute_client.wait_for_service(timeout_sec=1.0)
@@ -62,7 +65,6 @@ class TAMPClient(Node):
             or not self.move_to_target_client.wait_for_service(timeout_sec=1.0)
             or not self.get_tool_info_client.wait_for_service(timeout_sec=1.0)
             or not self.get_robot_info_client.wait_for_service(timeout_sec=1.0)
-            or not self.get_entity_state_client.wait_for_service(timeout_sec=1.0)
         ):
             self.get_logger().info('service not available, waiting again...')
 
@@ -315,38 +317,103 @@ class XDLRunner(TAMPClient):
     # =======================================================================
     # 물체 위치 조회 및 5cm 이내 충돌/접근 감지 함수 (2차원 평면 기준)
     # =======================================================================
+    # GT Based
+    # def check_entity_distances(self, step_attrs):
+    #     self.get_logger().info("🔍 [Entity Position & 2D Distance Check]")
+
+    #     is_space_constrained = False
+
+    #     # 1. 고정 엔티티 리스트
+    #     hardcoded_entities = ["beaker", "flask", "magnet", "stirrer", "box", "box_goal"]
+        
+    #     # 2. 이번 step과 관련된 타겟 엔티티 파악
+    #     target_entities = []
+    #     for key, entity_name in step_attrs.items():
+    #         if "vessel" in key or "object" in key or "place" in key:
+    #             target_entities.append(entity_name)
+
+    #     # 3. 위치를 조회할 전체 엔티티 (중복 제거)
+    #     all_entities_to_query = list(set(hardcoded_entities + target_entities))
+    #     positions = {}
+
+    #     # 4. 각 엔티티의 현재 좌표 조회
+    #     for entity_name in all_entities_to_query:
+    #         req = GetEntityState.Request()
+    #         req.entity = "/World/" + entity_name
+    #         res = self._call_service_and_wait(self.get_entity_state_client, req)
+            
+    #         if res and res.result.result == 1:
+    #             pos = res.state.pose.position
+    #             positions[entity_name] = pos
+    #             self.get_logger().info(
+    #                 f"  - {entity_name:10s} : x={pos.x:5.3f}, y={pos.y:5.3f}, z={pos.z:5.3f}"
+    #             )
+    #         else:
+    #             self.get_logger().warn(f"  - {entity_name:10s} : 위치 조회 실패")
+
+    #     # 5. 타겟 엔티티와 나머지 엔티티 사이의 2차원 거리 계산 (5cm 미만 감지)
+    #     for target in target_entities:
+    #         if target not in positions:
+    #             continue
+            
+    #         p1 = positions[target]
+            
+    #         # 고정 엔티티들을 순회하며 거리 검사
+    #         for other in hardcoded_entities:
+    #             # 자기 자신과의 비교는 제외
+    #             if target == other or other not in positions:
+    #                 continue
+                
+    #             p2 = positions[other]
+                
+    #             # ★ 3차원이 아닌 2차원(x, y 평면) 거리만 계산 ★
+    #             dist_2d = math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
+                
+    #             # 5cm (0.05m) 미만일 경우 출력
+    #             if dist_2d < 0.2:
+    #                 self.get_logger().warn(
+    #                     f"  ⚠️ [공간 협소 감지] '{target}' 주변 5cm 이내(평면 기준)에 '{other}'(이)가 있습니다! "
+    #                     f"(2D 거리: {dist_2d*100:.1f}cm)"
+    #                 )
+    #                 is_space_constrained = True
+        
+    #     self.get_logger().info("-" * 40)
+
+    #     return is_space_constrained
+    
+    # QR Based
     def check_entity_distances(self, step_attrs):
-        self.get_logger().info("🔍 [Entity Position & 2D Distance Check]")
+        self.get_logger().info("🔍 [Entity Position & 2D Distance Check via TF]")
 
         is_space_constrained = False
 
-        # 1. 고정 엔티티 리스트
         hardcoded_entities = ["beaker", "flask", "magnet", "stirrer", "box", "box_goal"]
         
-        # 2. 이번 step과 관련된 타겟 엔티티 파악
         target_entities = []
         for key, entity_name in step_attrs.items():
             if "vessel" in key or "object" in key or "place" in key:
                 target_entities.append(entity_name)
 
-        # 3. 위치를 조회할 전체 엔티티 (중복 제거)
         all_entities_to_query = list(set(hardcoded_entities + target_entities))
         positions = {}
 
-        # 4. 각 엔티티의 현재 좌표 조회
+        # 4. TF를 통해 각 엔티티의 현재 좌표 조회
         for entity_name in all_entities_to_query:
-            req = GetEntityState.Request()
-            req.entity = "/World/" + entity_name
-            res = self._call_service_and_wait(self.get_entity_state_client, req)
-            
-            if res and res.result.result == 1:
-                pos = res.state.pose.position
+            try:
+                # base_link 프레임을 기준으로 각 엔티티의 위치를 가져옵니다. (최대 0.5초 대기)
+                t = self.tf_buffer.lookup_transform(
+                    'base_link', 
+                    entity_name, 
+                    rclpy.time.Time(),
+                    timeout=rclpy.duration.Duration(seconds=0.5)
+                )
+                pos = t.transform.translation
                 positions[entity_name] = pos
                 self.get_logger().info(
                     f"  - {entity_name:10s} : x={pos.x:5.3f}, y={pos.y:5.3f}, z={pos.z:5.3f}"
                 )
-            else:
-                self.get_logger().warn(f"  - {entity_name:10s} : 위치 조회 실패")
+            except (LookupException, ConnectivityException, ExtrapolationException) as ex:
+                self.get_logger().warn(f"  - {entity_name:10s} : TF 위치 조회 실패 ({ex})")
 
         # 5. 타겟 엔티티와 나머지 엔티티 사이의 2차원 거리 계산 (5cm 미만 감지)
         for target in target_entities:
@@ -355,21 +422,18 @@ class XDLRunner(TAMPClient):
             
             p1 = positions[target]
             
-            # 고정 엔티티들을 순회하며 거리 검사
             for other in hardcoded_entities:
-                # 자기 자신과의 비교는 제외
                 if target == other or other not in positions:
                     continue
                 
                 p2 = positions[other]
                 
-                # ★ 3차원이 아닌 2차원(x, y 평면) 거리만 계산 ★
+                # 2차원(x, y 평면) 거리 계산
                 dist_2d = math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
                 
-                # 5cm (0.05m) 미만일 경우 출력
-                if dist_2d < 0.2:
+                if dist_2d < 0.2:  # 0.2m (20cm)
                     self.get_logger().warn(
-                        f"  ⚠️ [공간 협소 감지] '{target}' 주변 5cm 이내(평면 기준)에 '{other}'(이)가 있습니다! "
+                        f"  ⚠️ [공간 협소 감지] '{target}' 주변 20cm 이내(평면 기준)에 '{other}'(이)가 있습니다! "
                         f"(2D 거리: {dist_2d*100:.1f}cm)"
                     )
                     is_space_constrained = True

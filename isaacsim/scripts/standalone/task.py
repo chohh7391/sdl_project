@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Dict
+from typing import Dict, List
 import os, sys
 import numpy as np
 
@@ -38,8 +38,8 @@ class Task(ABC, BaseTask):
 
         self.camera_info = CameraInfo()
         self.camera_positions = [
-            np.array([0.375, 0.0, 1.4]),
-            np.array([-0.375, 0.0, 1.4]),
+            np.array([0.45, 0.0, 1.5]),
+            np.array([-0.45, 0.0, 1.5]),
         ]
         self.camera_orientations = [
             rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True),
@@ -501,7 +501,7 @@ class Task(ABC, BaseTask):
 
         ft_data = self._robot.get_measured_joint_forces(self._ee_joint_idx)[0]
         scale_data = self.compute_scale_data(
-            wrist_angle=self._robot.get_joint_positions(self._ee_joint_idx),
+            wrist_angle=self._robot.get_joint_positions(self._ee_joint_idx)[0],
             default_beaker_position=self.default_positions["beaker"],
             current_beaker_position=beaker_pos,
         )
