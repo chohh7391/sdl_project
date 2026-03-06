@@ -112,6 +112,8 @@ ros2 launch isaacsim run_isaacsim.launch.py standalone:=$HOME/sdl_ws/src/sdl_pro
 
 ## Perception Manager
 - Run Perception Manager node
+
+(if you want to use GT Pose data, please change `set_tamp_env_cb` function in `sdl_project/TAMP/tamp/scripts/server/tamp_server.py` and `check_entity_distances` function in `sdl_project/TAMP/tamp/scripts/xdl/tamp_xdl_parser.py`)
 ```bash
 source ~/sdl_ws/install/setup.bash
 ros2 launch perception_manager perception_manager.launch.py
