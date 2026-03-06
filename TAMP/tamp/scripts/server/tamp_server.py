@@ -298,94 +298,8 @@ class TAMPServer(Node):
         )
 
 
-    # Using Tag Data
-    async def set_tamp_env_cb(self, request, response):
-
-        env_name = request.env_name
-        entities = request.entities
-        movables = request.movables
-        statics = request.statics
-        ex_collision = request.ex_collision
-
-        entities_states = {
-            "poses": {},
-            "movables": movables,
-            "statics": statics,
-            "ex_collision": ex_collision,
-        }
-
-        for entity in entities:
-            # 1. Perception Node에서 발행하는 TF를 최우선으로 찾습니다. (예: beaker)
-            target_frame = f"{entity}"
-            
-            try:
-                # TF Buffer에서 베이스 링크 기준 최신 변환값을 가져옵니다.
-                trans = self.tf_buffer.lookup_transform(
-                    'base_link', 
-                    target_frame, 
-                    rclpy.time.Time()
-                )
-                
-                # [꿀팁] 이전 단계에서 발견한 깊이 오차 보정 (Z축 Grounding)
-                # 물체가 비커나 플라스크일 경우 테이블 높이(0.002)로 Z값을 강제 고정하여 파지 안정성을 높입니다.
-                z_value = trans.transform.translation.z
-                if entity in ["beaker", "flask"]:
-                    z_value = 0.002 
-                
-                entity_pose = [
-                    trans.transform.translation.x,
-                    trans.transform.translation.y,
-                    z_value + 0.01,  # 기존의 여유 충돌 값(+0.01) 유지
-                    trans.transform.rotation.w,
-                    trans.transform.rotation.x,
-                    trans.transform.rotation.y,
-                    trans.transform.rotation.z
-                ]
-                entities_states["poses"][entity] = entity_pose
-                self.get_logger().info(f"[{entity}] TF Pose 획득 완료 (Frame: {target_frame})")
-
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                # 2. TF 트리에 없는 정적 물체(table, stirrer 등)는 기존처럼 시뮬레이션 서비스로 획득합니다.
-                self.get_logger().info(f"[{entity}] TF가 없어 Isaac Sim 서비스로 대체합니다.")
-                
-                if not self.get_entity_state_cli.wait_for_service(timeout_sec=1.0):
-                    self.get_logger().warn('GetEntityState service not available, skipping...')
-                    continue
-
-                get_entity_state_request = GetEntityState.Request()
-                get_entity_state_request.entity = "/World/" + entity
-
-                get_entity_state_response = await self.get_entity_state_cli.call_async(get_entity_state_request)
-
-                if get_entity_state_response.result.result == 1:
-                    entity_pose = [
-                        get_entity_state_response.state.pose.position.x,
-                        get_entity_state_response.state.pose.position.y,
-                        get_entity_state_response.state.pose.position.z + 0.01,
-                        get_entity_state_response.state.pose.orientation.w,
-                        get_entity_state_response.state.pose.orientation.x,
-                        get_entity_state_response.state.pose.orientation.y,
-                        get_entity_state_response.state.pose.orientation.z
-                    ]
-                    entities_states["poses"][entity] = entity_pose
-
-        response.success = True
-
-        self.tamp.update_env(
-            name=env_name,
-            poses=entities_states["poses"],
-            movables=entities_states["movables"],
-            statics=entities_states["statics"],
-            ex_collision=entities_states["ex_collision"]
-        )
-
-        return response
-    
-    # # Using GT Data
+    # # Using Tag Data
     # async def set_tamp_env_cb(self, request, response):
-
-    #     while not self.get_entity_state_cli.wait_for_service(timeout_sec=1.0):
-    #         self.get_logger().info('service not available, waiting again...')
 
     #     env_name = request.env_name
     #     entities = request.entities
@@ -401,25 +315,61 @@ class TAMPServer(Node):
     #     }
 
     #     for entity in entities:
-    #         get_entity_state_request = GetEntityState.Request()
-    #         get_entity_state_request.entity = "/World/" + entity
-
-    #         get_entity_state_response = await self.get_entity_state_cli.call_async(get_entity_state_request)
-
-    #         if get_entity_state_response.result.result == 1:
-
-    #             response.success = True
-
+    #         # 1. Perception Node에서 발행하는 TF를 최우선으로 찾습니다. (예: beaker)
+    #         target_frame = f"{entity}"
+            
+    #         try:
+    #             # TF Buffer에서 베이스 링크 기준 최신 변환값을 가져옵니다.
+    #             trans = self.tf_buffer.lookup_transform(
+    #                 'base_link', 
+    #                 target_frame, 
+    #                 rclpy.time.Time()
+    #             )
+                
+    #             # [꿀팁] 이전 단계에서 발견한 깊이 오차 보정 (Z축 Grounding)
+    #             # 물체가 비커나 플라스크일 경우 테이블 높이(0.002)로 Z값을 강제 고정하여 파지 안정성을 높입니다.
+    #             z_value = trans.transform.translation.z
+    #             if entity in ["beaker", "flask"]:
+    #                 z_value = 0.002 
+                
     #             entity_pose = [
-    #                 get_entity_state_response.state.pose.position.x,
-    #                 get_entity_state_response.state.pose.position.y,
-    #                 get_entity_state_response.state.pose.position.z + 0.01,
-    #                 get_entity_state_response.state.pose.orientation.w,
-    #                 get_entity_state_response.state.pose.orientation.x,
-    #                 get_entity_state_response.state.pose.orientation.y,
-    #                 get_entity_state_response.state.pose.orientation.z
+    #                 trans.transform.translation.x,
+    #                 trans.transform.translation.y,
+    #                 z_value + 0.01,  # 기존의 여유 충돌 값(+0.01) 유지
+    #                 trans.transform.rotation.w,
+    #                 trans.transform.rotation.x,
+    #                 trans.transform.rotation.y,
+    #                 trans.transform.rotation.z
     #             ]
     #             entities_states["poses"][entity] = entity_pose
+    #             self.get_logger().info(f"[{entity}] TF Pose 획득 완료 (Frame: {target_frame})")
+
+    #         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+    #             # 2. TF 트리에 없는 정적 물체(table, stirrer 등)는 기존처럼 시뮬레이션 서비스로 획득합니다.
+    #             self.get_logger().info(f"[{entity}] TF가 없어 Isaac Sim 서비스로 대체합니다.")
+                
+    #             if not self.get_entity_state_cli.wait_for_service(timeout_sec=1.0):
+    #                 self.get_logger().warn('GetEntityState service not available, skipping...')
+    #                 continue
+
+    #             get_entity_state_request = GetEntityState.Request()
+    #             get_entity_state_request.entity = "/World/" + entity
+
+    #             get_entity_state_response = await self.get_entity_state_cli.call_async(get_entity_state_request)
+
+    #             if get_entity_state_response.result.result == 1:
+    #                 entity_pose = [
+    #                     get_entity_state_response.state.pose.position.x,
+    #                     get_entity_state_response.state.pose.position.y,
+    #                     get_entity_state_response.state.pose.position.z + 0.01,
+    #                     get_entity_state_response.state.pose.orientation.w,
+    #                     get_entity_state_response.state.pose.orientation.x,
+    #                     get_entity_state_response.state.pose.orientation.y,
+    #                     get_entity_state_response.state.pose.orientation.z
+    #                 ]
+    #                 entities_states["poses"][entity] = entity_pose
+
+    #     response.success = True
 
     #     self.tamp.update_env(
     #         name=env_name,
@@ -430,6 +380,56 @@ class TAMPServer(Node):
     #     )
 
     #     return response
+    
+    # Using GT Data
+    async def set_tamp_env_cb(self, request, response):
+
+        while not self.get_entity_state_cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+
+        env_name = request.env_name
+        entities = request.entities
+        movables = request.movables
+        statics = request.statics
+        ex_collision = request.ex_collision
+
+        entities_states = {
+            "poses": {},
+            "movables": movables,
+            "statics": statics,
+            "ex_collision": ex_collision,
+        }
+
+        for entity in entities:
+            get_entity_state_request = GetEntityState.Request()
+            get_entity_state_request.entity = "/World/" + entity
+
+            get_entity_state_response = await self.get_entity_state_cli.call_async(get_entity_state_request)
+
+            if get_entity_state_response.result.result == 1:
+
+                response.success = True
+
+                entity_pose = [
+                    get_entity_state_response.state.pose.position.x,
+                    get_entity_state_response.state.pose.position.y,
+                    get_entity_state_response.state.pose.position.z + 0.01,
+                    get_entity_state_response.state.pose.orientation.w,
+                    get_entity_state_response.state.pose.orientation.x,
+                    get_entity_state_response.state.pose.orientation.y,
+                    get_entity_state_response.state.pose.orientation.z
+                ]
+                entities_states["poses"][entity] = entity_pose
+
+        self.tamp.update_env(
+            name=env_name,
+            poses=entities_states["poses"],
+            movables=entities_states["movables"],
+            statics=entities_states["statics"],
+            ex_collision=entities_states["ex_collision"]
+        )
+
+        return response
     
     def set_tamp_cfg_cb(self, request, response):
 
