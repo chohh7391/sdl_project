@@ -1,4 +1,4 @@
-#!/home/home/anaconda3/envs/sdl/bin/python
+#!/home/home/miniconda3/envs/sdl/bin/python
 import argparse
 import time
 import xml.etree.ElementTree as ET
@@ -148,7 +148,8 @@ class TAMPClient(Node):
             request.env_name = "move"
             request.entities = [object, "box_goal"]
             request.movables = [object]
-            request.statics = ["table", "stirrer", "beaker", "flask", "box_goal"]
+            base_statics = ["table", "stirrer", "box", "beaker", "flask", "box_goal"]
+            request.statics = [obj for obj in base_statics if obj != object]
             request.ex_collision = ["box_region", "rearrange_region"]
 
         elif tag_name == "rearrange":

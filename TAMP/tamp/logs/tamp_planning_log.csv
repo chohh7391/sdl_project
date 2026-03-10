@@ -1,0 +1,11 @@
+Timestamp,Task Name,Experiment ID,Success,Attempts Needed,Planning Time (s),Particles Satisfying
+2026-03-10 22:36:10,move,N/A,True,0,21.8119,773
+2026-03-10 22:37:56,rearrange,N/A,True,0,45.3878,560
+2026-03-10 22:40:38,rearrange,N/A,True,0,22.1108,590
+2026-03-10 22:42:44,transfer,N/A,True,0,63.9630,4
+2026-03-10 22:46:11,rearrange,N/A,True,0,21.9421,601
+2026-03-10 22:48:09,transfer,N/A,True,0,56.8944,28
+2026-03-10 22:55:50,rearrange,N/A,True,0,22.3318,589
+2026-03-10 23:00:04,transfer,N/A,True,0,191.8855,60
+2026-03-10 23:05:00,rearrange,N/A,True,0,21.8711,621
+2026-03-10 23:07:01,transfer,N/A,True,0,58.9813,39

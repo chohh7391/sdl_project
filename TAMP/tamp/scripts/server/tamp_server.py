@@ -43,6 +43,8 @@ import tf2_ros
 # Llama import
 import os
 os.environ["UNSLOTH_DISABLE_STATISTICS"] = "1"
+import csv
+
 
 class TAMP:
 
@@ -57,6 +59,8 @@ class TAMP:
 
         self.env_manager = TAMPEnvManager()
         self.env = None
+
+        self.current_env_name = "unknown"
 
         setup_logging()
 
@@ -89,6 +93,8 @@ class TAMP:
         statics: List[str],
         ex_collision: List[str]
     ):
+        self.current_env_name = name
+
         self.env_manager.update_entities(
             poses=poses,
             movables=movables,
@@ -110,6 +116,10 @@ class TAMP:
     ):
         self.total_num_satisfying = 0
 
+        start_time = time.time()
+        attempts_used = 0
+        success = False
+
         if self.env is not None:
             for _ in range(self.max_attempts):
                 env = copy.deepcopy(self.env)
@@ -128,9 +138,22 @@ class TAMP:
                     self.total_num_satisfying = 0
 
                 if self.total_num_satisfying > 0:
+                    success = True
                     break
         else:
             raise ValueError("update_env is needed before plan")
+        
+        end_time = time.time()
+        planning_time = end_time - start_time
+
+        # CSV 파일에 결과 로깅
+        self._log_planning_result(
+            task_name=self.current_env_name,
+            experiment_id=experiment_id,
+            success=success,
+            attempts=attempts_used,
+            planning_time=planning_time
+        )
 
         return self.curobo_plan, self.total_num_satisfying
     
@@ -214,6 +237,33 @@ class TAMP:
             return None
     
         return cmd_plan
+    
+    def _log_planning_result(self, task_name, experiment_id, success, attempts, planning_time):
+        """
+        Planning 결과를 CSV 파일로 저장합니다.
+        """
+        log_file = "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/logs/tamp_planning_log.csv"
+        file_exists = os.path.isfile(log_file)
+        
+        # 파일이 없으면 헤더와 함께 생성하고, 있으면 데이터를 덧붙임(append)
+        with open(log_file, mode='a', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["Timestamp", "Task Name", "Experiment ID", "Success", "Attempts Needed", "Planning Time (s)", "Particles Satisfying"])
+            
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            exp_id_str = experiment_id if experiment_id else "N/A"
+            writer.writerow([
+                timestamp, 
+                task_name, 
+                exp_id_str, 
+                success, 
+                attempts, 
+                f"{planning_time:.4f}", 
+                self.total_num_satisfying
+            ])
+        
+        self._log.info(f"Planning log saved to {log_file} (Task: {task_name}, Time: {planning_time:.4f}s)")
 
         
 

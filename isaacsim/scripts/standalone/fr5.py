@@ -23,8 +23,6 @@ from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
 from isaacsim.robot.manipulators.grippers.parallel_gripper import ParallelGripper
 from isaacsim.robot.manipulators.grippers.surface_gripper import SurfaceGripper
 
-from gripper import SlowParallelGripper
-
 
 class FR5(Robot):
 

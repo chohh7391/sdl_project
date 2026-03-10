@@ -8,6 +8,7 @@ from tamp_interfaces.srv import (
     Plan, Execute, SetTampEnv, SetTampCfg, ToolChange, MoveToTarget, MoveToTargetJs, GetRobotInfo, GetToolInfo
 )
 from std_srvs.srv import SetBool
+from simulation_interfaces.srv import GetEntityState
 import time
 
 
@@ -55,6 +56,7 @@ class ControlSuiteShell(cmd.Cmd):
         self.move_to_target_js_client = self.node.create_client(MoveToTargetJs, "move_to_target_js")
         self.get_robot_info_client = self.node.create_client(GetRobotInfo, "get_robot_info")
         self.get_tool_info_client = self.node.create_client(GetToolInfo, "get_tool_info")
+        self.get_entity_state_client = self.node.create_client(GetEntityState, "get_entity_state")
 
         while (
             not self.plan_client.wait_for_service(timeout_sec=1.0) and 
@@ -66,7 +68,8 @@ class ControlSuiteShell(cmd.Cmd):
             not self.move_to_target_client.wait_for_service(timeout_sec=1.0) and 
             not self.get_tool_info_client.wait_for_service(timeout_sec=1.0) and
             not self.get_robot_info_client.wait_for_service(timeout_sec=1.0) and 
-            not self.get_tool_info_client.wait_for_service(timeout_sec=1.0) 
+            not self.get_tool_info_client.wait_for_service(timeout_sec=1.0) and
+            not self.get_entity_state_client.wait_for_service(timeout_sec=1.0)
         ):
             self.get_logger().info('service not available, waiting again...')
 
@@ -281,6 +284,25 @@ class ControlSuiteShell(cmd.Cmd):
             self.node.get_logger().info(f"Service call successful, result: {response.success}")
         else:
             self.node.get_logger().warn("Service call failed")
+
+    def do_get_entity_pose(self, arg):
+
+        request = GetEntityState.Request()
+        request.entity = "/World/" + str(arg)
+        response = self._call_service_and_wait(self.get_entity_state_client, request)
+
+        if response.result.result == 1:
+            entity_pose = [
+                response.state.pose.position.x,
+                response.state.pose.position.y,
+                response.state.pose.position.z,
+                response.state.pose.orientation.w,
+                response.state.pose.orientation.x,
+                response.state.pose.orientation.y,
+                response.state.pose.orientation.z
+            ]
+            print(f"position(xyz): ({entity_pose[0]:3f}, {entity_pose[1]:3f}, {entity_pose[2]:3f})")
+            print(f"orientation(wxyz): ({entity_pose[3]:3f}, {entity_pose[4]:3f}, {entity_pose[5]:3f}, {entity_pose[6]:3f})")
 
 
     ##############################################################################
