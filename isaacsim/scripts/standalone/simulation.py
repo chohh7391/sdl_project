@@ -220,19 +220,28 @@ class Simulation(Node):
         
         if is_close:
             if gripper == "dh3":
-                for _ in range(16):
-                    self.robot.gripper.close()
-                    self.world.step(render=True)
+                num_repeat = 16
+            elif gripper == "ag95":
+                num_repeat = 16
             else:
+                num_repeat = 16
+
+            for _ in range(num_repeat):
                 self.robot.gripper.close()
+                self.world.step(render=True)
+            
             response.message = "close gripper"
+            
         else:
             if gripper == "dh3":
-                for _ in range(3):
-                    self.robot.gripper.open()
-                    self.world.step(render=True)
+                num_repeat = 16 # 3
             else:
+                num_repeat = 16
+
+            for _ in range(num_repeat):
                 self.robot.gripper.open()
+                self.world.step(render=True)
+
             response.message = "open gripper"
 
         response.success = True

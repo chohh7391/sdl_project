@@ -139,7 +139,7 @@ def create_hollow_flask(prim_path, usd_path, position, orientation):
     
     UsdPhysics.RigidBodyAPI.Apply(beaker_xform.GetPrim())
     mass_api = UsdPhysics.MassAPI.Apply(beaker_xform.GetPrim())
-    mass_api.CreateMassAttr(0.1) 
+    mass_api.CreateMassAttr(0.1)
 
     # ---------------------------------------------------------
     

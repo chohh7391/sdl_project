@@ -149,7 +149,7 @@ class Task(ABC, BaseTask):
                 use_mimic_joints=True,
                 gripper_open_position=np.array([0.0]),
                 gripper_closed_position=np.array([0.6524]),
-                deltas = np.array([-0.4]) / get_stage_units(),
+                deltas = np.array([-0.4/16]) / get_stage_units(),
             )
             self._robot.joints_default_state = np.array([
                 0.0, -1.05, -2.18, -1.57, 1.57, 0.0, # Arm joint position
@@ -198,7 +198,7 @@ class Task(ABC, BaseTask):
                 use_mimic_joints=True,
                 gripper_open_position=np.array([0.0]),
                 gripper_closed_position=np.array([1.16]),
-                deltas = np.array([-0.2]) / get_stage_units() 
+                deltas = np.array([-0.2]) / get_stage_units()
             )
             self._robot.joints_default_state = np.array([
                 0.0, -1.05, -2.18, -1.57, 1.57, 0.0, # Arm joint position

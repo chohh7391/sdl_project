@@ -123,7 +123,6 @@ ros2 launch perception_manager perception_manager.launch.py
 
 - Run TAMP Server
 ```bash
-source /opt/ros/humble/setup.bash
 source ~/sdl_ws/install/local_setup.bash
 conda activate sdl
 export SYSTEM_LIBSTDCXX_PATH="/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
@@ -135,6 +134,7 @@ LD_PRELOAD="${SYSTEM_LIBSTDCXX_PATH}" ros2 run tamp tamp_server.py
 
 - Run TAMP with Xdl Parser
 ```bash
+source ~/sdl_ws/install/local_setup.bash
 ros2 run tamp tamp_xdl_parser.py
 ```
 

@@ -8,7 +8,7 @@ from rclpy.duration import Duration as RclpyDuration
 from tamp_interfaces.msg import PlanStep
 from tamp_interfaces.srv import Plan, Execute, SetTampEnv, MoveToTarget, MoveToTargetJs, SetTampCfg
 from builtin_interfaces.msg import Duration
-from simulation_interfaces.srv import GetEntityState
+from simulation_interfaces.srv import GetEntityState, SetSimulationState
 from std_srvs.srv import SetBool
 
 from rclpy.executors import MultiThreadedExecutor
@@ -242,7 +242,7 @@ class TAMP:
         """
         Planning 결과를 CSV 파일로 저장합니다.
         """
-        log_file = "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/logs/tamp_planning_log.csv"
+        log_file = "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/logs/move/flask/tamp_planning_log.csv"
         file_exists = os.path.isfile(log_file)
         
         # 파일이 없으면 헤더와 함께 생성하고, 있으면 데이터를 덧붙임(append)
@@ -293,6 +293,7 @@ class TAMPServer(Node):
         # commands
         self.arm_commands_publisher = self.create_publisher(JointState, "isaac_arm_commands", 10)
         self.gripper_commands_cli = self.create_client(SetBool, "isaac_gripper_commands", callback_group=self.reentrant_group)
+        self.set_simulation_state_cli = self.create_client(SetSimulationState, "set_simulation_state", callback_group=self.reentrant_group)
 
         # TF
         self.tf_buffer = tf2_ros.Buffer()
@@ -537,6 +538,15 @@ class TAMPServer(Node):
 
     def tamp_plan_cb(self, request, response):
 
+        pause_req = SetSimulationState.Request()
+        pause_req.state.state = 2 # pause
+
+        if not self.set_simulation_state_cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().error("Simulation Pause Failed")
+            return
+
+        pause_res = self.set_simulation_state_cli.call(pause_req)
+
         q_init = self.joint_states.position[:6].tolist()  # num_dof = 6
 
         try:
@@ -607,6 +617,15 @@ class TAMPServer(Node):
         return processed_plan
     
     def execute_plan_cb(self, request, response):
+
+        start_req = SetSimulationState.Request()
+        start_req.state.state = 1 # play
+
+        if not self.set_simulation_state_cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().error("Simulation Pause Failed")
+            return
+
+        self.set_simulation_state_cli.call(start_req)
 
         if not self.plan_to_execute or len(self.plan_to_execute) == 0:
             self.get_logger().warn("No plan to execute.")

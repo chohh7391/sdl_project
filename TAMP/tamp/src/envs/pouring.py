@@ -20,7 +20,7 @@ def load_Transfer_env(
     # entities["pour_region"].pose[2] = 0.18
     entities["pour_region"].pose = [entities["pour_region"].pose[0], entities["pour_region"].pose[1], 0.18, *unit_quat]
     # entities["pour_region"].pose = [0.3, 0.2, 0.16, *unit_quat]
-    entities["goal_region"].pose = [0.35, -0.35, 0.015, *unit_quat] 
+    entities["goal_region"].pose = [0.35, -0.35, 0.015, *unit_quat]
     # entities["goal_region"].pose = [0.51, -0.17, 0.015, *unit_quat]
     # "beaker": np.array([0.51, -0.17, 0.015]),
 
