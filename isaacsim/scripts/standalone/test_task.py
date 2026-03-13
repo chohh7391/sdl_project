@@ -10,18 +10,15 @@ from isaacsim.core.utils.prims import is_prim_path_valid
 from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
 from isaacsim.core.utils.string import find_unique_string_name
 from isaacsim.storage.native import get_assets_root_path
-from isaacsim.sensors.camera import Camera
 from isaacsim.core.api.objects import FixedCuboid, DynamicCylinder, VisualCuboid
 from isaacsim.core.api.materials.omni_pbr import OmniPBR
-from isaacsim.ros2.bridge import read_camera_info
 import isaacsim.core.utils.numpy.rotations as rot_utils
-from isaacsim.core.prims import SingleRigidPrim
+from isaacsim.core.api.objects import DynamicCuboid
 
 from fr5 import FR5
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
-from object import create_hybrid_beaker, create_hybrid_box, create_hollow_flask, create_single_rigid_prim_from_usd
-from camera import CameraInfo, set_world_pose_from_view
+from object import create_hybrid_beaker, create_hybrid_box, create_hollow_flask
 
 ASSET_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets")
 
@@ -37,16 +34,6 @@ class Task(ABC, BaseTask):
         self._robot_prim_path = robot_prim_path
         self._robot_name = robot_name
 
-        self.camera_info = CameraInfo()
-        self.camera_positions = [
-            np.array([0.45, 0.0, 1.5]),
-            np.array([-0.45, 0.0, 1.5]),
-        ]
-        self.camera_orientations = [
-            rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True),
-            rot_utils.euler_angles_to_quats(np.array([0, 90, 180]), degrees=True),
-        ]
-
         self.current_positions = None
         self.current_orientations = None
         self.desired_tool = None
@@ -54,16 +41,18 @@ class Task(ABC, BaseTask):
 
         self.default_positions = {
             "table": np.array([0.0, 0.0, -0.01]),
-            "stirrer": np.array([0.01, 0.45, 0.045]),
-            "beaker": np.array([0.51, -0.17, 0.07]),
-            "flask": np.array([0.43, -0.086, 0.07]), 
+            "stirrer": np.array([-0.04, 0.45, 0.038]),
+            "stirrer_visual": np.array([0.01, 0.45, 0.045]),
+            "beaker": np.array([0.51, -0.17, 0.01]),
+            "flask": np.array([0.43, -0.086, 0.05]), 
             "magnet": np.array([0.3, 0.416, 0.015]),
             "box" : np.array([0.35, -0.5, 0.06]),
             "box_goal" : np.array([-0.036, -0.52, 0.006]),
         }
         self.default_orientations = {
             "table": np.array([1.0, 0.0, 0.0, 0.0]),
-            "stirrer": np.array([0.7071, 0.0, 0.0, 0.7071]),
+            "stirrer": np.array([1.0, 0.0, 0.0, 0.0]),
+            "stirrer_visual": np.array([0.7071, 0.0, 0.0, 0.7071]),
             "beaker": np.array([1.0, 0.0, 0.0, 0.0]),
             "flask": np.array([1.0, 0.0, 0.0, 0.0]),
             "magnet": np.array([1.0, 0.0, 0.0, 0.0]),
@@ -96,7 +85,6 @@ class Task(ABC, BaseTask):
 
         self.set_object(self.current_positions, self.current_orientations)
         self.set_robot(self.desired_tool)
-        self.set_camera()
     
 
     def set_robot(self, desired_tool = None) -> FR5:
@@ -148,7 +136,7 @@ class Task(ABC, BaseTask):
                 use_mimic_joints=True,
                 gripper_open_position=np.array([0.0]),
                 gripper_closed_position=np.array([0.6524]),
-                deltas = np.array([-0.6524/10]) / get_stage_units(),
+                deltas = np.array([-0.4/16]) / get_stage_units(),
             )
             self._robot.joints_default_state = np.array([
                 0.0, -1.05, -2.18, -1.57, 1.57, 0.0, # Arm joint position
@@ -197,7 +185,7 @@ class Task(ABC, BaseTask):
                 use_mimic_joints=True,
                 gripper_open_position=np.array([0.0]),
                 gripper_closed_position=np.array([1.16]),
-                deltas = np.array([-1.16/10]) / get_stage_units()
+                deltas = np.array([-0.2]) / get_stage_units()
             )
             self._robot.joints_default_state = np.array([
                 0.0, -1.05, -2.18, -1.57, 1.57, 0.0, # Arm joint position
@@ -216,11 +204,19 @@ class Task(ABC, BaseTask):
     
     def set_object(self, current_positions = None, current_orientations = None) -> FR5:
 
+        # for testing grasp
+        cube = DynamicCuboid(
+            prim_path="/World/Cube",
+            position=[0.3, 0, 0.2],
+            scale=np.array([0.05, 0.05, 0.2])
+        )
+
         if current_positions is None:
             current_positions = self.default_positions
             current_orientations = self.default_orientations
 
-        # spawn table
+
+        # Objects
         self.table = self.scene.add(
             FixedCuboid(
                 prim_path="/World/table",
@@ -232,35 +228,52 @@ class Task(ABC, BaseTask):
                 color=np.array([0.922, 0.769, 0.569])
             )
         )
-
-        # spawn stirrer
-        stirrer_usd_path = os.path.join(ASSET_PATH, "lab", "stirrer.usd")
-        self.stirrer = create_single_rigid_prim_from_usd(
-            usd_path=stirrer_usd_path, prim_path="/World/stirrer", name="stirrer",
-            position=current_positions["stirrer"],
-            orientation=current_orientations["stirrer"],
+        self.stirrer = self.scene.add(
+            FixedCuboid(
+                prim_path="/World/stirrer",
+                name="stirrer",
+                position=current_positions["stirrer"],
+                orientation=current_orientations["stirrer"],
+                scale=np.array([0.1, 0.1, 0.075]),
+                size=1.0,
+            )
         )
-        self.scene.add(self.stirrer)
 
-        # spawn beaker
+        stirrer_usd_path = os.path.join(ASSET_PATH, "lab", "heat_device.usd")
+        
+        add_reference_to_stage(
+            usd_path=stirrer_usd_path,
+            prim_path="/World/stirrer_visual"
+        )
+        self.stirrer_visual = SingleXFormPrim(
+            prim_path="/World/stirrer_visual",
+            name="stirrer_visual",
+        )
+        self.stirrer_visual.set_world_pose(
+            position=current_positions["stirrer_visual"],
+            orientation=current_orientations["stirrer_visual"],
+        )
+
         beaker_usd_path = os.path.join(ASSET_PATH, "lab", "beaker.usd")
-        self.beaker = create_single_rigid_prim_from_usd(
-            usd_path=beaker_usd_path, prim_path="/World/beaker", name="beaker",
+        
+        self.beaker = create_hybrid_beaker(
+            prim_path="/World/beaker",
+            usd_path=beaker_usd_path,
             position=current_positions["beaker"],
-            orientation=current_orientations["beaker"],
+            orientation=current_orientations["beaker"]
         )
+        
         self.scene.add(self.beaker)
 
-        # spawn flask
         flask_usd_path = os.path.join(ASSET_PATH, "lab", "flask.usd")
-        self.flask = create_single_rigid_prim_from_usd(
-            usd_path=flask_usd_path, prim_path="/World/flask", name="flask",
+        self.flask = create_hollow_flask(
+            prim_path="/World/flask",
+            usd_path=flask_usd_path,
             position=current_positions["flask"],
-            orientation=current_orientations["flask"],
+            orientation=current_orientations["flask"]
         )
         self.scene.add(self.flask)
 
-        # spawn magnet
         self.magnet = self.scene.add(
             DynamicCylinder(
                 prim_path="/World/magnet",
@@ -269,22 +282,22 @@ class Task(ABC, BaseTask):
                 orientation=current_orientations["magnet"],
                 radius=0.012,
                 height=0.03,
-                color=np.array([0.0, 0.0, 1.0]),
+                color=np.array([0.0, 0.0, 1.0])
             )
         )
 
-        # spawn box
-        box_usd_path = os.path.join(ASSET_PATH, "lab", "bottle", "FluidBottle.usd")        
+        box_usd_path = os.path.join(ASSET_PATH, "lab", "bottle", "FluidBottle.usd")
+        box_size = np.array([0.1, 0.1, 0.08]) 
+        
         self.box = create_hybrid_box(
             prim_path="/World/box",
             usd_path=box_usd_path,
             position=current_positions["box"],
             orientation=current_orientations["box"],
-            scale_size=np.array([0.1, 0.1, 0.08]) 
+            scale_size=box_size
         )
         self.scene.add(self.box)
 
-        # spawn box_goal
         self.box_goal = self.scene.add(
             FixedCuboid(
                 prim_path="/World/box_goal",
@@ -373,20 +386,6 @@ class Task(ABC, BaseTask):
         self.create_gripper_stand()
 
 
-    def set_camera(self):
-        self.cameras = []
-        for i in range(2):
-            camera = Camera(
-                prim_path=f"/World/camera_{i+1}",
-                frequency=30,
-                resolution=(self.camera_info.width, self.camera_info.height),
-                position=self.camera_positions[i],
-                orientation=self.camera_orientations[i],
-            )
-            
-            self.cameras.append(camera)
-
-
     def create_gripper_stand(self):
         asset_path = os.path.join(ASSET_PATH, "lab", "texture", "propile.jpg")
         aluminum_material = OmniPBR(
@@ -468,6 +467,7 @@ class Task(ABC, BaseTask):
         # object pose
         table_pos, table_ori = self.table.get_world_pose()
         stirrer_pos, stirrer_ori = self.stirrer.get_world_pose()
+        stirrer_visual_pos, stirrer_visual_ori = self.stirrer_visual.get_world_pose()
         beaker_pos, beaker_ori = self.beaker.get_world_pose()
         flask_pos, flask_ori = self.flask.get_world_pose()
         magnet_pos, magnet_ori = self.magnet.get_world_pose()
@@ -480,17 +480,18 @@ class Task(ABC, BaseTask):
         gripper_base_dh3_pos, gripper_base_dh3_ori = self.gripper_base_dh3.get_world_pose()
 
         ft_data = self._robot.get_measured_joint_forces(self._ee_joint_idx)[0]
-        # scale_data = self.compute_scale_data(
-        #     wrist_angle=self._robot.get_joint_positions(self._ee_joint_idx)[0],
-        #     default_beaker_position=self.default_positions["beaker"],
-        #     current_beaker_position=beaker_pos,
-        # )
+        scale_data = self.compute_scale_data(
+            wrist_angle=self._robot.get_joint_positions(self._ee_joint_idx)[0],
+            default_beaker_position=self.default_positions["beaker"],
+            current_beaker_position=beaker_pos,
+        )
         
         # observation dict
         observations = {
             "current_positions": {
                 "table": table_pos,
                 "stirrer": stirrer_pos,
+                "stirrer_visual": stirrer_visual_pos.tolist(),
                 "beaker": beaker_pos,
                 "flask": flask_pos,
                 "magnet": magnet_pos,
@@ -500,6 +501,7 @@ class Task(ABC, BaseTask):
             "current_orientations": {
                 "table": table_ori,
                 "stirrer": stirrer_ori,
+                "stirrer_visual": stirrer_visual_ori.tolist(),
                 "beaker": beaker_ori,
                 "flask": flask_ori,
                 "magnet": magnet_ori,
@@ -519,15 +521,15 @@ class Task(ABC, BaseTask):
                 "dh3": gripper_base_dh3_ori.tolist(),
             },
             "ft_data": ft_data,
-            # "scale_data": scale_data if scale_data is not None else 0.0,
+            "scale_data": scale_data if scale_data is not None else 0.0,
         }
 
         return observations
     
     def compute_scale_data(self, wrist_angle, default_beaker_position, current_beaker_position):
         try:
-            beaker_start_pos = default_beaker_position
-            beaker_pos = current_beaker_position
+            beaker_start_pos = np.array(default_beaker_position)
+            beaker_pos = np.array(current_beaker_position)
             beaker_moved_distance = np.linalg.norm(beaker_pos - beaker_start_pos)
         except Exception as e:
             print(f"[Warning] compute_scale_data error: {e}")

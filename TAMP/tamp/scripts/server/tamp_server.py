@@ -460,16 +460,19 @@ class TAMPServer(Node):
             if get_entity_state_response.result.result == 1:
 
                 response.success = True
-
+                
                 entity_pose = [
                     get_entity_state_response.state.pose.position.x,
                     get_entity_state_response.state.pose.position.y,
-                    get_entity_state_response.state.pose.position.z + 0.01,
+                    get_entity_state_response.state.pose.position.z,
                     get_entity_state_response.state.pose.orientation.w,
                     get_entity_state_response.state.pose.orientation.x,
                     get_entity_state_response.state.pose.orientation.y,
                     get_entity_state_response.state.pose.orientation.z
                 ]
+                if entity == "magnet":
+                    entity_pose[2] += 0.01
+
                 entities_states["poses"][entity] = entity_pose
 
         self.tamp.update_env(

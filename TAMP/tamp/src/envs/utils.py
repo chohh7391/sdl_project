@@ -65,7 +65,9 @@ class TAMPEnvManager:
         if poses is not None:
             for name, pose in poses.items():
                 self.entities[name.lower()].pose = pose
-            self.entities["beaker"].pose[2] += 0.06
+            
+            # apply offset
+            self.entities["beaker"].pose[2] += 0.02
             self.entities["box"].pose[2] += 0.05
             self.entities["flask"].pose[2] += 0.055
 

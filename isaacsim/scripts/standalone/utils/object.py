@@ -224,3 +224,16 @@ def create_hollow_flask(prim_path, usd_path, position, orientation):
         position=position,
         orientation=orientation
     )
+
+def create_single_rigid_prim_from_usd(
+    usd_path: str, prim_path: str, name: str,
+    position: np.ndarray, orientation: np.ndarray,    
+):
+    add_reference_to_stage(usd_path=usd_path, prim_path=prim_path)
+    
+    return SingleRigidPrim(
+        prim_path=prim_path,
+        name=name,
+        position=position,
+        orientation=orientation,
+    )

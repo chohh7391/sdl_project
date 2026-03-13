@@ -48,30 +48,18 @@ class Simulation(Node):
         # Preparing stage
         viewports.set_camera_view(eye=np.array([1.2, 1.2, 0.8]), target=np.array([0, 0, 0.5]))
 
-        from task import Task
-
-        sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
-        from camera import initialize_camera
+        from test_task import Task
 
         sys.path.append(os.path.join(os.path.dirname(__file__), "action_graph"))
-        from camera_graph import create_ros_camera_graph
         from robot_control_graph import create_robot_control_graph
-        from tf_graph import create_tf_graph
         
-        self.create_ros_camera_graph = create_ros_camera_graph
         self.create_robot_control_graph = create_robot_control_graph
-        self.create_tf_graph = create_tf_graph
-        self.initialize_camera = initialize_camera
 
         self.task = Task(name="task", robot_prim_path=ROBOT_STAGE_PATH, robot_name="fr5")
         self.world.add_task(self.task)
         self.world.reset()
 
         self.simulation_app.update()
-
-        # initialize camera
-        for i in range(2):
-            self.initialize_camera(self.task.cameras[i])
         
         self.robot = self.world.scene.get_object("fr5")
         if self.robot is None:
@@ -88,16 +76,7 @@ class Simulation(Node):
         self.world.initialize_physics()
 
         # action graphs
-        camera_paths = ["/World/camera_1", "/World/camera_2"]
-        camera_names = ["camera_1", "camera_2"]
-        self.camera_data_graph = self.create_ros_camera_graph(camera_paths=camera_paths, camera_names=camera_names)
-        self.og.Controller.evaluate_sync(self.camera_data_graph)
         self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-        target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
-        self.tf_graph = self.create_tf_graph(
-            target_prim_paths=target_prim_paths,
-            parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
-        )
 
         self.arm_joint_names = ["j1", "j2", "j3", "j4", "j5", "j6"]
         self.arm_joint_ids = []
@@ -160,17 +139,18 @@ class Simulation(Node):
 
                 # robot control command
                 self.og.Controller.set(self.og.Controller.attribute("/ActionGraph/RobotControl/OnImpulseEvent.state:enableImpulse"), True)
-                # # compute observations
-                # observations = self.world.get_observations()
-
-                # ft_data = observations["ft_data"]
-                # scale_data = observations["scale_data"]
                 
-                # # publish
-                # if ft_data is not None:
-                #     self.publish_ft(ft_data)
-                # if scale_data is not None:
-                #     self.publish_scale(scale_data)
+                # compute observations
+                observations = self.world.get_observations()
+
+                ft_data = observations["ft_data"]
+                scale_data = observations["scale_data"]
+                
+                # publish
+                if ft_data is not None:
+                    self.publish_ft(ft_data)
+                if scale_data is not None:
+                    self.publish_scale(scale_data)
 
             self.step += 1
 
@@ -218,18 +198,25 @@ class Simulation(Node):
         gripper = self.current_tool
         
         if is_close:
-            num_repeat = 17 # 3/10 만큼 그리퍼 닫기
+            if gripper == "dh3":
+                num_repeat = 16
+            elif gripper == "ag95":
+                num_repeat = 16
+            else:
+                num_repeat = 16
+
             for _ in range(num_repeat):
+                
                 self.robot.gripper.close()
                 self.world.step(render=True)
             
             response.message = "close gripper"
             
         else:
-            if gripper == "dh3": # for grasping small magnet (only stirring)
-                num_repeat = 5
+            if gripper == "dh3":
+                num_repeat = 16 # 3
             else:
-                num_repeat = 30
+                num_repeat = 16
 
             for _ in range(num_repeat):
                 self.robot.gripper.open()
@@ -270,10 +257,6 @@ class Simulation(Node):
             
             self.simulation_app.update() 
 
-            # initialize camera
-            for i in range(2):
-                self.initialize_camera(self.task.cameras[i])
-
             self.robot = self.world.scene.get_object("fr5")
             
             self.robot.post_reset()
@@ -283,16 +266,7 @@ class Simulation(Node):
             self.world.initialize_physics()
 
             # action graphs
-            camera_paths = ["/World/camera_1", "/World/camera_2"]
-            camera_names = ["camera_1", "camera_2"]
-            self.camera_data_graph = self.create_ros_camera_graph(camera_paths=camera_paths, camera_names=camera_names)
-            self.og.Controller.evaluate_sync(self.camera_data_graph)
             self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-            target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
-            self.tf_graph = self.create_tf_graph(
-                target_prim_paths=target_prim_paths,
-                parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
-            )
 
             self.robot.set_joint_positions(
                 positions=self._saved_robot_joint_positions,
