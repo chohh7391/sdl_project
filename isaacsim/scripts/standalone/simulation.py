@@ -218,22 +218,14 @@ class Simulation(Node):
         gripper = self.current_tool
         
         if is_close:
-            num_repeat = 17 # 3/10 만큼 그리퍼 닫기
-            for _ in range(num_repeat):
-                self.robot.gripper.close()
-                self.world.step(render=True)
+            self.robot.gripper.close()
+            self.world.step(render=True)
             
             response.message = "close gripper"
             
         else:
-            if gripper == "dh3": # for grasping small magnet (only stirring)
-                num_repeat = 5
-            else:
-                num_repeat = 30
-
-            for _ in range(num_repeat):
-                self.robot.gripper.open()
-                self.world.step(render=True)
+            self.robot.gripper.open()
+            self.world.step(render=True)
 
             response.message = "open gripper"
 

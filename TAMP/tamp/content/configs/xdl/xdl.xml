@@ -13,7 +13,7 @@
   </hardware>
 
   <procedure>
-    <Move object="beaker" place="box_goal"/>
+    <Move object="flask" place="box_goal"/>
     <!-- <Transfer from_vessel="beaker" to_vessel="flask" volume="10 mL"/> -->
     <!-- <Stir vessel="flask" time="1 min"/> -->
   </procedure>

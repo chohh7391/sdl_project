@@ -69,7 +69,7 @@ class TAMPEnvManager:
             # apply offset
             self.entities["beaker"].pose[2] += 0.02
             self.entities["box"].pose[2] += 0.05
-            self.entities["flask"].pose[2] += 0.055
+            self.entities["flask"].pose[2] += 0.02
 
         if movables is not None:
             for name in movables:
