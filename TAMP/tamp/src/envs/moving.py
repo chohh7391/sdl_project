@@ -9,7 +9,7 @@ from cutamp.tamp_domain import HandEmpty, On
 from cutamp.utils.shapes import MultiSphere
 
 
-def load_Moving_env(
+def load_moving_env(
     entities: Dict[str, Any],
     movables: List[Obstacle],
     statics: List[Obstacle],

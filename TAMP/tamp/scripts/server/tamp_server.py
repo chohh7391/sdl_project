@@ -40,7 +40,6 @@ from curobo.types.base import TensorDeviceType
 from std_msgs.msg import Float32
 import tf2_ros
 
-# Llama import
 import os
 os.environ["UNSLOTH_DISABLE_STATISTICS"] = "1"
 import csv
@@ -168,12 +167,12 @@ class TAMP:
 
         _, _, timer, world = setup_cutamp(self.env, self.config, q_init)
         motion_gen = world.get_motion_gen(collision_activation_distance=self.config.world_activation_distance)
-        if config.warmup_motion_gen:
+        if self.config.warmup_motion_gen:
             with timer.time("curobo_motion_gen_warmup"):
                 motion_gen.warmup()
 
         plan_config = MotionGenPlanConfig(
-            timeout=0.5, enable_finetune_trajopt=False, time_dilation_factor=config.time_dilation_factor
+            timeout=0.5, enable_finetune_trajopt=False, time_dilation_factor=self.config.time_dilation_factor
         )
 
         cu_js = CuroboJointState(
@@ -196,7 +195,8 @@ class TAMP:
             return None
         
         return cmd_plan
-    
+
+
     def motion_plan_js(
         self,
         q_init: List,
@@ -206,12 +206,12 @@ class TAMP:
 
         _, _, timer, world = setup_cutamp(self.env, self.config, q_init)
         motion_gen = world.get_motion_gen(collision_activation_distance=self.config.world_activation_distance)
-        if config.warmup_motion_gen:
+        if self.config.warmup_motion_gen:
             with timer.time("curobo_motion_gen_warmup"):
                 motion_gen.warmup()
 
         plan_config = MotionGenPlanConfig(
-            max_attempts=1, enable_finetune_trajopt=True,
+            max_attempts=1, enable_finetune_trajopt=True, time_dilation_factor=self.config.time_dilation_factor
         )
 
         cu_js_init = CuroboJointState(
@@ -237,7 +237,8 @@ class TAMP:
             return None
     
         return cmd_plan
-    
+
+
     def _log_planning_result(self, task_name, experiment_id, success, attempts, planning_time):
         """
         Planning 결과를 CSV 파일로 저장합니다.
@@ -460,7 +461,6 @@ class TAMPServer(Node):
             if get_entity_state_response.result.result == 1:
 
                 response.success = True
-                
                 entity_pose = [
                     get_entity_state_response.state.pose.position.x,
                     get_entity_state_response.state.pose.position.y,
@@ -470,9 +470,6 @@ class TAMPServer(Node):
                     get_entity_state_response.state.pose.orientation.y,
                     get_entity_state_response.state.pose.orientation.z
                 ]
-                if entity == "magnet":
-                    entity_pose[2] += 0.01
-
                 entities_states["poses"][entity] = entity_pose
 
         self.tamp.update_env(
@@ -504,8 +501,6 @@ class TAMPServer(Node):
         if request.opt_viz_interval == 0:
             request.opt_viz_interval = 10
 
-        self.get_logger().warn(f"grasp_dof: {request.grasp_dof}")
-
         config = TAMPConfiguration(
             num_particles=request.num_particles,
             robot=request.robot,
@@ -523,7 +518,7 @@ class TAMPServer(Node):
             opt_viz_interval=request.opt_viz_interval,
             viz_robot_mesh=request.viz_robot_mesh,
             enable_experiment_logging=request.enable_experiment_logging,
-            # gripper_activation_distance=0.5,
+            time_dilation_factor=0.5,
         )
         validate_tamp_config(config)
 
@@ -773,63 +768,6 @@ class TAMPServer(Node):
         self.get_logger().info("✔ PD + convolution-shaped pouring finished.")
 
 
-
-
-
-    def execute_plan_timer_cb(self):
-        if self.is_waiting_after_step:
-            if self.get_clock().now() - self.wait_start_time >= self.wait_duration:
-                self.is_waiting_after_step = False
-            else:
-                return
-
-        if not self.plan_to_execute or self.plan_index >= len(self.plan_to_execute):
-            if self.execute_plan_timer is not None:
-                self.execute_plan_timer.cancel()
-                self.execute_plan_timer = None
-            # self.plan_to_execute = None
-            return
-
-        current_plan_part = self.plan_to_execute[self.plan_index]
-        plan_type = current_plan_part.get("type")
-        
-        step_finished = False
-
-        if plan_type == "trajectory":
-            plan_trajectory = current_plan_part["plan"]
-            num_waypoints = plan_trajectory.position.shape[0]
-
-            if self.current_plan_step < num_waypoints:
-                self.arm_commands.header.stamp = self.get_clock().now().to_msg()
-                self.arm_commands.name = plan_trajectory.joint_names
-                self.arm_commands.position = plan_trajectory.position[self.current_plan_step].tolist()
-                
-                self.arm_commands_publisher.publish(self.arm_commands)
-                
-                self.current_plan_step += 1
-            
-            if self.current_plan_step >= num_waypoints:
-                step_finished = True
-                self.current_plan_step = 0 # 다음 궤적을 위해 초기화
-
-        elif plan_type == "gripper":
-            self.execute_gripper_action(current_plan_part)
-            step_finished = True
-            
-        else:
-            self.get_logger().error(f"Unknown plan type: {plan_type}")
-            if self.execute_plan_timer is not None:
-                self.execute_plan_timer.cancel()
-            return
-
-        if step_finished:
-            self.plan_index += 1
-            
-            if self.plan_index < len(self.plan_to_execute):
-                self.is_waiting_after_step = True
-                self.wait_start_time = self.get_clock().now()
-
-
     def execute_gripper_action(self, plan_part):
         """
         Executes a gripper action by making a synchronous service call.
@@ -921,7 +859,8 @@ if __name__ == "__main__":
         enable_visualizer=False,
         # opt_viz_interval=10,
         viz_robot_mesh=False,
-        enable_experiment_logging=False
+        enable_experiment_logging=False,
+        time_dilation_factor=0.5,
     )
 
     tamp = TAMP(

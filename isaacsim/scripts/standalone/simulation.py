@@ -218,14 +218,20 @@ class Simulation(Node):
         gripper = self.current_tool
         
         if is_close:
-            self.robot.gripper.close()
-            self.world.step(render=True)
+            # beaker: 17
+            # flask: 12
+            num_repeat = 17
+            for _ in range(num_repeat):
+                self.robot.gripper.close()
+                self.world.step(render=True)
             
             response.message = "close gripper"
             
         else:
-            self.robot.gripper.open()
-            self.world.step(render=True)
+            num_repeat = 17
+            for _ in range(num_repeat):
+                self.robot.gripper.open()
+                self.world.step(render=True)
 
             response.message = "open gripper"
 

@@ -1,4 +1,4 @@
-#!/home/home/anaconda3/envs/sdl/bin/python
+#!/home/home/miniconda3/envs/sdl/bin/python
 import argparse
 import time
 import xml.etree.ElementTree as ET
@@ -117,11 +117,13 @@ class TAMPClient(Node):
         request = SetTampEnv.Request()
         tag_name = arg.strip().lower()
 
+        all_entities = ["table", "stirrer", "box_goal", "beaker", "flask", "magnet",  "box"]
+        request.entities = all_entities
+
         if tag_name == "transfer":
             from_vessel = step_attrs.get("from_vessel")
             to_vessel = step_attrs.get("to_vessel")
             request.env_name = "transfer"
-            request.entities = [from_vessel, to_vessel, "magnet", "stirrer", "box"]
             request.movables = [from_vessel, to_vessel]
             request.statics = ["table", "goal_region", "stirrer", "magnet", "box"]
             request.ex_collision = ["pour_region", "rearrange_region"]
@@ -129,16 +131,13 @@ class TAMPClient(Node):
         elif tag_name == "stir":
             vessel = step_attrs.get("vessel")
             not_vessel = "beaker" if vessel == "flask" else "flask"
-            
             request.env_name = "stir"
-            request.entities = [vessel, not_vessel, "magnet", "stirrer", "box"]
             request.movables = [vessel, "magnet"]
             request.statics = ["table", "stirrer", not_vessel, "goal_region", "box"]
             request.ex_collision = ["beaker_region", "rearrange_region"]
 
         elif tag_name == "default":
             request.env_name = "default"
-            request.entities = ["beaker", "flask", "magnet", "stirrer", "box"]
             request.movables = ["magnet"]
             request.statics = ["table", "stirrer", "beaker", "flask", "box"]
             request.ex_collision = []
@@ -146,7 +145,6 @@ class TAMPClient(Node):
         elif tag_name == "move":
             object = step_attrs.get("object")
             request.env_name = "move"
-            request.entities = [object, "box_goal"]
             request.movables = [object]
             base_statics = ["table", "stirrer", "box", "beaker", "flask", "box_goal"]
             request.statics = [obj for obj in base_statics if obj != object]
@@ -155,7 +153,6 @@ class TAMPClient(Node):
         elif tag_name == "rearrange":
             target_object = step_attrs.get("object") or step_attrs.get("to_vessel") or step_attrs.get("vessel")
             request.env_name = "rearrange"
-            request.entities = [target_object]
             request.movables = [target_object]
             
             # [수정된 부분] 타겟 물체가 무엇이든 statics 목록에서 자동으로 제외합니다.

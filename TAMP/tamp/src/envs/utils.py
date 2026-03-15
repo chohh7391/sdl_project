@@ -7,27 +7,25 @@ from cutamp.envs import TAMPEnvironment
 from cutamp.envs.utils import unit_quat
 from cutamp.envs import TAMPEnvironment
 
-from envs.pouring import load_Transfer_env
-from envs.stirring import load_Stir_env
+from envs.transfer import load_transfer_env
+from envs.stirring import load_stir_env
 from envs.default import load_default_env
-from envs.moving import load_Moving_env
-from envs.rearranging import load_Rearranging_env
+from envs.moving import load_moving_env
+from envs.rearranging import load_rearranging_env
 
 
 ENTITIES = {
     "table": Cuboid(name="table", pose=[0.0, 0.0, -0.01, *unit_quat], dims=[1.5, 1.5, 0.02], color=[255, 0, 0]),
-    "stirrer": Cuboid(name="stirrer", pose=[0.3, 0.3, 0.4, *unit_quat], dims=[0.1, 0.1, 0.075], color=[255, 0, 0]),
+    "stirrer": Cuboid(name="stirrer", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.18, 0.18, 0.09], color=[255, 0, 0]),
 
     # objects
-    # "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.064, 0.064, 0.12], color=[0, 0, 255]),
-    # "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.04, 0.04, 0.16], color=[0, 255, 0]),
-    "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.05, 0.05, 0.11], color=[255, 0, 0]),
-    "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.06, 0.06, 0.08], color=[255, 0, 0]),
+    "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.05, 0.05, 0.135 - 0.02], color=[255, 0, 0]),
+    "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.07, 0.07, 0.12 - 0.02], color=[255, 0, 0]),
     "magnet": Cuboid(name="magnet", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.045, 0.045, 0.03], color=[255, 0, 0]),
-    "box" : Cuboid(name="box", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.1, 0.1, 0.08], color=[0, 0, 255]),
+    "box" : Cuboid(name="box", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.108, 0.108, 0.08], color=[0, 0, 255]),
     "box_goal" : Cuboid(name="box_goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.15, 0.15, 0.01], color=[0, 255, 0]),    
 
-    # Reigion
+    # Regions
     "goal_region": Cuboid(name="goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.1, 0.1, 0.01], color=[186, 255, 201]),
     "pour_region": Cuboid(name="pour_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.08, 0.08, 0.0001], color=[255, 255, 255]),
     "beaker_region": Cuboid(name="beaker_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.08, 0.08, 0.0001], color=[255, 255, 255]),
@@ -66,10 +64,13 @@ class TAMPEnvManager:
             for name, pose in poses.items():
                 self.entities[name.lower()].pose = pose
             
-            # apply offset
-            self.entities["beaker"].pose[2] += 0.02
-            self.entities["box"].pose[2] += 0.05
-            self.entities["flask"].pose[2] += 0.02
+            # offset for avoiding collision
+            offset = 0.01
+            self.entities["beaker"].pose[2] += offset
+            self.entities["flask"].pose[2] += offset
+            self.entities["box"].pose[2] += offset
+            self.entities["stirrer"].pose[2] += offset
+            self.entities["magnet"].pose[2] += 2 * offset
 
         if movables is not None:
             for name in movables:
@@ -94,7 +95,7 @@ class TAMPEnvManager:
 
             if name == "transfer":
 
-                env, pour_region_pose = load_Transfer_env(
+                env, pour_region_pose = load_transfer_env(
                     entities=self.entities,
                     movables=self.movables,
                     statics=self.statics,
@@ -103,7 +104,7 @@ class TAMPEnvManager:
 
             elif name == "stir":
 
-                env = load_Stir_env(
+                env = load_stir_env(
                     entities=self.entities,
                     movables=self.movables,
                     statics=self.statics,
@@ -121,7 +122,7 @@ class TAMPEnvManager:
 
             elif name == "move":
 
-                env = load_Moving_env(
+                env = load_moving_env(
                     entities=self.entities,
                     movables=self.movables,
                     statics=self.statics,
@@ -130,7 +131,7 @@ class TAMPEnvManager:
 
             elif name == "rearrange":
 
-                env = load_Rearranging_env(
+                env = load_rearranging_env(
                     entities=self.entities,
                     movables=self.movables,
                     statics=self.statics,

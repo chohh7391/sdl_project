@@ -79,20 +79,20 @@ class Task(ABC, BaseTask):
     def set_up_scene(self, scene: Scene) -> None:
         super().set_up_scene(scene)
 
-        # scene.add_default_ground_plane(z_position=-0.72)
+        scene.add_default_ground_plane(z_position=-0.72)
         
-        add_reference_to_stage(
-            usd_path=os.path.join(ASSET_PATH, "lab", "World.usd"),
-            prim_path="/World/background"
-        )
-        self.backgound = SingleXFormPrim(
-            prim_path="/World/background",
-            name="background"
-        )
-        self.backgound.set_world_pose(
-            position=[0.0, 0.0, -0.71],
-            orientation=[1, 0, 0, 0],
-        )
+        # add_reference_to_stage(
+        #     usd_path=os.path.join(ASSET_PATH, "lab", "World.usd"),
+        #     prim_path="/World/background"
+        # )
+        # self.backgound = SingleXFormPrim(
+        #     prim_path="/World/background",
+        #     name="background"
+        # )
+        # self.backgound.set_world_pose(
+        #     position=[0.0, 0.0, -0.71],
+        #     orientation=[1, 0, 0, 0],
+        # )
 
         self.set_object(self.current_positions, self.current_orientations)
         self.set_robot(self.desired_tool)
@@ -148,7 +148,7 @@ class Task(ABC, BaseTask):
                 use_mimic_joints=True,
                 gripper_open_position=np.array([0.0]),
                 gripper_closed_position=np.array([0.6524]),
-                deltas = np.array([-0.6524]) / get_stage_units(),
+                deltas = np.array([-0.6524/5]) / get_stage_units(),
             )
             self._robot.joints_default_state = np.array([
                 0.0, -1.05, -2.18, -1.57, 1.57, 0.0, # Arm joint position
@@ -197,7 +197,7 @@ class Task(ABC, BaseTask):
                 use_mimic_joints=True,
                 gripper_open_position=np.array([0.0]),
                 gripper_closed_position=np.array([1.16]),
-                deltas = np.array([-1.16]) / get_stage_units()
+                deltas = np.array([-1.16/5]) / get_stage_units()
             )
             self._robot.joints_default_state = np.array([
                 0.0, -1.05, -2.18, -1.57, 1.57, 0.0, # Arm joint position
@@ -274,13 +274,11 @@ class Task(ABC, BaseTask):
         )
 
         # spawn box
-        box_usd_path = os.path.join(ASSET_PATH, "lab", "bottle", "FluidBottle.usd")        
-        self.box = create_hybrid_box(
-            prim_path="/World/box",
-            usd_path=box_usd_path,
+        box_usd_path = os.path.join(ASSET_PATH, "lab", "bottle", "FluidBottle.usd")
+        self.box = create_single_rigid_prim_from_usd(
+            usd_path=box_usd_path, prim_path="/World/box", name="box",
             position=current_positions["box"],
             orientation=current_orientations["box"],
-            scale_size=np.array([0.1, 0.1, 0.08]) 
         )
         self.scene.add(self.box)
 

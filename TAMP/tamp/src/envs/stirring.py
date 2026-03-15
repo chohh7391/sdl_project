@@ -8,7 +8,7 @@ from cutamp.tamp_domain import HandEmpty, On, Poured, OnBeaker
 from cutamp.utils.shapes import MultiSphere
 
 
-def load_Stir_env(
+def load_stir_env(
     entities: Dict[str, Any],
     movables: List[Obstacle],
     statics: List[Obstacle],
@@ -18,9 +18,9 @@ def load_Stir_env(
     """Pick-and-place environment with a cylindrical beaker and small MultiSphere near goal."""
     
     entities["beaker_region"].pose = entities["stirrer"].pose.copy() # [0.3, 0.3, 0.16, *unit_quat]
-    entities["beaker_region"].pose[2] += 0.17
+    entities["beaker_region"].pose[2] += 0.5 # magnet position is set to over the beaker
     entities["goal_region"].pose = entities["stirrer"].pose.copy()
-    entities["goal_region"].pose[2] += 0.07
+    entities["goal_region"].pose[2] += 0.3 # position of the beaker of flask is set to be on the stirrer
 
     env = TAMPEnvironment(
         name="stir",

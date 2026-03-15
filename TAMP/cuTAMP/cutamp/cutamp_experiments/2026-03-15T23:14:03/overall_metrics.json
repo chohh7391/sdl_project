@@ -1,0 +1,16 @@
+{
+  "num_optimized_plans": 1,
+  "num_initial_plans": 0,
+  "num_skipped_plans": 0,
+  "num_satisfying_final": 493,
+  "num_particles": 1024,
+  "best_cost": 0.03497389331459999,
+  "best_soft_cost": 0.0012933185789734125,
+  "final_plan_skeleton": [
+    "MoveFree(q0, traj1, q1)",
+    "Pick(flask, grasp1, q1)",
+    "MoveHolding(flask, grasp1, q1, traj2, q2)",
+    "Place(flask, grasp1, pose1, box_region, q2)"
+  ],
+  "found_solution": true
+}

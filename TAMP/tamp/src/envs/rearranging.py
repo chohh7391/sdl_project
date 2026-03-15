@@ -8,7 +8,7 @@ from cutamp.envs.utils import unit_quat
 from cutamp.tamp_domain import HandEmpty, On
 from cutamp.utils.shapes import MultiSphere
 
-def load_Rearranging_env(
+def load_rearranging_env(
     entities: Dict[str, Any],
     movables: List[Obstacle],
     statics: List[Obstacle],
@@ -24,13 +24,13 @@ def load_Rearranging_env(
     # pose 배열: [x, y, z, q_w, q_x, q_y, q_z] 형태 (위치 + 쿼터니언 회전)
     if target_name == "beaker":
         # 비커를 치워둘 임시 위치 (예시 좌표)
-        entities["rearrange_region"].pose = [0.3, 0.3, 0.085, 1.0, 0.0, 0.0, 0.0]
+        entities["rearrange_region"].pose = [0.3, 0.3, 0.02, 1.0, 0.0, 0.0, 0.0]
     elif target_name == "flask":
         # 플라스크를 치워둘 임시 위치 (예시 좌표)
-        entities["rearrange_region"].pose = [0.22, 0.2, 0.085, 1.0, 0.0, 0.0, 0.0]
+        entities["rearrange_region"].pose = [0.22, 0.2, 0.02, 1.0, 0.0, 0.0, 0.0]
     elif target_name == "box":
         # 박스를 치워둘 임시 위치 (예시 좌표)
-        entities["rearrange_region"].pose = [0.4, 0.0, 0.085, 1.0, 0.0, 0.0, 0.0]
+        entities["rearrange_region"].pose = [0.4, 0.0, 0.02, 1.0, 0.0, 0.0, 0.0]
     # else:
     #     # 그 외 물체들의 기본 치우기 위치
     #     entities["rearrange_region"].pose = [0.25, 0.25, 0.085, 1.0, 0.0, 0.0, 0.0]
