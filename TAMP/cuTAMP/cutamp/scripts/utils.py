@@ -67,8 +67,8 @@ default_constraint_to_tol = {
     Motion.type: {"joint_limit": 0.0, "self_collision": 0.0},
     StablePlacement.type: {
         # You might need to add additional tolerances if your support surfaces have different names
-        "goal_in_xy": 1e-3,
-        "goal_support": 1e-2,
+        "goal_region_in_xy": 1e-3,
+        "goal_region_support": 1e-2,
         "platform0_in_xy": 1e-3,
         "platform0_support": 1e-2,
         "floor_in_xy": 1e-3,
@@ -85,9 +85,8 @@ default_constraint_to_tol = {
         "pour_region_support": 1e-2,
         "box_region_in_xy": 1e-4,
         "box_region_support": 1e-3,
-        "rearrange_region_in_xy": 1e-4,
-        "rearrange_region_support": 1e-3,
-        
+        "rearrange_region_in_xy": 1e-3,
+        "rearrange_region_support": 1e-2,
     },
     ValidPush.type: {"dist_from_button": 0.0},
 }

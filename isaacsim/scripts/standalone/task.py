@@ -54,7 +54,7 @@ class Task(ABC, BaseTask):
 
         self.default_positions = {
             "table": np.array([0.0, 0.0, -0.01]),
-            "stirrer": np.array([0.01, 0.45, 0.045]),
+            "stirrer": np.array([-0.04, 0.45, 0.045]),
             "beaker": np.array([0.51, -0.17, 0.07]),
             "flask": np.array([0.43, -0.086, 0.07]), 
             "magnet": np.array([0.3, 0.416, 0.015]),
@@ -63,7 +63,7 @@ class Task(ABC, BaseTask):
         }
         self.default_orientations = {
             "table": np.array([1.0, 0.0, 0.0, 0.0]),
-            "stirrer": np.array([0.7071, 0.0, 0.0, 0.7071]),
+            "stirrer": np.array([1.0, 0.0, 0.0, 0.0]),
             "beaker": np.array([1.0, 0.0, 0.0, 0.0]),
             "flask": np.array([1.0, 0.0, 0.0, 0.0]),
             "magnet": np.array([1.0, 0.0, 0.0, 0.0]),

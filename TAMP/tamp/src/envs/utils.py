@@ -26,7 +26,7 @@ ENTITIES = {
     "box_goal" : Cuboid(name="box_goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.15, 0.15, 0.01], color=[0, 255, 0]),    
 
     # Regions
-    "goal_region": Cuboid(name="goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.1, 0.1, 0.01], color=[186, 255, 201]),
+    "goal_region": Cuboid(name="goal_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.1, 0.1, 0.01], color=[186, 255, 201]),
     "pour_region": Cuboid(name="pour_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.08, 0.08, 0.0001], color=[255, 255, 255]),
     "beaker_region": Cuboid(name="beaker_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.08, 0.08, 0.0001], color=[255, 255, 255]),
     "box_region": Cuboid(name="box_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.2, 0.2, 0.0001], color=[255, 255, 255]),

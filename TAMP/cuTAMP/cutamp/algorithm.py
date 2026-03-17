@@ -67,6 +67,13 @@ def heuristic_fn(
             successes.extend(satisfying.tolist())
             if verbose:
                 _log.debug(f"{con_type} {name} {satisfying.tolist()}")
+
+        if "StablePlacement" in con_type:
+            for name, value in con_info.items():
+                if "in_xy" in name:
+                    # 1024개 중 첫 번째 파티클의 raw value 출력
+                    _log.debug(f"!!! {con_type} {name} raw error value: {value[0].item()}")
+
     success_mean = sum(successes) / len(successes)
     success_rate = success_mean / num_particles
     failure_rate = 1 - success_rate

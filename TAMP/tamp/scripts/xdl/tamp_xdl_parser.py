@@ -1,4 +1,4 @@
-#!/home/home/miniconda3/envs/sdl/bin/python
+#!/home/home/anaconda3/envs/sdl/bin/python
 import argparse
 import time
 import xml.etree.ElementTree as ET
@@ -506,6 +506,7 @@ class XDLRunner(TAMPClient):
             self.get_logger().info(f"💡 LLM 판단 결과 => Main Tool: {llm_main} | Need Move: {llm_need_move} | Move Tool: {llm_move_tool}")
             # =======================================================================
             
+            llm_need_move = "False"
             # 🚨 [NEW] 1. 공간이 좁아 치우기(rearrange)가 필요한 경우
             if llm_need_move == "True":
                 self.get_logger().info("⚠️ 공간이 협소하여 방해물을 먼저 치웁니다 (rearrange 실행)")

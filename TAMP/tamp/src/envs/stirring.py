@@ -18,9 +18,9 @@ def load_stir_env(
     """Pick-and-place environment with a cylindrical beaker and small MultiSphere near goal."""
     
     entities["beaker_region"].pose = entities["stirrer"].pose.copy() # [0.3, 0.3, 0.16, *unit_quat]
-    entities["beaker_region"].pose[2] += 0.5 # magnet position is set to over the beaker
+    entities["beaker_region"].pose[2] += 0.2 # magnet position is set to over the beaker
     entities["goal_region"].pose = entities["stirrer"].pose.copy()
-    entities["goal_region"].pose[2] += 0.3 # position of the beaker of flask is set to be on the stirrer
+    entities["goal_region"].pose[2] += 0.05 # position of the beaker of flask is set to be on the stirrer
 
     env = TAMPEnvironment(
         name="stir",
@@ -37,7 +37,7 @@ def load_stir_env(
                 HandEmpty.ground(),
                 On.ground(movables[0].name, entities["goal_region"].name), 
                 On.ground(entities["magnet"].name, entities["beaker_region"].name),
-                OnBeaker.ground(entities["magnet"].name, entities["beaker_region"].name), 
+                OnBeaker.ground(entities["magnet"].name, entities["beaker_region"].name),
             }
         )
     )
