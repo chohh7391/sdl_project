@@ -506,7 +506,7 @@ class XDLRunner(TAMPClient):
             self.get_logger().info(f"💡 LLM 판단 결과 => Main Tool: {llm_main} | Need Move: {llm_need_move} | Move Tool: {llm_move_tool}")
             # =======================================================================
             
-            # llm_need_move = "False"
+            llm_need_move = "False"
             # 🚨 [NEW] 1. 공간이 좁아 치우기(rearrange)가 필요한 경우
             if llm_need_move == "True":
                 self.get_logger().info("⚠️ 공간이 협소하여 방해물을 먼저 치웁니다 (rearrange 실행)")
@@ -535,6 +535,7 @@ class XDLRunner(TAMPClient):
                 self.get_logger().info("✅ 방해물 치우기(rearrange) 완료")
                 time.sleep(2.0)
 
+            llm_main = "dh3"
             # 🛠️ 2. 본 작업 실행 (원래 XML 태그)
             main_tool = llm_main if llm_main in {"ag95", "vgc10", "dh3"} else None
             if not main_tool:
