@@ -218,8 +218,6 @@ class Simulation(Node):
         gripper = self.current_tool
         
         if is_close:
-            # beaker: 17
-            # flask: 12
             if gripper == "dh3":
                 num_repeat = 14
             elif gripper == "ag95":
@@ -235,7 +233,7 @@ class Simulation(Node):
             
         else:
             if gripper == "dh3":
-                num_repeat = 3
+                num_repeat = 3 # for grasping magnet (small object)
             elif gripper == "ag95":
                 num_repeat = 10
             else:
