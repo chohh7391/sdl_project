@@ -478,11 +478,11 @@ class Task(ABC, BaseTask):
         gripper_base_dh3_pos, gripper_base_dh3_ori = self.gripper_base_dh3.get_world_pose()
 
         ft_data = self._robot.get_measured_joint_forces(self._ee_joint_idx)[0]
-        # scale_data = self.compute_scale_data(
-        #     wrist_angle=self._robot.get_joint_positions(self._ee_joint_idx)[0],
-        #     default_beaker_position=self.default_positions["beaker"],
-        #     current_beaker_position=beaker_pos,
-        # )
+        scale_data = self.compute_scale_data(
+            wrist_angle=self._robot.get_joint_positions(self._ee_joint_idx)[0],
+            default_beaker_position=self.default_positions["beaker"],
+            current_beaker_position=beaker_pos,
+        )
         
         # observation dict
         observations = {
@@ -517,15 +517,15 @@ class Task(ABC, BaseTask):
                 "dh3": gripper_base_dh3_ori.tolist(),
             },
             "ft_data": ft_data,
-            # "scale_data": scale_data if scale_data is not None else 0.0,
+            "scale_data": scale_data if scale_data is not None else 0.0,
         }
 
         return observations
     
     def compute_scale_data(self, wrist_angle, default_beaker_position, current_beaker_position):
         try:
-            beaker_start_pos = default_beaker_position
-            beaker_pos = current_beaker_position
+            beaker_start_pos = np.array(default_beaker_position)
+            beaker_pos = np.array(current_beaker_position)
             beaker_moved_distance = np.linalg.norm(beaker_pos - beaker_start_pos)
         except Exception as e:
             print(f"[Warning] compute_scale_data error: {e}")

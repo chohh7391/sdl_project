@@ -249,7 +249,7 @@ class ControlSuiteShell(cmd.Cmd):
             self.node.get_logger().warn("Service call failed")
 
     
-    def do_home(self):
+    def do_home(self, arg=None):
 
         home_pos = [0.0, -1.05, -2.18, -1.57, 1.57, 0.0]
         self.move_to_target_js(home_pos)

@@ -19,11 +19,11 @@ ENTITIES = {
     "stirrer": Cuboid(name="stirrer", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.18, 0.18, 0.09], color=[255, 0, 0]),
 
     # objects
-    "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.05, 0.05, 0.135 - 0.02], color=[255, 0, 0]),
-    "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.07, 0.07, 0.12 - 0.02], color=[255, 0, 0]),
+    "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.05, 0.05, 0.135], color=[255, 0, 0]),
+    "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.07, 0.07, 0.12], color=[255, 0, 0]),
     "magnet": Cuboid(name="magnet", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.045, 0.045, 0.03], color=[255, 0, 0]),
     "box" : Cuboid(name="box", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.108, 0.108, 0.08], color=[0, 0, 255]),
-    "box_goal" : Cuboid(name="box_goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.15, 0.15, 0.01], color=[0, 255, 0]),    
+    "box_goal" : Cuboid(name="box_goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.15, 0.15, 0.01], color=[0, 255, 0]),
 
     # Regions
     "goal_region": Cuboid(name="goal_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.1, 0.1, 0.01], color=[186, 255, 201]),

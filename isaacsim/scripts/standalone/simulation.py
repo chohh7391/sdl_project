@@ -160,17 +160,17 @@ class Simulation(Node):
 
                 # robot control command
                 self.og.Controller.set(self.og.Controller.attribute("/ActionGraph/RobotControl/OnImpulseEvent.state:enableImpulse"), True)
-                # # compute observations
-                # observations = self.world.get_observations()
+                # compute observations
+                observations = self.world.get_observations()
 
-                # ft_data = observations["ft_data"]
-                # scale_data = observations["scale_data"]
+                ft_data = observations["ft_data"]
+                scale_data = observations["scale_data"]
                 
-                # # publish
-                # if ft_data is not None:
-                #     self.publish_ft(ft_data)
-                # if scale_data is not None:
-                #     self.publish_scale(scale_data)
+                # publish
+                if ft_data is not None:
+                    self.publish_ft(ft_data)
+                if scale_data is not None:
+                    self.publish_scale(scale_data)
 
             self.step += 1
 
@@ -220,7 +220,13 @@ class Simulation(Node):
         if is_close:
             # beaker: 17
             # flask: 12
-            num_repeat = 14
+            if gripper == "dh3":
+                num_repeat = 14
+            elif gripper == "ag95":
+                num_repeat = 10
+            else:
+                num_repeat = 1
+
             for _ in range(num_repeat):
                 self.robot.gripper.close()
                 self.world.step(render=True)
@@ -229,9 +235,11 @@ class Simulation(Node):
             
         else:
             if gripper == "dh3":
-                num_repeat = 3 # for grasping magent
+                num_repeat = 3
+            elif gripper == "ag95":
+                num_repeat = 10
             else:
-                num_repeat = 14
+                num_repeat = 1
 
             for _ in range(num_repeat):
                 self.robot.gripper.open()
