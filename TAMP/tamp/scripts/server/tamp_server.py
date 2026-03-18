@@ -518,7 +518,8 @@ class TAMPServer(Node):
             opt_viz_interval=request.opt_viz_interval,
             viz_robot_mesh=request.viz_robot_mesh,
             enable_experiment_logging=request.enable_experiment_logging,
-            time_dilation_factor=0.5,
+            time_dilation_factor=request.time_dilation_factor,
+            rr_spawn=request.rr_spawn,
         )
         validate_tamp_config(config)
 

@@ -91,6 +91,8 @@ class TAMPClient(Node):
         request.enable_visualizer = False
         request.viz_robot_mesh = False
         request.enable_experiment_logging = False
+        request.rr_spawn = False
+        request.time_dilation_factor = 0.5
 
         robot_name = "fr5"
 

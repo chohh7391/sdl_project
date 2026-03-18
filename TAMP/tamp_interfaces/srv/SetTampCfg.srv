@@ -12,6 +12,8 @@ bool enable_visualizer
 int32 opt_viz_interval
 bool viz_robot_mesh
 bool enable_experiment_logging
+float32 time_dilation_factor
+bool rr_spawn
 ---
 # Response
 bool success

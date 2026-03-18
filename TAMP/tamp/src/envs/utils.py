@@ -12,7 +12,7 @@ from envs.stirring import load_stir_env
 from envs.default import load_default_env
 from envs.moving import load_moving_env
 from envs.rearranging import load_rearranging_env
-
+import copy
 
 ENTITIES = {
     "table": Cuboid(name="table", pose=[0.0, 0.0, -0.01, *unit_quat], dims=[1.5, 1.5, 0.02], color=[255, 0, 0]),
@@ -41,13 +41,12 @@ class TAMPEnvManager:
 
     def __init__(self):
 
-        self.entities = ENTITIES
+        self.entities = copy.deepcopy(ENTITIES)
 
         self.is_update_entities = False
         self.movables = []
         self.statics = []
         self.ex_collision = []
-
 
     def update_entities(
         self,
