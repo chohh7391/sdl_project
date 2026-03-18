@@ -1,12 +1,8 @@
-from typing import Optional, Dict, List, Any
-import torch
-import numpy as np
-from curobo.geom.types import Cuboid, Cylinder, Obstacle
+from typing import Dict, List, Any
+from curobo.geom.types import Obstacle
 from curobo.types.base import TensorDeviceType
 from cutamp.envs import TAMPEnvironment
-from cutamp.envs.utils import unit_quat
 from cutamp.tamp_domain import HandEmpty, On
-from cutamp.utils.shapes import MultiSphere
 
 
 def load_moving_env(

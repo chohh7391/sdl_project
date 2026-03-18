@@ -172,7 +172,7 @@ class TAMP:
                 motion_gen.warmup()
 
         plan_config = MotionGenPlanConfig(
-            timeout=0.5, enable_finetune_trajopt=False, time_dilation_factor=self.config.time_dilation_factor
+            timeout=0.5, time_dilation_factor=self.config.time_dilation_factor
         )
 
         cu_js = CuroboJointState(
@@ -211,7 +211,7 @@ class TAMP:
                 motion_gen.warmup()
 
         plan_config = MotionGenPlanConfig(
-            max_attempts=1, enable_finetune_trajopt=True, time_dilation_factor=self.config.time_dilation_factor
+            max_attempts=1, time_dilation_factor=self.config.time_dilation_factor
         )
 
         cu_js_init = CuroboJointState(
