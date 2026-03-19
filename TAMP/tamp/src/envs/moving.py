@@ -16,7 +16,7 @@ def load_moving_env(
     
     
     entities["box_region"].pose = entities["box_goal"].pose.copy() 
-    entities["box_region"].pose[2] += 0.02 
+    entities["box_region"].pose[2] += 0.02
 
     env = TAMPEnvironment(
         name="move",

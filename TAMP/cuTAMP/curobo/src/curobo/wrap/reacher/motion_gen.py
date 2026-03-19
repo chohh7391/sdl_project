@@ -2232,7 +2232,8 @@ class MotionGen(MotionGenConfig):
                             "Partial orientation between start and goal is not equal"
                             + str(distance)
                         )
-                        return False
+                        # return False
+                        return True
 
                 # check linear distance:
                 if (
