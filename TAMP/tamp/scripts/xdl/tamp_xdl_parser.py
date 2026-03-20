@@ -123,7 +123,7 @@ class TAMPClient(Node):
             self.get_logger().warn("Service call failed")
 
 
-    def set_tamp_env(self, arg: str, step_attrs: dict = None):
+    def set_tamp_env(self, arg: str, step_attrs: dict = None, rearrange_info: Dict[str, str] = None):
 
         request = SetTampEnv.Request()
         tag_name = arg.strip().lower()
@@ -162,9 +162,10 @@ class TAMPClient(Node):
             request.ex_collision = ["box_region", "rearrange_region"]
 
         elif tag_name == "rearrange":
-            target_object = step_attrs.get("object") or step_attrs.get("to_vessel") or step_attrs.get("vessel")
+            target_object = rearrange_info["target_entity"]
             request.env_name = "rearrange"
             request.movables = [target_object]
+            request.rearrange_grid = rearrange_info["target_grid"]
             
             # [수정된 부분] 타겟 물체가 무엇이든 statics 목록에서 자동으로 제외합니다.
             base_statics = ["table", "stirrer", "beaker", "flask", "box_goal"]
@@ -351,37 +352,44 @@ class XDLRunner(TAMPClient):
 
         # 단계별 실행
         procedure = list(procedure)
-        for i in range(len(procedure)-1):
+        for i in range(len(procedure)):
 
             current_step = procedure[i]
-            next_step = procedure[i + 1]
-
             tag_name = current_step.tag.split("}")[-1]  # ex) "Transfer", "Stir"
             current_step_attrs = current_step.attrib
-            next_step_attrs = next_step.attrib
             self.get_logger().info(f"[Step {i+1}] Tag: {tag_name} | Attrs: {current_step_attrs}")
 
-            # =======================================================================
             llm_attrs = {
                 "current": {},
                 "next": {},
             }
-            
+
             for k, v in current_step_attrs.items():
                 llm_attrs["current"][k] = v
-            for k, v in next_step_attrs.items():
-                llm_attrs["next"][k] = v
-            
-            # LLM 전용 문자열 조합
+
             current_attr_str = " ".join([f'{k}="{v}"' for k, v in llm_attrs["current"].items()])
-            next_attr_str = " ".join([f'{k}="{v}"' for k, v in llm_attrs["next"].items()])
             current_xdl = f'<{tag_name} {current_attr_str} />'
-            next_xdl = f'<{tag_name} {next_attr_str} />'
             obstacle_info, candidate_grids = self.get_obstacle_info_and_candidate_grids(llm_attrs["current"])
+
+            if i == len(procedure) - 1:
+                next_xdl = "None"
+            else:
+                next_step = procedure[i + 1]
+                next_step_attrs = next_step.attrib
+                for k, v in next_step_attrs.items():
+                    llm_attrs["next"][k] = v
+                next_attr_str = " ".join([f'{k}="{v}"' for k, v in llm_attrs["next"].items()])
+                next_xdl = f'<{tag_name} {next_attr_str} />'
+
+            llm_attrs = {
+                "current": {},
+                "next": {},
+            }
 
             sdl_step = {
                 "instruction": {"current_xdl": current_xdl, "next_xdl": next_xdl, "obstacle_info": obstacle_info, "candidate_grids": candidate_grids}
             }
+            self.get_logger().info(f"sdl_step: {sdl_step}")
 
             self.get_logger().info("🧠 LLM에게 다음 행동을 질문합니다...")
 
@@ -405,7 +413,17 @@ class XDLRunner(TAMPClient):
                     self.get_logger().info("치우기용 Tool 변경 없음")
                 
                 # rearrange 환경 세팅 및 실행
-                self.set_tamp_env("rearrange", current_step_attrs)
+                if obstacle_info and obstacle_info != "None":
+                    # "at"이라는 단어를 기준으로 앞부분만 자릅니다.
+                    target_entity = obstacle_info.split(" at ")[0].strip()
+                else:
+                    target_entity = None
+                
+                rearrange_info = {
+                    "target_entity": target_entity,
+                    "target_grid": rearrange_grid,
+                }
+                self.set_tamp_env("rearrange", current_step_attrs, rearrange_info)
                 time.sleep(2.0)
                 
                 self.get_logger().info("Planning for rearrange...")
@@ -454,7 +472,7 @@ class XDLRunner(TAMPClient):
     # 물체 위치 조회 및 5cm 이내 충돌/접근 감지 함수 (2차원 평면 기준)
     # =======================================================================
     # GT Based
-    def get_obstacle_info_and_candidate_grids(self, step_attrs) -> Dict[str, str]:
+    def get_obstacle_info_and_candidate_grids(self, step_attrs):
         self.get_logger().info("🔍 [Entity & Grid Obstacle Check]")
 
         hardcoded_entities = ["beaker", "flask", "magnet", "stirrer", "box", "box_goal"]
@@ -504,16 +522,14 @@ class XDLRunner(TAMPClient):
                     
                     self.get_logger().warn(f"  ⚠️ [Obstacle] {report}")
 
-        obstacle_info = ", ".join(obstacle_reports) if obstacle_reports else ""
-        candidate_grids_str = self.get_candidate_grids(positions)
-        
-        self.get_logger().info("-" * 40)
+        if len(obstacle_reports):
+            obstacle_info = obstacle_reports[-1]
+        else:
+            obstacle_info = "None"
 
-        # 최종 결과: "stirrer at G6 (blocking), box at G3 (blocking)" 형태
-        return {
-            "obstacle_info": obstacle_info,
-            "candidate_grids": candidate_grids_str,
-        }
+        candidate_grids = self.get_candidate_grids(positions)
+        
+        return obstacle_info, candidate_grids
     
     def get_candidate_grids(self, all_positions):
         """
@@ -613,31 +629,27 @@ class XDLRunner(TAMPClient):
 
     #     return is_space_constrained
 
-    def get_grid_name(self, pos_x, pos_y):
-        """
-        엔티티의 x, y 좌표를 기반으로 G1~G12 구역을 반환합니다.
-        (아래 수치는 예시이며, 실제 환경의 좌표값으로 calibration이 필요합니다.)
-        """
-        # 예: 상단(G1, G2), 중단(G3-G7), 하단(G8-G12)
-        # 실제 실험대 상의 x, y 임계값(Threshold)을 입력하세요.
-        
-        # 예시 로직 (좌표 범위에 따른 매핑)
-        if pos_y > 0.4: # 테이블 안쪽 (상단)
-            if pos_x < -0.3: return "G1"
-            if pos_x > 0.3: return "G2"
-        elif -0.1 < pos_y <= 0.4: # 중간 영역
-            if pos_x < -0.4: return "G3"
-            if -0.4 <= pos_x < -0.15: return "G4"
-            if -0.15 <= pos_x < 0.15: return "G5"
-            if 0.15 <= pos_x < 0.4: return "G6"
-            else: return "G7"
-        else: # 앞쪽 영역
-            if pos_x < -0.4: return "G8"
-            if -0.4 <= pos_x < -0.15: return "G9"
-            if -0.15 <= pos_x < 0.15: return "G10"
-            if 0.15 <= pos_x < 0.4: return "G11"
-            else: return "G12"
-            
+    def get_grid_name(self, x, y):
+        if -0.3 <= x < 0:
+            if -0.75 <= y < -0.45: 
+                return "G1"
+            if -0.2 <= x < -0.1 and 0.55 <= y < 0.65: # Stirrer Grid (G2) is smaller than others
+                return "G2"
+
+        elif 0.0 <= x < 0.3:
+            if   -0.75 <= y < -0.45: return "G3"
+            elif -0.45 <= y < -0.15: return "G4"
+            elif -0.15 <= y <  0.15: return "G5"
+            elif  0.15 <= y <  0.45: return "G6"
+            elif  0.45 <= y <= 0.75: return "G7"
+
+        elif 0.3 <= x < 0.6:
+            if   -0.75 <= y < -0.45: return "G8"
+            elif -0.45 <= y < -0.15: return "G9"
+            elif -0.15 <= y <  0.15: return "G10"
+            elif  0.15 <= y <  0.45: return "G11"
+            elif  0.45 <= y <= 0.75: return "G12"
+                
         return "Unknown"
 
     

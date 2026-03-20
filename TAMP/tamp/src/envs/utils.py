@@ -5,10 +5,10 @@ from cutamp.envs.utils import unit_quat
 from cutamp.envs import TAMPEnvironment
 
 from envs.transfer import load_transfer_env
-from envs.stirring import load_stir_env
+from envs.stir import load_stir_env
 from envs.default import load_default_env
-from envs.moving import load_moving_env
-from envs.rearranging import load_rearranging_env
+from envs.move import load_move_env
+from envs.rearrange import load_rearrange_env
 import copy
 
 
@@ -28,7 +28,7 @@ ENTITIES = {
     "pour_region": Cuboid(name="pour_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.08, 0.08, 0.0001], color=[255, 255, 255]),
     "beaker_region": Cuboid(name="beaker_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.08, 0.08, 0.0001], color=[255, 255, 255]),
     "box_region": Cuboid(name="box_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.2, 0.2, 0.0001], color=[255, 255, 255]),
-    "rearrange_region" : Cuboid(name="rearrange_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.1, 0.1, 0.0001], color=[255, 255, 255]),
+    "rearrange_region" : Cuboid(name="rearrange_region", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.3, 0.3, 0.0001], color=[255, 255, 255]),
 
     "obstacle_1": Cuboid(name="obstacle_1", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.07, 0.07, 0.1], color=[255, 0, 255]),
     "obstacle_2": Cuboid(name="obstacle_2", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.07, 0.07, 0.1], color=[255, 0, 255]),
@@ -52,10 +52,13 @@ class TAMPEnvManager:
         movables: List[str] = None,
         statics: List[str] = None,
         ex_collision: List[str] = None,
+        rearrange_grid: str = None,
     ):
+        print(f"rearrange_grid: {rearrange_grid}")
         self.movables = []
         self.statics = []
         self.ex_collision = []
+        self.rearrange_grid = None
 
         if poses is not None:
             for name, pose in poses.items():
@@ -81,8 +84,10 @@ class TAMPEnvManager:
             for name in ex_collision:
                 self.ex_collision.append(self.entities[name.lower()])
 
-        self.is_update_entities = True
+        if rearrange_grid is not None:
+            self.rearrange_grid = rearrange_grid
 
+        self.is_update_entities = True
 
     def load_env(self, name: str) -> TAMPEnvironment:
         
@@ -119,7 +124,7 @@ class TAMPEnvManager:
 
             elif name == "move":
 
-                env = load_moving_env(
+                env = load_move_env(
                     entities=self.entities,
                     movables=self.movables,
                     statics=self.statics,
@@ -128,11 +133,12 @@ class TAMPEnvManager:
 
             elif name == "rearrange":
 
-                env = load_rearranging_env(
+                env = load_rearrange_env(
                     entities=self.entities,
                     movables=self.movables,
                     statics=self.statics,
                     ex_collision=self.ex_collision,
+                    rearrange_grid=self.rearrange_grid
                 )
 
             else:

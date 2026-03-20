@@ -54,12 +54,12 @@ class Task(ABC, BaseTask):
 
         self.default_positions = {
             "table": np.array([0.0, 0.0, -0.01]),
-            "stirrer": np.array([-0.04, 0.45, 0.045]),
+            "stirrer": np.array([-0.15, 0.6, 0.045]),
             "beaker": np.array([0.51, -0.17, 0.07]),
             "flask": np.array([0.43, -0.086, 0.07]), 
             "magnet": np.array([0.3, 0.416, 0.015]),
             "box" : np.array([0.35, -0.5, 0.06]),
-            "box_goal" : np.array([-0.036, -0.52, 0.006]),
+            "box_goal" : np.array([-0.15, -0.6, 0.006]),
         }
         self.default_orientations = {
             "table": np.array([1.0, 0.0, 0.0, 0.0]),
@@ -82,7 +82,7 @@ class Task(ABC, BaseTask):
         scene.add_default_ground_plane(z_position=-0.72)
         
         # add_reference_to_stage(
-        #     usd_path=os.path.join(ASSET_PATH, "lab", "World.usd"),
+        #     usd_path=os.path.join(ASSET_PATH, "lab", "world.usd"),
         #     prim_path="/World/background"
         # )
         # self.backgound = SingleXFormPrim(
@@ -283,35 +283,16 @@ class Task(ABC, BaseTask):
         self.scene.add(self.box)
 
         # spawn box_goal
-        self.box_goal = self.scene.add(
-            FixedCuboid(
-                prim_path="/World/box_goal",
-                name="box_goal",
-                position=current_positions["box_goal"],
-                orientation=current_orientations["box_goal"],
-                scale=np.array([0.2, 0.2, 0.01]),
-                size=1.0,
-                color=np.array([0.922, 0.769, 0.569]),
-                visible=False,
-            )
+        box_goal_usd_path = os.path.join(ASSET_PATH, "lab", "tray.usd")
+        self.box_goal = create_single_rigid_prim_from_usd(
+            usd_path=box_goal_usd_path, prim_path="/World/box_goal", name="box_goal",
+            position=current_positions["box_goal"],
+            orientation=current_orientations["box_goal"],
         )
+        self.scene.add(self.box_goal)
 
-        add_reference_to_stage(
-            usd_path=os.path.join(ASSET_PATH, "lab", "Tray.usd"),
-            prim_path="/World/box_goal_visual"
-        )
-        self.box_goal_visual = SingleXFormPrim(
-            prim_path="/World/box_goal_visual",
-            name="box_goal_visual"
-        )
-        self.box_goal_visual.set_world_pose(
-            position=np.array([-0.036, -0.52, 0.001]),
-            orientation=[1, 0, 0, 0],
-        )
-
-
+        # spawn gripper visual
         gripper_visual_asset_path = os.path.join(ASSET_PATH, "robot", "dcp_description", "usd", "gripper_visual")
-        
         # ag95
         add_reference_to_stage(
             usd_path=os.path.join(gripper_visual_asset_path, "ag95", "ag95.usd"),
@@ -325,7 +306,6 @@ class Task(ABC, BaseTask):
             position=[-0.6, -0.4, 0.25],
             orientation=[0, 0, 1, 0],
         )
-
         # vgc10
         add_reference_to_stage(
             usd_path=os.path.join(gripper_visual_asset_path, "vgc10", "vgc10.usd"),
@@ -339,7 +319,6 @@ class Task(ABC, BaseTask):
             position=[-0.6, 0.0, 0.25],
             orientation=[0, 0, 1, 0],
         )
-
         # dh3
         add_reference_to_stage(
             usd_path=os.path.join(gripper_visual_asset_path, "dh3", "dh3.usd"),
@@ -353,7 +332,6 @@ class Task(ABC, BaseTask):
             position=[-0.6, 0.4, 0.25],
             orientation=[0, 0, 1, 0],
         )
-
         # gripper_base_link xform
         self.gripper_base_ag95 = SingleXFormPrim(
             prim_path="/World/gripper_visual/gripper_ag95/gripper_base_link",
@@ -367,7 +345,6 @@ class Task(ABC, BaseTask):
             prim_path="/World/gripper_visual/gripper_dh3/gripper_base_link",
             name="gripper_base_dh3"
         )
-
         self.create_gripper_stand()
 
 

@@ -90,7 +90,8 @@ class TAMP:
         poses: Dict[str, List[float]],
         movables: List[str],
         statics: List[str],
-        ex_collision: List[str]
+        ex_collision: List[str],
+        rearrange_grid: str | None = None,
     ):
         self.current_env_name = name
 
@@ -98,7 +99,8 @@ class TAMP:
             poses=poses,
             movables=movables,
             statics=statics,
-            ex_collision=ex_collision
+            ex_collision=ex_collision,
+            rearrange_grid=rearrange_grid,
         )
 
         if name == "transfer" :
@@ -444,12 +446,14 @@ class TAMPServer(Node):
         movables = request.movables
         statics = request.statics
         ex_collision = request.ex_collision
+        rearrange_grid = request.rearrange_grid
 
         entities_states = {
             "poses": {},
             "movables": movables,
             "statics": statics,
             "ex_collision": ex_collision,
+            "rearrange_grid": rearrange_grid,
         }
 
         for entity in entities:
@@ -477,7 +481,8 @@ class TAMPServer(Node):
             poses=entities_states["poses"],
             movables=entities_states["movables"],
             statics=entities_states["statics"],
-            ex_collision=entities_states["ex_collision"]
+            ex_collision=entities_states["ex_collision"],
+            rearrange_grid=entities_states["rearrange_grid"],
         )
 
         return response

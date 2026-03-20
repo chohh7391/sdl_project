@@ -4,6 +4,7 @@ string[] entities
 string[] movables
 string[] statics
 string[] ex_collision
+string rearrange_grid
 ---
 # Response
 bool success

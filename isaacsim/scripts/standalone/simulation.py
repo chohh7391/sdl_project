@@ -219,7 +219,7 @@ class Simulation(Node):
         
         if is_close:
             if gripper == "dh3":
-                num_repeat = 14
+                num_repeat = 16
             elif gripper == "ag95":
                 num_repeat = 10
             else:

@@ -5,7 +5,7 @@ from cutamp.envs import TAMPEnvironment
 from cutamp.tamp_domain import HandEmpty, On
 
 
-def load_moving_env(
+def load_move_env(
     entities: Dict[str, Any],
     movables: List[Obstacle],
     statics: List[Obstacle],
