@@ -125,9 +125,6 @@ class Simulation(Node):
 
         self.step = 0
 
-        self.gripper_state = "stop" # "open", "close", "stop"
-        self.gripper_effort = 100.0 # 잡을 때 가할 힘 (단위: N 또는 Nm, 모델에 맞게 조절)
-
         self.get_logger().info("Simulation Start")
 
     def update_joint_ids(self) -> bool:
@@ -155,26 +152,6 @@ class Simulation(Node):
     def step_cb(self):
 
         if self.simulation_app.is_running():
-
-            # 1. 그리퍼 상태에 따른 제어 로직 추가
-            if self.robot and self.robot.is_valid() and self.robot.gripper:
-                
-                
-                
-                if self.gripper_state == "close":
-                    # 양쪽 조인트에 닫는 방향으로 일정한 힘(Effort) 적용
-                    # 주의: 관절 방향에 따라 effort 값의 부호(+/-)가 다를 수 있음
-                    dof_indices = self.robot.gripper.joint_dof_indicies[0]
-                    efforts = np.array([self.gripper_effort] * len(dof_indices))
-                    # self.robot.apply_action(self.ArticulationAction(joint_efforts=efforts, joint_indices=dof_indices))
-                    # self.get_logger().info(f"dof_indices: {dof_indices}")
-                    # self.get_logger().info(f"efforts: {efforts}")
-                    self.get_logger().info("Gripper closing...")
-                
-                elif self.gripper_state == "open":
-                    # 열 때는 정확한 위치가 중요하므로 Position Control 사용 가능
-                    self.robot.gripper.open()
-                    # 또는 반대 방향 effort
 
             # step simulation
             self.world.step(render=True)
@@ -230,14 +207,46 @@ class Simulation(Node):
 
 
     def gripper_commands_cb(self, request, response):
-        if request.data: # Close
-            self.gripper_state = "close"
-            response.message = "Gripper closing mode activated"
-        else: # Open
-            self.gripper_state = "open"
-            response.message = "Gripper opening mode activated"
+
+        if self.robot is None or not self.robot.is_valid() or self.robot.gripper is None:
+            self.get_logger().warning("gripper_commands_cb: Robot is not valid. Skipping command.")
+            response.success = False
+            response.message = "Robot is not valid (currently swapping?)"
+            return response
+
+        is_close = request.data
+        gripper = self.current_tool
         
+        if is_close:
+            if gripper == "dh3":
+                num_repeat = 16
+            elif gripper == "ag95":
+                num_repeat = 10
+            else:
+                num_repeat = 1
+
+            for _ in range(num_repeat):
+                self.robot.gripper.close()
+                self.world.step(render=True)
+            
+            response.message = "close gripper"
+            
+        else:
+            if gripper == "dh3":
+                num_repeat = 3 # for grasping magnet (small object)
+            elif gripper == "ag95":
+                num_repeat = 10
+            else:
+                num_repeat = 1
+
+            for _ in range(num_repeat):
+                self.robot.gripper.open()
+                self.world.step(render=True)
+
+            response.message = "open gripper"
+
         response.success = True
+        
         return response
     
     def tool_change_cb(self, request, response):

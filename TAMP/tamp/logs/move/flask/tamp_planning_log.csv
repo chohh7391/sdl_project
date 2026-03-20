@@ -420,3 +420,9 @@ Timestamp,Task Name,Experiment ID,Success,Attempts Needed,Planning Time (s),Part
 2026-03-20 16:45:33,rearrange,N/A,True,0,40.7503,806
 2026-03-20 16:48:11,rearrange,N/A,True,0,55.4772,813
 2026-03-20 16:49:52,stir,N/A,True,0,74.3083,455
+2026-03-20 17:03:40,rearrange,N/A,True,0,23.4764,828
+2026-03-20 17:07:00,rearrange,N/A,True,0,36.1715,656
+2026-03-20 17:10:08,rearrange,N/A,True,0,19.8974,678
+2026-03-20 17:12:12,rearrange,N/A,True,0,23.7119,26
+2026-03-20 17:14:24,rearrange,N/A,True,0,40.1049,676
+2026-03-20 17:21:34,rearrange,N/A,True,0,50.9774,810
