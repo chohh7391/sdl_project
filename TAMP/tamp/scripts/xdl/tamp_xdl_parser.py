@@ -1,4 +1,4 @@
-#!/home/home/anaconda3/envs/sdl/bin/python
+#!/home/home/miniconda3/envs/sdl/bin/python
 from typing import Dict
 import argparse
 import time
@@ -24,6 +24,7 @@ PROJECT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "
 sys.path.append(os.path.join(PROJECT_PATH, "LLM"))
 # Llama import
 from llama.script.action_reasoner.model import ActionReasoner
+import numpy as np
 
 
 GRID_PROPERTIES = {
@@ -96,7 +97,6 @@ class TAMPClient(Node):
 
         assert desired_tool in {"empty", "ag95", "vgc10", "dh3"}
 
-        request.curobo_plan = True
         request.enable_visualizer = False
         request.viz_robot_mesh = False
         request.enable_experiment_logging = False
@@ -398,7 +398,12 @@ class XDLRunner(TAMPClient):
 
             self.get_logger().info(f"💡 LLM 판단 결과 => Main Tool: {main_tool} | Need Move: {is_rearrange} | Move Tool: {rearrange_tool}")
             # =======================================================================
-            
+
+            # for test
+            # rearrange_grid = "G12"
+            # rearrange_grid = np.random.choice("G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12".split())
+            # is_rearrange = "False"
+
             # 🚨 [NEW] 1. 공간이 좁아 치우기(rearrange)가 필요한 경우
             if is_rearrange == "True":
                 self.get_logger().info("⚠️ 공간이 협소하여 방해물을 먼저 치웁니다 (rearrange 실행)")

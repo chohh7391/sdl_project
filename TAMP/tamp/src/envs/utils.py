@@ -54,7 +54,6 @@ class TAMPEnvManager:
         ex_collision: List[str] = None,
         rearrange_grid: str = None,
     ):
-        print(f"rearrange_grid: {rearrange_grid}")
         self.movables = []
         self.statics = []
         self.ex_collision = []

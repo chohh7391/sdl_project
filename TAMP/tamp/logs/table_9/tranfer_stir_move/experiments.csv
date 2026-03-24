@@ -1,0 +1,7 @@
+trial,env_name,success,planning_time_sec,attempts,total_num_satisfying
+2026-03-24 17:14:41,rearrange,True,14.1918,1,781
+2026-03-24 17:16:52,transfer,True,59.1418,2,8
+2026-03-24 17:19:22,rearrange,False,34.7486,3,0
+2026-03-24 17:20:41,transfer,True,31.0665,1,18
+2026-03-24 17:22:53,rearrange,True,14.1354,1,779
+2026-03-24 17:24:34,transfer,True,30.1768,1,16

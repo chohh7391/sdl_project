@@ -17,7 +17,7 @@ def load_transfer_env(
 
     # movables = [from_vessel, to_vessel]
     entities["pour_region"].pose = movables[1].pose.copy()
-    entities["pour_region"].pose = [entities["pour_region"].pose[0], entities["pour_region"].pose[1], 0.18, *unit_quat]
+    entities["pour_region"].pose[2] += 0.11
     entities["goal_region"].pose = [0.35, -0.35, 0.015, *unit_quat]
 
     env = TAMPEnvironment(

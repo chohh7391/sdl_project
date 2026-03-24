@@ -123,6 +123,9 @@ class TAMP:
 
         if self.env is not None:
             for _ in range(self.max_attempts):
+
+                attempts_used += 1
+
                 env = copy.deepcopy(self.env)
                 
                 try:
@@ -245,24 +248,22 @@ class TAMP:
         """
         Planning 결과를 CSV 파일로 저장합니다.
         """
-        log_file = "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/logs/move/flask/tamp_planning_log.csv"
+        env_name = self.current_env_name
+        log_file = "/home/home/sdl_ws/src/sdl_project/TAMP/tamp/logs/table_9/tranfer_stir_move/experiments.csv"
         file_exists = os.path.isfile(log_file)
         
-        # 파일이 없으면 헤더와 함께 생성하고, 있으면 데이터를 덧붙임(append)
         with open(log_file, mode='a', newline='') as f:
             writer = csv.writer(f)
             if not file_exists:
-                writer.writerow(["Timestamp", "Task Name", "Experiment ID", "Success", "Attempts Needed", "Planning Time (s)", "Particles Satisfying"])
+                writer.writerow(["trial", "env_name", "success", "planning_time_sec", "attempts", "total_num_satisfying"])
             
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-            exp_id_str = experiment_id if experiment_id else "N/A"
             writer.writerow([
                 timestamp, 
-                task_name, 
-                exp_id_str, 
-                success, 
+                env_name,
+                success,
+                f"{planning_time:.4f}",
                 attempts, 
-                f"{planning_time:.4f}", 
                 self.total_num_satisfying
             ])
         
@@ -518,7 +519,7 @@ class TAMPServer(Node):
             soft_cost=None,
             num_initial_plans=request.num_initial_plans, # Changed from 1 to 30
             cache_subgraphs=None,
-            curobo_plan=request.curobo_plan,
+            curobo_plan=True,
             enable_visualizer=request.enable_visualizer,
             opt_viz_interval=request.opt_viz_interval,
             viz_robot_mesh=request.viz_robot_mesh,

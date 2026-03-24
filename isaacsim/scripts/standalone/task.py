@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 import os, sys
 import numpy as np
 
@@ -52,12 +52,23 @@ class Task(ABC, BaseTask):
         self.desired_tool = None
         self.current_tool = None
 
+        # # G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12
+        # random_grid = np.random.choice("G1 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12".split())
+        # random_x, random_y = self.get_grid_xy(random_grid)
+        flask_x, flask_y = self.get_grid_xy("G12")
+        box_x, box_y = self.get_grid_xy("G1")
+        noise = np.random.uniform(-0.1, 0.1, size=2)
+
+
         self.default_positions = {
             "table": np.array([0.0, 0.0, -0.01]),
             "stirrer": np.array([-0.15, 0.6, 0.045]),
+            # "beaker": np.array([random_x, random_y, 0.067]),
             "beaker": np.array([0.51, -0.17, 0.07]),
-            "flask": np.array([0.43, -0.086, 0.07]), 
+            "flask": np.array([flask_x + noise[0], flask_y + noise[1], 0.07]),
+            # "flask": np.array([0.43, -0.086, 0.07]),
             "magnet": np.array([0.3, 0.416, 0.015]),
+            # "box" : np.array([box_x, box_y, 0.06]),
             "box" : np.array([0.35, -0.5, 0.06]),
             "box_goal" : np.array([-0.15, -0.6, 0.006]),
         }
@@ -531,3 +542,23 @@ class Task(ABC, BaseTask):
             self.max_pour_angle = current_wrist_angle
         
         return self.scale_data
+
+    def get_grid_xy(self, name: str) -> Tuple[Optional[float], Optional[float]]:
+        """
+        그리드 이름을 입력받아 해당 영역의 중심 좌표 (x, y)를 반환합니다.
+        """
+        if name == "G1": return -0.15, -0.6
+        elif name == "G2": return -0.15, 0.6
+        elif name == "G3": return 0.15, -0.6
+        elif name == "G4": return 0.15, -0.3
+        elif name == "G5": return 0.15, 0.0
+        elif name == "G6": return 0.15, 0.3
+        elif name == "G7": return 0.15, 0.6
+        elif name == "G8":  return 0.45, -0.6
+        elif name == "G9":  return 0.45, -0.3
+        elif name == "G10": return 0.45, 0.0
+        elif name == "G11": return 0.45, 0.3
+        elif name == "G12": return 0.45, 0.6
+
+        # 정의되지 않은 이름일 경우
+        return None, None

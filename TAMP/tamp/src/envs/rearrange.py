@@ -48,22 +48,13 @@ def get_grid_xy(name: str) -> Tuple[Optional[float], Optional[float]]:
     """
     그리드 이름을 입력받아 해당 영역의 중심 좌표 (x, y)를 반환합니다.
     """
-    # G1: x(-0.3 ~ 0), y(-0.75 ~ -0.45) -> center(-0.15, -0.6)
-    if name == "G1":
-        return -0.15, -0.6
-    
-    # G2: x(-0.2 ~ -0.1), y(0.55 ~ 0.65) -> center(-0.15, 0.6)
-    elif name == "G2":
-        return -0.15, 0.6
-
-    # x-range: 0.0 ~ 0.3 (center 0.15)
+    if name == "G1": return -0.15, -0.6
+    elif name == "G2": return -0.15, 0.6
     elif name == "G3": return 0.15, -0.6
     elif name == "G4": return 0.15, -0.3
     elif name == "G5": return 0.15, 0.0
     elif name == "G6": return 0.15, 0.3
     elif name == "G7": return 0.15, 0.6
-
-    # x-range: 0.3 ~ 0.6 (center 0.45)
     elif name == "G8":  return 0.45, -0.6
     elif name == "G9":  return 0.45, -0.3
     elif name == "G10": return 0.45, 0.0
