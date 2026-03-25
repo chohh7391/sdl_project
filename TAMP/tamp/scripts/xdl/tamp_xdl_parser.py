@@ -402,7 +402,7 @@ class XDLRunner(TAMPClient):
             # for test
             # rearrange_grid = "G12"
             # rearrange_grid = np.random.choice("G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12".split())
-            # is_rearrange = "False"
+            is_rearrange = "False"
 
             # 🚨 [NEW] 1. 공간이 좁아 치우기(rearrange)가 필요한 경우
             if is_rearrange == "True":
