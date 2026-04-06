@@ -150,14 +150,14 @@ class TAMP:
         end_time = time.time()
         planning_time = end_time - start_time
 
-        # CSV 파일에 결과 로깅
-        self._log_planning_result(
-            task_name=self.current_env_name,
-            experiment_id=experiment_id,
-            success=success,
-            attempts=attempts_used,
-            planning_time=planning_time
-        )
+        # # CSV 파일에 결과 로깅
+        # self._log_planning_result(
+        #     task_name=self.current_env_name,
+        #     experiment_id=experiment_id,
+        #     success=success,
+        #     attempts=attempts_used,
+        #     planning_time=planning_time
+        # )
 
         return self.curobo_plan, self.total_num_satisfying
     
@@ -681,7 +681,7 @@ class TAMPServer(Node):
             elif plan_type == "gripper":
                 self.get_logger().info(f"Executing gripper: {plan_part['action']}")
                 self.execute_gripper_action(plan_part)
-                time.sleep(0.4)
+                time.sleep(1.0)
 
             else:
                 self.get_logger().error(f"Unknown plan type: {plan_type}")

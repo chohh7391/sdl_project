@@ -64,9 +64,9 @@ class Task(ABC, BaseTask):
             "table": np.array([0.0, 0.0, -0.01]),
             "stirrer": np.array([-0.15, 0.6, 0.045]),
             # "beaker": np.array([random_x, random_y, 0.067]),
-            "beaker": np.array([0.35, -0.35, 0.07]),
-            "flask": np.array([flask_x + noise[0], flask_y + noise[1], 0.07]),
-            # "flask": np.array([0.43, -0.086, 0.07]),
+            "beaker": np.array([0.49, 0.17475, 0.07]),
+            # "flask": np.array([flask_x + noise[0], flask_y + noise[1], 0.07]),
+            "flask": np.array([0.48383, 0.33166, 0.07]),
             "magnet": np.array([-0.3, 0.416, 0.015]),
             # "box" : np.array([box_x, box_y, 0.06]),
             "box" : np.array([0.35, -0.5, 0.06]),
@@ -90,20 +90,20 @@ class Task(ABC, BaseTask):
     def set_up_scene(self, scene: Scene) -> None:
         super().set_up_scene(scene)
 
-        scene.add_default_ground_plane(z_position=-0.72)
+        # scene.add_default_ground_plane(z_position=-0.72)
         
-        # add_reference_to_stage(
-        #     usd_path=os.path.join(ASSET_PATH, "lab", "world.usd"),
-        #     prim_path="/World/background"
-        # )
-        # self.backgound = SingleXFormPrim(
-        #     prim_path="/World/background",
-        #     name="background"
-        # )
-        # self.backgound.set_world_pose(
-        #     position=[0.0, 0.0, -0.71],
-        #     orientation=[1, 0, 0, 0],
-        # )
+        add_reference_to_stage(
+            usd_path=os.path.join(ASSET_PATH, "lab", "world.usd"),
+            prim_path="/World/background"
+        )
+        self.backgound = SingleXFormPrim(
+            prim_path="/World/background",
+            name="background"
+        )
+        self.backgound.set_world_pose(
+            position=[0.0, 0.0, -0.71],
+            orientation=[1, 0, 0, 0],
+        )
 
         self.set_object(self.current_positions, self.current_orientations)
         self.set_robot(self.desired_tool)

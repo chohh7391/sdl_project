@@ -14,7 +14,7 @@ ROOT_JOINT_PATH = ROBOT_STAGE_PATH + "/root_joint"
 BACKGROUND_STAGE_PATH = "/background"
 BACKGROUND_USD_PATH = "/Isaac/Environments/Grid/default_environment.usd"
 
-CONFIG = {"renderer": "RaytracedLighting", "headless": True}
+CONFIG = {"renderer": "RaytracedLighting", "headless": False}
 
 
 class Simulation(Node):
@@ -46,7 +46,7 @@ class Simulation(Node):
         self.world = self.World(stage_units_in_meters=1.0)
 
         # Preparing stage
-        viewports.set_camera_view(eye=np.array([1.2, 1.2, 0.8]), target=np.array([0, 0, 0.5]))
+        viewports.set_camera_view(eye=np.array([1.6, 1.6, 1.2]), target=np.array([0, 0, 0.1]))
 
         from task import Task
 
