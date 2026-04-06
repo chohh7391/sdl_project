@@ -69,7 +69,7 @@ class Task(ABC, BaseTask):
             "flask": np.array([0.48383, 0.33166, 0.07]),
             "magnet": np.array([-0.3, 0.416, 0.015]),
             # "box" : np.array([box_x, box_y, 0.06]),
-            "box" : np.array([0.35, -0.5, 0.06]),
+            "box" : np.array([-0.12621, -0.57484, 0.06]),
             "box_goal" : np.array([-0.15, -0.6, 0.006]),
         }
         self.default_orientations = {
@@ -78,7 +78,7 @@ class Task(ABC, BaseTask):
             "beaker": np.array([1.0, 0.0, 0.0, 0.0]),
             "flask": np.array([1.0, 0.0, 0.0, 0.0]),
             "magnet": np.array([1.0, 0.0, 0.0, 0.0]),
-            "box": np.array([1.0, 0.0, 0.0, 0.0]),
+            "box": np.array([0.917491, 0, 0, -0.3977565]),
             "box_goal": np.array([1.0, 0.0, 0.0, 0.0]),
         }
 

@@ -1,4 +1,4 @@
-#!/home/home/miniconda3/envs/sdl/bin/python
+#!/home/home/anaconda3/envs/sdl/bin/python
 from typing import Dict
 import argparse
 import time
@@ -285,6 +285,8 @@ class TAMPClient(Node):
             # move to current tool pose
             self.move_to_target(current_tool_position, current_tool_orientation)
 
+            time.sleep(5.0)
+
             # release tool
             tool_change_request = ToolChange.Request()
             tool_change_request.desired_tool = "empty"
@@ -294,6 +296,8 @@ class TAMPClient(Node):
 
             # move to desired_tool pose
             self.move_to_target(desired_tool_position, desired_tool_orientation)
+
+            time.sleep(5.0)
 
             # grip tool
             tool_change_request = ToolChange.Request()
@@ -423,6 +427,8 @@ class XDLRunner(TAMPClient):
                     target_entity = obstacle_info.split(" at ")[0].strip()
                 else:
                     target_entity = None
+
+                target_entity = "flask"
                 
                 rearrange_info = {
                     "target_entity": target_entity,
