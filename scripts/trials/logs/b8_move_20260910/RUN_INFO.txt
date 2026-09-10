@@ -1,0 +1,29 @@
+B8 move batch -- seeds 0..29 -- 2026-09-10/11
+csv: _2026__IEEE_Access/revision/analysis/data/move_b8_20260910.csv
+batch stdout: scripts/trials/logs/b8_move_batch.out
+
+WHY: a re-run of B5 on the code version the Stir work produced, so all three
+tasks are measured on ONE version. What reaches Move since B5:
+  * _open_gripper() drives the gripper to its opened position and verifies it,
+    instead of a fixed repeat count.
+  * SDL_PLACE_SETTLE_STEPS=15 -- hold the last commanded pose before releasing.
+  * The flask is a hollow collider and the stir bar is 10 x 35 mm. Neither is in
+    Move's planner world (its statics are table, stirrer, beaker, flask,
+    box_goal, and the flask's OUTER envelope is unchanged), so Move's planning
+    problem is identical to B5's; the change is code-version consistency.
+  * Harness: stray-process reaping and the read-back-vs-spawned pose check.
+Layouts are unchanged from B5 (_MOVABLE_FOOTPRINT is frozen).
+
+RESULT: 30/30 task success [Wilson 88.6, 100.0]  (B5: 29/30, the miss being an
+Isaac Sim crash inside world.stop() during the tool change -- it did not recur).
+  planning 30/30, median 23.56 s, max 46.39 s, 30/30 within 60 s
+  transport tilt max 2.35 deg, 30/30 <= 5 deg; final tilt 0.00 deg on all 30
+  placement error from the tray centre: median 13.1 mm, max 16.9 mm
+    (B5: median 13.3, max 29.8) -- within 10 mm 4/30, 15 mm 26/30, 20 mm 30/30
+  log audit: 1 retry, 1 carry-tilt rejection, 0 go-home fallbacks,
+    0 linear-approach fallbacks, 0 stray processes, 0 pose mismatches
+
+NOTE for the manuscript: the Move terminal condition is written as a placement
+within \nd{10 mm} of the target. Measured, that holds for 4/30. The spread is
+not tracking error -- the placement constraint only requires the object's
+footprint to be inside the goal region and does not pull it to the centre.

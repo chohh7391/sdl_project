@@ -8,30 +8,26 @@
 
 ## 0. 지금 상태
 
-**세 task 모두 randomized harness에서 실측 완료: transfer 30/30, stir 30/30, move 29/30. 단 move(B5)는 이전 코드 버전이라 재실행 필요. 그리고 구매한 실물 유리기구와 시뮬 모델이 불일치(저자 결정 대기).**
-- stir B6 `stir_b6_20260910.csv` (**stir 최초 완주**): **30/30 [Wilson 88.6–100]**, planning 중앙 33.5 s(30/30 ≤60 s),
-  운반 tilt 최대 4.40°(30/30 ≤5°), vessel 최종 tilt 최대 0.02°, stirrer 중심 오차 중앙 5.9 mm,
-  **stir bar가 vessel 안에 30/30**(축에서 중앙 6.5 mm, 입구보다 100–112 mm 아래 = 내부 바닥).
-- transfer B7 `transfer_b7_20260910.csv` (B4 재실행, 한 코드 버전으로 통일): **30/30**, 최종 tilt 전부 0.00°,
-  운반 tilt ≤5° **27/30**(B4는 24/30), planning 중앙 55.3 s(60 s 내 22/30), 목표 오차 중앙 13.8 mm.
-- move B5 `move_b5_20260910.csv`: 29/30(실행된 29건은 29/29; 1건은 Isaac Sim `world.stop()` 크래시).
-  **단 B5는 그리퍼 개방 수렴·속 빈 flask·stir bar 변경 이전 코드** → 버전 일치를 위해 재실행 필요.
-- stir가 막혀 있던 것은 파지가 아니라 ①dh3 홈 자기충돌 ②**그리퍼가 다 열리지 않음**(dh3 open 3 step, 실측 필요 22–23;
-  ag95도 10 vs 필요 11) ③flask가 속 찬 상자여서 bar가 들어갈 수 없음 ④`beaker_region_in_xy` 임계값 1e-1(다른 영역 1e-3).
-  전부 계측으로 확정하고 고쳤다(§1 2026-09-10 (2), REFACTOR).
-- harness 신뢰성: 죽인 배치의 sim이 살아남아 같은 ROS 도메인에 응답해 **드라이버가 다른 seed의 월드를 읽는 사고**가 있었다
-  (seed 3개가 연속으로 seed 4의 좌표를 읽음). seed마다 stray 프로세스를 정리하고 **읽어온 포즈 vs 스폰 포즈 정합성 검사**를 추가.
-  B6·B7은 stray 0, mismatch 0.
-- **저자 결정 대기**: 구매 실물(beaker 높이 72 mm·외경 60 mm·100 mL, flask 높이 160 mm·입구외경 38 mm·300 mL)과
-  시뮬 모델(beaker 50×50×135 mm, flask 70×70×120 mm·개구부 64 mm)이 다르다. stir bar 10×35 mm는 실물 입구(내경 약 34 mm)를
-  여유롭게 통과하므로 **magnet은 변경 불필요**하지만, 유리기구를 실물에 맞추면 B4–B7 전부 재실행이 필요하다.
-- 열려 있는 것: 위 결정, move 재실행, PDDLStream 베이스라인·AprilTag in-the-loop 미착수.
-- **레이아웃 변경(2026-09-10)**: 원고·문서·`.conventions`를 모두 `sdl_project/` 안으로 옮겼다.
-  이제 저장소 루트 = 프로젝트 루트 = 세션 루트 = `/home/home/sdl_ws/src/sdl_project`(remote가 clone할 수 있는 형태).
-  코드에서 깨진 참조는 `run_trials.sh`·`run_nominal_control.sh`의 기본 CSV 경로 2곳뿐이었고 수정했다.
-  **아직 커밋/푸시 안 함** — `.gitignore`가 얇아(`build/ install/ log/ .vscode/ *.pyc`) 미추적 약 4 GB가
-  그대로 잡히고, 100 MB 초과 파일 2개(`LLM/llama/script/experiments/ActionReasoner.zip`,
-  `experiments/pddlstream/downward/builds/release/bin/downward`)는 GitHub가 거부한다.
+**세 task 모두 한 코드 버전에서 30/30. transfer B7 / move B8 / stir B6 — 시뮬 TAMP 실험(계열 1) 종료.**
+
+| task | 과제 성공 | planning 중앙 (≤60 s) | 운반 tilt 최대 (≤5°) | 최종 tilt | 목표 오차 중앙/최대 |
+|---|---|---|---|---|---|
+| transfer B7 | **30/30** | 55.3 s (22/30) | 11.38° (27/30) | 전부 0.00° | 13.8 / 23.6 mm |
+| move B8 | **30/30** | 23.6 s (30/30) | 2.35° (30/30) | 전부 0.00° | 13.1 / 16.9 mm |
+| stir B6 | **30/30** | 33.5 s (30/30) | 4.40° (30/30) | 최대 0.02° | 5.9 / 13.5 mm |
+
+- CSV: `_2026__IEEE_Access/revision/analysis/data/{transfer_b7,move_b8,stir_b6}_20260910.csv`,
+  각 배치의 코드·설정은 `scripts/trials/logs/b*/RUN_INFO.txt`. 전 배치 stray 0 / pose mismatch 0.
+- **논문과 어긋나는 것(계열 1 안에서 남은 것)**: ① latency — 논문 31.18±1.44 / 17.60±3.55 / 28.83±1.00 s vs
+  실측 69.90±35.92 / 24.39±4.73 / 34.48±4.56 s. ② **60 s 예산 timeout 0 %가 transfer에서 미성립**(8/30 초과 →
+  그 예산이면 22/30 = 73.3 %). ③ Move 종료조건 `\nd{10 mm}`는 **4/30**(15 mm면 26/30, 20 mm면 30/30) —
+  추종오차가 아니라 배치 제약이 중심으로 끌지 않기 때문. ④ 파지 슬립 `\nd{5 mm}`는 **측정 항목 자체가 없음**.
+- 저장소 정리 완료: 원고·문서·`.conventions`를 `sdl_project/` 안으로 옮기고 `.gitignore` 작성 후 로컬 커밋 2개
+  (`b56d852`, `b2c04fd`). 100 MB 초과 파일이 제외돼 푸시 가능 상태. **푸시는 아직 안 함.**
+- 구매 실물 유리기구(beaker 72 mm/60 mm, flask 160 mm/입구 38 mm)와 시뮬 모델은 다르며, **저자 지시로 asset은 그대로 둠**.
+  stir bar 10×35 mm는 실물 입구도 통과한다.
+- 열려 있는 것: 계열 2 PDDLStream 베이스라인(표의 66.7/83.3/60 %·McNemar p가 미검증), 계열 3 AprilTag in-the-loop,
+  계열 4 LLM infra 채점, 계열 5 실물 pouring. `\nd{}` 원고 213 / 응답 97.
 
 ## 1. 기록
 
@@ -131,3 +127,7 @@
 - stir 30/30, transfer 30/30. 상세 수치는 §0, 코드/설정은 각 로그 디렉터리의 RUN_INFO.txt.
 - stir를 막던 4개 원인과 harness 오염 사고는 REFACTOR "dh3 파지 안정화" 절에 계측치와 함께 기록.
 - 실물 유리기구 치수를 저자가 알려줌 → magnet(10×35 mm)은 실물 입구 38 mm를 통과하므로 유지. 유리기구 모델 갱신은 결정 대기.
+
+### 2026-09-11 — move 재실행 B8, 계열 1 종료
+- move 30/30(B5의 1건 실패는 Isaac Sim 크래시였고 재현되지 않았다). 목표 오차 최대 29.8 → 16.9 mm.
+- 이로써 transfer/move/stir가 **동일 코드 버전**의 실측으로 정렬됐다. 상세는 §0 표와 각 RUN_INFO.txt.
