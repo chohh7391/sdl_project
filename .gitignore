@@ -1,5 +1,82 @@
+# =============================================================================
+# What belongs in this repository
+#
+#   TRACKED : our own source (TAMP, isaacsim, LLM scripts, perception, scripts/),
+#             the manuscript and response (_2026__IEEE_Access/), the project docs
+#             (CLAUDE.md, PLAN.md, SESSION_LOG.md, REFACTOR.md, ...), the analysis
+#             code, and the per-trial batch CSVs -- those CSVs are the paper's data.
+#   IGNORED : vendored third-party trees, build outputs, model weights, archives,
+#             environments and batch logs. Each block below says how to get it back.
+#
+# Note: some model checkpoints under LLM/llama/model/checkpoint/ are ALREADY in
+# git history. Ignoring the directory stops new ones being added; it does not
+# untrack what is committed (that would need a history rewrite, not done here).
+# =============================================================================
+
+# --- editors / caches -------------------------------------------------------
+.vscode/
+.idea/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- python environments ----------------------------------------------------
+# .venv-sdl is the Isaac Sim 6.0.1 env (~30 GB); uv also writes its own
+# .gitignore inside it. Recreate per README / environment.yml.
+.venv-sdl/
+.venv/
+venv/
+
+# --- colcon (ROS 2) build tree ----------------------------------------------
+# Regenerate: ros2_isaacsim_ws/build_interfaces.sh (py3.12) and
+# colcon build --packages-select tamp_interfaces (conda sdl, py3.10).
 build/
 install/
 log/
-.vscode/
-*.pyc
+ros2_isaacsim_ws/build/
+ros2_isaacsim_ws/install/
+ros2_isaacsim_ws/log/
+
+# --- randomized-trials batch logs -------------------------------------------
+# ~344 MB of Isaac Sim / tamp_server / driver logs per batch. The batch RESULTS
+# live in _2026__IEEE_Access/revision/analysis/data/*.csv (tracked), and each
+# batch's code-under-test and settings are recorded in its RUN_INFO.txt, which
+# is kept.
+scripts/trials/logs/**
+!scripts/trials/logs/
+!scripts/trials/logs/*/
+!scripts/trials/logs/**/RUN_INFO.txt
+
+# --- LLM model weights and archives -----------------------------------------
+# Fine-tuned adapters / tokenizers / optimizer state. Re-obtain from the
+# training scripts in LLM/llama/script/ or the authors' model store.
+LLM/llama/model/checkpoint/
+LLM/llama/script/experiments/ActionReasoner/model/
+# 217 MB duplicate archive of the unpacked ActionReasoner directory, and over
+# GitHub's 100 MB per-file limit.
+LLM/llama/script/experiments/ActionReasoner.zip
+
+# --- PDDLStream baseline (vendored third party) ------------------------------
+# experiments/pddlstream is an upstream checkout: Fast Downward (575 MB, whose
+# builds/release/bin/downward is itself over GitHub's 100 MB limit) plus 460 MB
+# of PyBullet example models. Only OUR baseline implementation is tracked --
+# examples/pybullet/fr5_obstacle, the FR5 problem the paper compares against.
+experiments/pddlstream/downward/
+experiments/pddlstream/temp/
+experiments/pddlstream/examples/**
+!experiments/pddlstream/examples/
+!experiments/pddlstream/examples/pybullet/
+!experiments/pddlstream/examples/pybullet/fr5_obstacle/
+!experiments/pddlstream/examples/pybullet/fr5_obstacle/**
+
+# --- vendored simulation assets ---------------------------------------------
+# LabUtopia (111 MB) is a third-party asset pack the scene USDs reference by
+# relative path (third_party/LabUtopia/...). Not our code; re-obtain upstream.
+third_party/
+
+# --- scratch ----------------------------------------------------------------
+*.tmp
+*.swp
+nohup.out
