@@ -58,6 +58,22 @@ def dist_from_bounds_jit(vals, lower, upper):
     return dists
 
 
+def dist_from_bounds_inset(vals, lower, upper, radii):
+    """`dist_from_bounds_jit` on bounds inset by each sphere's radius.
+
+    Turns "the sphere CENTRE is inside the region" into "the sphere is inside the
+    region", which is what a placement constraint means physically: a vessel whose
+    centre sits exactly on the region boundary is half outside it. If an object is
+    wider than the surface the inset bounds would invert, so they collapse to the
+    surface centre instead of becoming unsatisfiable in a way that reads as a
+    kinematic failure.
+    """
+    center = 0.5 * (lower + upper)
+    lower_in = torch.minimum(lower + radii, center)
+    upper_in = torch.maximum(upper - radii, center)
+    return dist_from_bounds_jit(vals, lower_in, upper_in)
+
+
 def get_aabb_from_spheres(spheres: Float[torch.Tensor, "*b n 4"]) -> Float[torch.Tensor, "*b 2 3"]:
     """Compute the axis-aligned bounding box (AABB) for a set of spheres that represent some object."""
     centers, radii = spheres[..., :3], spheres[..., 3]

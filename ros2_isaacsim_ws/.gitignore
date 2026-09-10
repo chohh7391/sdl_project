@@ -1,0 +1,5 @@
+# Generated colcon build artifacts (rebuild via build_interfaces.sh)
+/build/
+/install/
+/log/
+/.gen_shim_py312/

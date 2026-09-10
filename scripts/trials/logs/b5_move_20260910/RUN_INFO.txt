@@ -1,0 +1,33 @@
+B5 move batch -- seeds 0..29 -- 2026-09-10
+first trial row 00:18:00, last 01:12:xx (+09:00)
+csv:   _2026__IEEE_Access/revision/analysis/data/move_b5_20260910.csv
+batch stdout: sdl_project/scripts/trials/logs/b5_move_batch.out
+
+FIRST randomized-harness run of the Move task (it had never been executed).
+task=move  robot=fr5_vgc10 (suction), per content/configs/xdl/tool_map.yml.
+
+CODE UNDER TEST = the B4 transfer code PLUS, for Move:
+  harness       : run_trials.sh takes TASK/ROBOT; trial_driver.py scores per-task
+                  criteria (TASK_OUTCOMES) and records target_obj/goal_err_mm/aux_check
+  initial state : goal tray box_goal moved G1 (-0.15,-0.6) -> G3 (0.15,-0.6). At G1 the
+                  box's own start cell was INSIDE the tray footprint (centres 3.5 cm
+                  apart, tray half-width 7.5 cm), so the goal held at t=0, and the box
+                  spawned 10 mm inside the tray. The tray is not randomized, so no
+                  seeded layout changed (verified: transfer seed 0 beaker_xy identical
+                  to B4).
+  place surface : box_region derived from the tray's own dims and top + PLANNER_Z_LIFT
+                  (was 0.2 x 0.2 m on a 0.15 m tray, and 7 mm too high)
+  carried tilt  : suction engages through SurfaceGripper, not a fixed joint, so
+                  carried_tilt_deg reported -1 for the whole task. Now published while
+                  SurfaceGripper.is_closed(), i.e. only while the cup has really latched
+  release       : SDL_PLACE_SETTLE_STEPS=15 (hold the last commanded pose before opening)
+  exec rate     : SDL_EXEC_DT=0.08 s per planned waypoint (12.5 Hz)
+  particles     : 1024, 1000 opt steps, up to 3 planning attempts
+
+RESULT: 29/30 task success. The one miss (seed 27) is an Isaac Sim crash inside
+world.stop() during the tool change (breakpad minidump + py-spy dump in the sim log);
+the driver could only see the tool-change service fail, so the row reads
+tool_change_vgc10_failed. It is an infrastructure failure, not a planning or execution
+failure -- the harness retries a sim that never boots, but not one that dies later.
+
+GPU: NVIDIA GeForce RTX 5070, sole occupant of the batch.

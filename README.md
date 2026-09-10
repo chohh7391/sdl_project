@@ -99,15 +99,26 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 200
 
 # Demo
 
-## Isaacsim with ROS2 Launch
+## Isaac Sim + TAMP launch
+
+One-time: build the custom ROS 2 interfaces (tamp_interfaces, perception_interfaces)
+for Isaac Sim's bundled CPython 3.12:
 
 ```bash
-source /opt/ros/humble/setup.bash
-source ~/sdl_ws/install/local_setup.bash
+bash ros2_isaacsim_ws/build_interfaces.sh
+```
+
+Then run each side in its own terminal. The scripts derive all paths from their
+own location (no hardcoded home paths) and wire up the correct ROS environment:
+
+```bash
+# Terminal 1 -- Isaac Sim standalone node (.venv-sdl, py3.12, internal Humble)
+bash scripts/run_isaacsim.sh          # add --check to validate the ROS env only
 ```
 
 ```bash
-ros2 launch isaacsim run_isaacsim.launch.py standalone:=$HOME/sdl_ws/src/sdl_project/isaacsim/scripts/standalone/simulation.py install_path:=$HOME/isaacsim/_build/linux-x86_64/release exclude_install_path:=home/home/sdl_ws/install ros_installation_path:="/home/home/IsaacSim-ros_workspaces/build_ws/humble/humble_ws/install/local_setup.bash,/home/home/IsaacSim-ros_workspaces/build_ws/humble/isaac_sim_ros_ws/install/local_setup.bash"
+# Terminal 2 -- TAMP / perception node (conda `sdl`, py3.10, system Humble)
+bash scripts/run_tamp.sh              # add --parser to launch the XDL parser
 ```
 
 ## Perception Manager
@@ -201,12 +212,6 @@ ros2 run tamp tamp_xdl_parser.py
 
 # Trouble Shooting
 - can not import llama
-In sdl_project/TAMP/tamp/scripts/xdl/tamp_xdl_parser.py, change `#!/home/home/anaconda3/envs/sdl/bin/python`
-
-- rendering issue
-```bash
-cd ~/
-mkdir git_clone
-cd git_clone
-git clone https://github.com/Rui-li023/LabUtopia.git
-```
+In sdl_project/TAMP/tamp/scripts/xdl/tamp_xdl_parser.py, the interpreter shebang must
+point at the `sdl` conda env's python. Do not hard-code an absolute per-machine path;
+resolve it from the active environment instead.

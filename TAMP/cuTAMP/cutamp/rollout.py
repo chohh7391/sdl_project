@@ -52,6 +52,11 @@ class Rollout(TypedDict):
     action_to_ts: Dict[str, int]
     action_to_pose_ts: Dict[str, int]
     ts_to_pose_ts: Dict[int, int]
+    # Object held in (or being closed on / released from) the gripper at each
+    # action timestep. The gripper is *supposed* to touch it, so that one pair is
+    # excluded from the robot-to-movables collision term -- see
+    # CostFunction.collision_costs.
+    ts_to_gripper_obj: Dict[int, str]
 
 
 class RolloutFunction:
@@ -109,6 +114,7 @@ class RolloutFunction:
         # These dicts are used to map actions and timestamps to their corresponding pose timestamps.
         action_to_pose_ts: Dict[str, int] = {}
         ts_to_pose_ts: Dict[int, int] = {}
+        ts_to_gripper_obj: Dict[int, str] = {}
 
         # 4x4 transformation matrices for grasp parameters (if any)
         grasp_to_mat4x4: Dict[str, Float[torch.Tensor, "num_particles 4 4"]] = {}
@@ -245,6 +251,10 @@ class RolloutFunction:
 
             # Increment time step
             ts_to_pose_ts[ts] = pose_ts
+            # Every actionable operator here manipulates `obj_name`, so that object
+            # is in the gripper at this timestep (Pick closes on it, Move_to_Surface
+            # carries it, the Place variants release it).
+            ts_to_gripper_obj[ts] = obj_name
             ts += 1
 
         # Stack and store in rollout
@@ -281,5 +291,6 @@ class RolloutFunction:
             action_to_ts=action_to_ts,
             action_to_pose_ts=action_to_pose_ts,
             ts_to_pose_ts=ts_to_pose_ts,
+            ts_to_gripper_obj=ts_to_gripper_obj,
         )
         return rollout

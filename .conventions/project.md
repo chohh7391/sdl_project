@@ -1,0 +1,1 @@
+/home/home/claude_ws/src/workspace_setting/conventions/project.md

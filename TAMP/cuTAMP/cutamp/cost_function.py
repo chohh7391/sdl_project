@@ -18,7 +18,13 @@ from curobo.rollout.cost.self_collision_cost import SelfCollisionCost, SelfColli
 from jaxtyping import Float
 
 from cutamp.config import TAMPConfiguration
-from cutamp.costs import curobo_pose_error, dist_from_bounds_jit, sphere_to_sphere_overlap, trajectory_length
+from cutamp.costs import (
+    curobo_pose_error,
+    dist_from_bounds_inset,
+    dist_from_bounds_jit,
+    sphere_to_sphere_overlap,
+    trajectory_length,
+)
 from cutamp.rollout import Rollout
 from cutamp.tamp_world import TAMPWorld
 from cutamp.task_planning import PlanSkeleton
@@ -223,8 +229,18 @@ class CostFunction:
             spheres = torch.cat(surface_to_spheres[surface], dim=1)
             spheres_xy = spheres[..., :2]
 
-            # Within goal xy bounds, need to gather by the spheres for each object
-            in_goal_xy = dist_from_bounds_jit(spheres_xy, *self.surface_to_aabb[surface])
+            # Within goal xy bounds, need to gather by the spheres for each object.
+            # The bounds are shrunk by each sphere's radius so the constraint means
+            # "the object's footprint is inside the region", not "its sphere centres
+            # are". Without that a vessel can be planned with its centre exactly on
+            # the region boundary and half of it overhanging, and the few millimetres
+            # of execution tracking error then put it outside (measured: seed 5
+            # planned at the goal-region corner and was scored at 0.414, -0.293,
+            # 6.4 cm from the region centre of a region only 5 cm in half-width).
+            # If an object is wider than the surface the shrunk bounds would invert,
+            # so they collapse to the surface centre instead.
+            lower, upper = self.surface_to_aabb[surface]
+            in_goal_xy = dist_from_bounds_inset(spheres_xy, lower, upper, spheres[..., 3:4])
             obj_in_goal_xy = torch.zeros((num_particles, len(objs)), dtype=in_goal_xy.dtype, device=in_goal_xy.device)
             obj_in_goal_xy.scatter_add_(1, sphere_idx_map_expand, in_goal_xy)
             support_vals[f"{surface}_in_xy"] = obj_in_goal_xy
@@ -266,11 +282,38 @@ class CostFunction:
 
         # Collision between robot and movables, need to expand poses to full timesteps
         all_pose_ts = list(rollout["ts_to_pose_ts"].values())
-        coll_values["robot_to_movables"] = sphere_to_sphere_overlap(
-            robot_spheres,
-            all_movable_spheres[:, all_pose_ts],
-            activation_distance=self.config.gripper_activation_distance,
-        )
+        # A gripper MUST touch the object it is grasping, so that one robot/object
+        # pair is not a collision and is excluded at the timesteps where the object
+        # is in the gripper. Everything else (this robot vs the OTHER movables, the
+        # held object vs the world, movable vs movable) is still checked.
+        #
+        # This is what makes a side grasp feasible at all (measured 2026-09-08):
+        # grasping penetrates the vessel's surface spheres by ~4 mm either way, but
+        # a TOP grasp can absorb that inside the 5 mm pos_err tolerance by backing
+        # off along its vertical approach axis, whereas a SIDE grasp holds the
+        # vessel between the fingers and has no escape direction. Without this
+        # exclusion the optimizer traded pos_err against this term and satisfied
+        # neither (robot_to_movables 121/1024, pos_err 4/1024 -> 0 satisfying).
+        # `_sphere_to_sphere_overlap` sums over sphere pairs, so summing per object
+        # is identical to the previous single concatenated call.
+        gripper_obj_per_ts = [
+            rollout["ts_to_gripper_obj"].get(ts) for ts in rollout["ts_to_pose_ts"]
+        ]
+        robot_to_movables = None
+        for obj_name, obj_spheres in obj_to_spheres.items():
+            overlap = sphere_to_sphere_overlap(
+                robot_spheres,
+                obj_spheres[:, all_pose_ts],
+                activation_distance=self.config.gripper_activation_distance,
+            )
+            in_gripper = torch.tensor(
+                [held == obj_name for held in gripper_obj_per_ts], device=overlap.device
+            )
+            overlap = overlap * (~in_gripper)
+            robot_to_movables = overlap if robot_to_movables is None else robot_to_movables + overlap
+        if robot_to_movables is None:
+            robot_to_movables = torch.zeros_like(coll_values["robot_to_world"])
+        coll_values["robot_to_movables"] = robot_to_movables
 
         # TODO: this is slow and a bottleneck, could consider using curobo's fast sphere-to-sphere kernel
         # Collision between movable objects

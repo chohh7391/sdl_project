@@ -11,16 +11,19 @@ from isaacsim.core.utils.stage import add_reference_to_stage, get_stage_units
 from isaacsim.core.utils.string import find_unique_string_name
 from isaacsim.storage.native import get_assets_root_path
 from isaacsim.sensors.camera import Camera
-from isaacsim.core.api.objects import FixedCuboid, DynamicCylinder, VisualCuboid
+from isaacsim.core.api.objects import FixedCuboid, DynamicCylinder, DynamicCuboid, VisualCuboid
 from isaacsim.core.api.materials.omni_pbr import OmniPBR
-from isaacsim.ros2.bridge import read_camera_info
+# Isaac Sim 6.x migration: the ROS2 bridge extension was split; read_camera_info
+# moved from isaacsim.ros2.bridge to isaacsim.ros2.core (impl.camera_info_utils).
+from isaacsim.ros2.core import read_camera_info
 import isaacsim.core.utils.numpy.rotations as rot_utils
 from isaacsim.core.prims import SingleRigidPrim
 
 from fr5 import FR5
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
-from object import create_hybrid_beaker, create_hybrid_box, create_hollow_flask, create_single_rigid_prim_from_usd
+from object import (create_box_collider_rigid, create_box_collider_static,
+                    create_hollow_box_collider_rigid, create_single_rigid_prim_from_usd)
 from camera import CameraInfo, set_world_pose_from_view
 
 ASSET_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets")
@@ -62,15 +65,27 @@ class Task(ABC, BaseTask):
 
         self.default_positions = {
             "table": np.array([0.0, 0.0, -0.01]),
-            "stirrer": np.array([-0.15, 0.6, 0.045]),
+            # z = cuTAMP box-center height (dims_z / 2) so each box collider
+            # rests on the table top (z = 0). x,y layout unchanged. (REFACTOR II-2)
+            "stirrer": np.array([-0.15, 0.6, 0.045]),      # 0.09 / 2
             # "beaker": np.array([random_x, random_y, 0.067]),
-            "beaker": np.array([0.49, 0.17475, 0.07]),
+            "beaker": np.array([0.49, 0.17475, 0.0675]),   # 0.135 / 2
             # "flask": np.array([flask_x + noise[0], flask_y + noise[1], 0.07]),
-            "flask": np.array([0.48383, 0.33166, 0.07]),
-            "magnet": np.array([-0.3, 0.416, 0.015]),
+            "flask": np.array([0.48383, 0.33166, 0.06]),   # 0.12 / 2
+            "magnet": np.array([-0.3, 0.416, self.STIR_BAR_DIMS[2] / 2.0]),
             # "box" : np.array([box_x, box_y, 0.06]),
-            "box" : np.array([-0.12621, -0.57484, 0.06]),
-            "box_goal" : np.array([-0.15, -0.6, 0.006]),
+            "box" : np.array([-0.12621, -0.57484, 0.04]),  # 0.08 / 2
+            # Goal tray for the Move task, moved from G1 (-0.15, -0.6) to G3.
+            # At G1 it sat under the box's own start cell: the box centre was
+            # 3.5 cm from the tray centre, i.e. INSIDE the 15 cm tray footprint,
+            # so (a) the Move goal was already satisfied at t = 0 and (b) the box
+            # spawned with its bottom at z = 0 while the tray top is at z = 0.010,
+            # i.e. 10 mm of interpenetration. G3 is the adjacent grid cell on the
+            # same table edge, which makes Move a 0.30 m transport that stays clear
+            # of the beaker/flask cluster (G11/G12) and of the Transfer goal region.
+            # The tray is never randomized and is not in _RANDOMIZE_ORDER, so this
+            # cannot change any seeded layout (verified: seeds 0-29 identical).
+            "box_goal" : np.array([0.15, -0.6, 0.005]),    # 0.01 / 2
         }
         self.default_orientations = {
             "table": np.array([1.0, 0.0, 0.0, 0.0]),
@@ -82,10 +97,191 @@ class Task(ABC, BaseTask):
             "box_goal": np.array([1.0, 0.0, 0.0, 0.0]),
         }
 
+        # Nominal ("home") arm configuration, shared by every tool build in
+        # set_robot(). Kept as a field so seeded randomization (SDL_SEED, below)
+        # can perturb it deterministically without touching the four tool blocks.
+        self._nominal_home_arm = np.array([0.0, -1.05, -2.18, -1.57, 1.57, 0.0])
+        self._home_arm = self._nominal_home_arm.copy()
+
+        # ------------------------------------------------------------------ #
+        # Seed-driven object-position / robot-config randomization (STAGE B1,
+        # REFACTOR.md I-7 / PLAN.md D3, R1#8 reproducibility).
+        #
+        # When the env var SDL_SEED is set to an integer, every MOVABLE object's
+        # (x, y) is perturbed within +/-5 cm of its nominal cell, its yaw within
+        # +/-180 deg, and the robot's initial arm config within +/-10 deg of
+        # home -- DETERMINISTICALLY from the seed (same seed => identical layout).
+        # Objects stay on the table, inside the workspace, and non-overlapping
+        # (overlaps are rejected and resampled). When SDL_SEED is UNSET the
+        # nominal hard-coded layout above is used unchanged (regression-safe).
+        # Ranges + RNG are documented in _randomize_layout().
+        # ------------------------------------------------------------------ #
+        self.seed = None
+        _seed_env = os.environ.get("SDL_SEED", "").strip()
+        if _seed_env != "":
+            try:
+                self.seed = int(_seed_env)
+            except ValueError:
+                print(f"[Task] SDL_SEED={_seed_env!r} is not an int; ignoring (nominal layout).")
+        if self.seed is not None:
+            self._randomize_layout(self.seed)
+
         self.scale_data = 0.0
         self.scale_gain = 50.0
 
         return
+
+    # In-plane bounding radius (circumscribed, = half-diagonal) of each movable's
+    # cuTAMP box footprint [dx, dy] -- used for conservative circle-vs-circle
+    # non-overlap rejection (holds for ANY yaw). Values match the box colliders
+    # spawned in set_object() (which match TAMP/tamp/src/envs/utils.py ENTITIES).
+    # Wall thickness of the hollow flask [m]. 3 mm leaves a 64 mm clear opening
+    # in the 70 mm outer envelope and is thick enough for stable PhysX contacts.
+    FLASK_WALL_M = 0.003
+    # Magnetic stir bar [m]. Was a 45 mm cube, whose worst-yaw diagonal (63.6 mm)
+    # does not clear the 64 mm opening -- the Stir task was geometrically
+    # impossible whatever the vessel. A real PTFE stir bar is about 10 mm across
+    # and 30-40 mm long; at 10 mm the worst-yaw need is 14 mm, with wide margin.
+    STIR_BAR_DIMS = [0.010, 0.010, 0.035]
+
+    _MOVABLE_FOOTPRINT = {
+        "beaker":  (0.05, 0.05),
+        "flask":   (0.07, 0.07),
+        # Deliberately still the pre-stir-bar 45 mm footprint, NOT STIR_BAR_DIMS.
+        # This table only drives the non-overlap rejection during layout
+        # sampling, so reserving more space than the object occupies is
+        # conservative (it can only add clearance, never miss an overlap), and
+        # keeping it fixed means every seeded layout is bit-identical to the ones
+        # the earlier batches were measured on.
+        "magnet":  (0.045, 0.045),
+        "box":     (0.108, 0.108),
+        "stirrer": (0.18, 0.18),
+    }
+    # Objects randomized when SDL_SEED is set (fixed order => deterministic RNG
+    # draw sequence). table/box_goal (goal tray) stay fixed like the goal region.
+    _RANDOMIZE_ORDER = ["beaker", "flask", "magnet", "box", "stirrer"]
+
+    # Per-tool correction to the shared home arm configuration, applied on top of
+    # the (optionally seeded) home in set_robot().
+    #
+    # The shared home folds the elbow back (j3 = -2.18 rad), which parks the tool
+    # close to the shoulder. Measured with cuRobo's own start-state check on the
+    # fr5_dh3 model: at the shared home the 3-finger gripper's finger1 links and
+    # 'shoulder_link' are inside each other's self-collision buffers, so the home
+    # sits ON the self-collision boundary -- the COMMANDED home passes for all 30
+    # seeds, but the pose the arm actually settles at does not (seed 0's logged
+    # joint state checks INVALID_START_STATE_SELF_COLLISION, constraint 1.3111),
+    # and cuRobo then refuses to plan the very first motion segment. That made the
+    # Stir task unplannable for every seed. fr5, fr5_ag95 and fr5_vgc10 all have
+    # margin here (0/600 infeasible under the same noise), so this is scoped to
+    # dh3 rather than changing the shared home for every tool.
+    #
+    # +0.10 rad on j3 (5.7 deg, unfolding the elbow) is the smallest offset tested
+    # that is clean at every noise level: 0/450 infeasible over the 30 seeded homes
+    # with +/-10, +/-20 and +/-40 mrad of tracking noise, versus 4-5/450 at zero
+    # offset. 0.15/0.20/0.30 rad are equally clean, so the margin is not knife-edge.
+    _TOOL_HOME_OFFSET = {
+        "dh3": np.array([0.0, 0.0, 0.10, 0.0, 0.0, 0.0]),
+    }
+
+    def tool_home_offset(self, tool):
+        """Per-tool correction to the shared home arm configuration [rad, 6]."""
+        return np.asarray(
+            self._TOOL_HOME_OFFSET.get(tool, np.zeros(6)), dtype=float
+        )
+
+    _POS_JITTER_M = 0.05          # +/- position jitter [m] about the nominal cell
+    _YAW_RANGE_RAD = np.pi        # +/- yaw range [rad] (== +/-180 deg)
+    _ROBOT_JITTER_RAD = np.deg2rad(10.0)   # +/- per-arm-joint jitter [rad]
+    _OVERLAP_MARGIN_M = 0.01      # extra clearance between movable footprints [m]
+    _BASE_KEEPOUT_M = 0.15        # keep-out radius around the robot base (origin)
+    _WORKSPACE_HALF_M = 0.70      # |x|,|y| must stay within this (table is 0.75)
+    _MAX_RESAMPLE = 300           # resample tries before falling back to nominal
+
+    @staticmethod
+    def _bounding_radius(dims_xy):
+        return 0.5 * float(np.hypot(dims_xy[0], dims_xy[1]))
+
+    @staticmethod
+    def _yaw_quat(yaw):
+        """Scalar-first (w, x, y, z) quaternion for a yaw rotation about +Z."""
+        return np.array([np.cos(yaw / 2.0), 0.0, 0.0, np.sin(yaw / 2.0)])
+
+    def _randomize_layout(self, seed):
+        """Deterministically perturb the movable objects + robot home from `seed`.
+
+        RNG: numpy Generator (PCG64) via np.random.default_rng(seed). All draws
+        are issued in a FIXED program order (robot arm first, then each movable
+        in _RANDOMIZE_ORDER), so a given seed always yields an identical layout
+        regardless of how many overlap-resamples occur.
+
+        Ranges (per the paper's randomization spec):
+          * object (x, y): nominal +/- _POS_JITTER_M (5 cm), uniform, z unchanged
+          * object yaw   : uniform in +/- _YAW_RANGE_RAD (+/-180 deg)
+          * robot arm    : each of the 6 joints, home +/- _ROBOT_JITTER_RAD (10 deg)
+
+        Constraints (rejection-sampled per object, up to _MAX_RESAMPLE tries):
+          * inside the workspace: |x|,|y| <= _WORKSPACE_HALF_M
+          * clear of the robot base: center-to-origin > _BASE_KEEPOUT_M + radius
+          * non-overlapping with already-placed movables: center distance
+            > r_i + r_j + _OVERLAP_MARGIN_M (circumscribed radii => any-yaw safe)
+        If an object cannot be placed within the try budget it falls back to its
+        nominal (x, y) (still deterministic). box_goal / table are never moved.
+        """
+        rng = np.random.default_rng(seed)
+
+        # --- robot initial config: home +/- 10 deg per arm joint ---------------
+        arm_jitter = rng.uniform(-self._ROBOT_JITTER_RAD, self._ROBOT_JITTER_RAD, size=6)
+        self._home_arm = self._nominal_home_arm + arm_jitter
+
+        # --- movable object (x, y) + yaw --------------------------------------
+        placed = {}  # name -> (x, y, radius) accepted so far
+        for name in self._RANDOMIZE_ORDER:
+            if name not in self.default_positions:
+                continue
+            nominal = np.asarray(self.default_positions[name], dtype=float)
+            radius = self._bounding_radius(self._MOVABLE_FOOTPRINT[name])
+
+            chosen_xy = None
+            for _ in range(self._MAX_RESAMPLE):
+                dx, dy = rng.uniform(-self._POS_JITTER_M, self._POS_JITTER_M, size=2)
+                x, y = nominal[0] + dx, nominal[1] + dy
+                # workspace bound (stay on the table)
+                if abs(x) > self._WORKSPACE_HALF_M or abs(y) > self._WORKSPACE_HALF_M:
+                    continue
+                # robot-base keep-out
+                if np.hypot(x, y) < self._BASE_KEEPOUT_M + radius:
+                    continue
+                # pairwise non-overlap with already-placed movables
+                ok = True
+                for (px, py, pr) in placed.values():
+                    if np.hypot(x - px, y - py) < (radius + pr + self._OVERLAP_MARGIN_M):
+                        ok = False
+                        break
+                if ok:
+                    chosen_xy = (x, y)
+                    break
+
+            if chosen_xy is None:
+                # Could not satisfy constraints within the budget: keep nominal
+                # xy (deterministic) so the scene is still valid; report it.
+                chosen_xy = (float(nominal[0]), float(nominal[1]))
+                print(f"[Task] SDL_SEED={seed}: '{name}' fell back to nominal xy "
+                      f"(no non-overlapping sample in {self._MAX_RESAMPLE} tries).")
+
+            yaw = float(rng.uniform(-self._YAW_RANGE_RAD, self._YAW_RANGE_RAD))
+            self.default_positions[name] = np.array([chosen_xy[0], chosen_xy[1], nominal[2]])
+            self.default_orientations[name] = self._yaw_quat(yaw)
+            placed[name] = (chosen_xy[0], chosen_xy[1], radius)
+
+        # Log the resolved layout (real, not asserted) so each run self-documents.
+        print(f"[Task] SDL_SEED={seed} randomized layout:")
+        print(f"[Task]   home_arm(rad) = {np.round(self._home_arm, 4).tolist()}")
+        for name in self._RANDOMIZE_ORDER:
+            if name in self.default_positions:
+                p = self.default_positions[name]; o = self.default_orientations[name]
+                yaw_deg = np.rad2deg(2.0 * np.arctan2(o[3], o[0]))
+                print(f"[Task]   {name:8s} xy=({p[0]:.4f},{p[1]:.4f}) yaw={yaw_deg:.1f}deg")
     
     def set_up_scene(self, scene: Scene) -> None:
         super().set_up_scene(scene)
@@ -219,8 +415,22 @@ class Task(ABC, BaseTask):
         else:
             raise ValueError("Available Grippers are only 'empty', 'ag95', 'vgc10', 'dh3'")
 
+        # Apply the (optionally SDL_SEED-randomized) initial arm configuration to
+        # the first 6 DOFs; any gripper DOFs keep their default 0.0. When
+        # SDL_SEED is unset, self._home_arm == self._nominal_home_arm, so this is
+        # a no-op that reproduces the original hard-coded home exactly.
+        jd = np.asarray(self._robot.joints_default_state, dtype=float)
+        home_arm = self._home_arm + self._TOOL_HOME_OFFSET.get(
+            desired_tool, np.zeros(6)
+        )
+        jd[:6] = home_arm
+        self._robot.joints_default_state = jd
+        if desired_tool in self._TOOL_HOME_OFFSET:
+            print(f"[Task]   home_arm(rad) for '{desired_tool}' (tool offset applied) "
+                  f"= {np.round(home_arm, 4).tolist()}")
+
         self.current_tool = desired_tool
-        
+
         self.scene.add(self._robot)
 
         return self._robot
@@ -244,61 +454,89 @@ class Task(ABC, BaseTask):
             )
         )
 
-        # spawn stirrer
+        # spawn stirrer -- box collider matching cuTAMP dims [0.18,0.18,0.09]
+        # (resolves the triangle-mesh -> convexHull fallback on heat_device meshes)
         stirrer_usd_path = os.path.join(ASSET_PATH, "lab", "stirrer.usd")
-        self.stirrer = create_single_rigid_prim_from_usd(
+        self.stirrer = create_box_collider_rigid(
             usd_path=stirrer_usd_path, prim_path="/World/stirrer", name="stirrer",
             position=current_positions["stirrer"],
             orientation=current_orientations["stirrer"],
+            dims=[0.18, 0.18, 0.09],
         )
         self.scene.add(self.stirrer)
 
-        # spawn beaker
+        # spawn beaker -- box collider matching cuTAMP dims [0.05,0.05,0.135]
         beaker_usd_path = os.path.join(ASSET_PATH, "lab", "beaker.usd")
-        self.beaker = create_single_rigid_prim_from_usd(
+        self.beaker = create_box_collider_rigid(
             usd_path=beaker_usd_path, prim_path="/World/beaker", name="beaker",
             position=current_positions["beaker"],
             orientation=current_orientations["beaker"],
+            dims=[0.05, 0.05, 0.135],
         )
         self.scene.add(self.beaker)
 
-        # spawn flask
+        # spawn flask -- OPEN-TOPPED box collider, outer envelope matching cuTAMP
+        # dims [0.07,0.07,0.12]. It has to be hollow because the Stir task drops a
+        # stir bar into it: with the previous solid box the bar came to rest at
+        # exactly (mouth + its own half-height) on every seed, i.e. on the lid, and
+        # the "stir bar inside the vessel" terminal condition could never occur.
+        # The outer envelope is unchanged, so the planner's Cuboid model of the
+        # flask and every external contact stay exactly as before; only the
+        # interior becomes real. FLASK_WALL_M gives a 64 mm clear opening.
         flask_usd_path = os.path.join(ASSET_PATH, "lab", "flask.usd")
-        self.flask = create_single_rigid_prim_from_usd(
+        self.flask = create_hollow_box_collider_rigid(
             usd_path=flask_usd_path, prim_path="/World/flask", name="flask",
             position=current_positions["flask"],
             orientation=current_orientations["flask"],
+            dims=[0.07, 0.07, 0.12], wall=self.FLASK_WALL_M,
         )
         self.scene.add(self.flask)
 
-        # spawn magnet
+        # spawn magnet -- BOX collider matching cuTAMP dims [0.045,0.045,0.03]
+        # (TAMP/tamp/src/envs/utils.py ENTITIES["magnet"] is a Cuboid, and the
+        # magnet/stir-bar is a grasp candidate for dh3). cuTAMP plans EVERY
+        # entity as a box, so the sim collider must be a box too for plan/grasp
+        # self-consistency (REFACTOR.md III MINOR / II-2). This procedural stir
+        # bar has no visual USD to strip, so -- unlike beaker/flask/box which use
+        # object.create_box_collider_rigid on a referenced USD -- a DynamicCuboid
+        # (box visual + matching box collider) is the right box primitive here.
+        # size=1.0 * scale = full extents (same convention as the table above);
+        # z=0.015 (=0.03/2) already rests the box on the table top; mass=0.1
+        # matches the other movable box colliders.
         self.magnet = self.scene.add(
-            DynamicCylinder(
+            DynamicCuboid(
                 prim_path="/World/magnet",
                 name="magnet",
                 position=current_positions["magnet"],
                 orientation=current_orientations["magnet"],
-                radius=0.012,
-                height=0.03,
+                scale=np.array(self.STIR_BAR_DIMS),
+                size=1.0,
                 color=np.array([0.0, 0.0, 1.0]),
+                mass=0.1,
             )
         )
 
-        # spawn box
+        # spawn box -- box collider matching cuTAMP dims [0.108,0.108,0.08]
+        # (resolves the triangle-mesh -> convexHull fallback on the FluidBottle mesh)
         box_usd_path = os.path.join(ASSET_PATH, "lab", "bottle", "FluidBottle.usd")
-        self.box = create_single_rigid_prim_from_usd(
+        self.box = create_box_collider_rigid(
             usd_path=box_usd_path, prim_path="/World/box", name="box",
             position=current_positions["box"],
             orientation=current_orientations["box"],
+            dims=[0.108, 0.108, 0.08],
         )
         self.scene.add(self.box)
 
-        # spawn box_goal
+        # spawn box_goal -- STATIC goal tray. A static collider (no rigid body)
+        # needs no mass/inertia, removing the previous PhysX
+        # 'negative mass / invalid inertia' warning. Box collider matches
+        # cuTAMP dims [0.15,0.15,0.01]. (REFACTOR II-2 fix #1)
         box_goal_usd_path = os.path.join(ASSET_PATH, "lab", "tray.usd")
-        self.box_goal = create_single_rigid_prim_from_usd(
+        self.box_goal = create_box_collider_static(
             usd_path=box_goal_usd_path, prim_path="/World/box_goal", name="box_goal",
             position=current_positions["box_goal"],
             orientation=current_orientations["box_goal"],
+            dims=[0.15, 0.15, 0.01],
         )
         self.scene.add(self.box_goal)
 

@@ -19,7 +19,7 @@ from cutamp.config import TAMPConfiguration
 from cutamp.costs import sphere_to_sphere_overlap
 from cutamp.samplers import (
     grasp_4dof_sampler,
-    grasp_6dof_sampler,
+    grasp_side_sampler,
     place_4dof_sampler,
     sample_yaw,
 )
@@ -27,6 +27,7 @@ from cutamp.tamp_domain import MoveFree, MoveHolding, Pick, Place, Place_magnet_
 from cutamp.tamp_world import TAMPWorld
 from cutamp.task_planning import PlanSkeleton
 from cutamp.utils.common import (
+    APPROACH_RETREAT_M,
     Particles,
     action_4dof_to_mat4x4,
     action_6dof_to_mat4x4,
@@ -119,10 +120,17 @@ class ParticleInitializer:
 
                 # Sample 4 times as many grasps as particles
                 if config.grasp_dof == 4:
+                    # Top grasp: yaw-only about the object axis.
                     sampled_grasps = grasp_4dof_sampler(num_particles * 4, obj_curobo, obj_spheres, num_faces=num_faces)
                     obj_from_grasp = action_4dof_to_mat4x4(sampled_grasps)
                 else:
-                    sampled_grasps = grasp_6dof_sampler(num_particles * 4, obj_curobo, num_faces=num_faces)
+                    # Side grasp on an upright vessel (2-finger gripper). NOT the
+                    # upstream `grasp_6dof_sampler`, which is the bookshelf sampler
+                    # and does not describe a vessel grasp -- see
+                    # `grasp_side_sampler` for the measurements behind this.
+                    sampled_grasps = grasp_side_sampler(
+                        num_particles * 4, obj_curobo, world.robot_container.gripper_spheres
+                    )
                     obj_from_grasp = action_6dof_to_mat4x4(sampled_grasps)
 
                 # Select the grasps that are not in collision with the object
@@ -139,15 +147,49 @@ class ParticleInitializer:
                     obj_from_grasp = obj_from_grasp[good_idxs]
                     world_from_obj = pose_list_to_mat4x4(obj_curobo.pose).to(world.tensor_args.device)
                     world_from_grasp = world_from_obj @ obj_from_grasp
-                    world_from_ee = world_from_grasp @ world.tool_from_ee
+                    world_from_ee_mat = world_from_grasp @ world.tool_from_ee
 
                     # Solve IK with cuRobo
-                    world_from_ee = Pose.from_matrix(world_from_ee)
+                    world_from_ee = Pose.from_matrix(world_from_ee_mat)
                     ik_result = world.ik_solver.solve_batch(world_from_ee, seed_config=None)  # TODO: seeding
                     log_debug(
                         f"{header}. IK success: {ik_result.success.sum()}/{num_particles}, took {ik_result.solve_time:.2f}s"
                     )
-                    particles[q] = ik_result.solution[:, 0]
+
+                    # Nothing in cuTAMP constrains the PRE-GRASP pose that cuRobo then
+                    # has to reach, so the optimizer can return a "best" grasp whose
+                    # approach lies outside the workspace -- the most common motion
+                    # planning failure ("Failed to plan for approach for Pick"), and much
+                    # more likely for a side grasp, whose approach retreats sideways
+                    # rather than straight up. Solve the pre-grasp pose too (same batch
+                    # shape, so cuRobo keeps its cached CUDA graph) and steer every
+                    # particle onto a grasp that is reachable at BOTH poses.
+                    approach_offset = torch.eye(4, device=world.tensor_args.device)
+                    approach_offset[2, 3] = -APPROACH_RETREAT_M
+                    approach_ik = world.ik_solver.solve_batch(
+                        Pose.from_matrix(world_from_ee_mat @ approach_offset), seed_config=None
+                    )
+                    reachable = ik_result.success.view(-1) & approach_ik.success.view(-1)
+                    feasible_idxs = torch.nonzero(reachable).flatten()
+                    log_debug(
+                        f"{header}. reachable at grasp AND pre-grasp: {len(feasible_idxs)}/{num_particles}"
+                    )
+                    if 0 < len(feasible_idxs) < num_particles:
+                        remap = torch.arange(num_particles, device=reachable.device)
+                        blocked = torch.nonzero(~reachable).flatten()
+                        draw = torch.randint(
+                            len(feasible_idxs), (len(blocked),), device=feasible_idxs.device
+                        )
+                        remap[blocked] = feasible_idxs[draw]
+                        particles[grasp] = particles[grasp][remap]
+                        particles[q] = ik_result.solution[remap, 0]
+                    else:
+                        if len(feasible_idxs) == 0:
+                            log_debug(
+                                f"{header}. NO grasp is reachable at both poses; leaving the "
+                                f"sampled particles as-is so the failure stays visible"
+                            )
+                        particles[q] = ik_result.solution[:, 0]
                 deferred_params.remove(q)
 
                 # Store in cache

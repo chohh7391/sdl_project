@@ -1,0 +1,29 @@
+B4 transfer batch -- seeds 0..29 -- 2026-09-09
+start: 2026-09-09T13:41 (+09:00)   first trial row 13:47:30
+end:   2026-09-09T15:11:03 (+09:00, last trial row)
+csv:   _2026__IEEE_Access/revision/analysis/data/transfer_b4_20260909.csv
+batch stdout: sdl_project/scripts/trials/logs/b4_batch.out
+
+CODE UNDER TEST = B3 (side grasp, linear grasp approach, wrist-flange weld)
+PLUS the four release/placement fixes measured this session
+(see REFACTOR.md 'release (놓기)' section for the measurements):
+
+  release order : SDL_RELEASE_ORDER default detach_first -> open_first
+                  (fingers open while the weld still holds, weld removed after).
+                  seed 5 measured: after-open 28.85 deg / 1.98 rad/s -> 0.06 deg / 0.015 rad/s
+  place height  : goal_region z derived from the table top + PLANNER_Z_LIFT
+                  (envs/constants.py, envs/transfer.py) instead of the hardcoded 0.015.
+                  measured release drop 15.2 mm -> 3.2-8.2 mm over this batch
+  final retract : straight-line, orientation-locked (grasp_plan_config) with a free-plan
+                  fallback, so the withdrawing hand cannot sweep the just-placed vessel
+  placement xy  : StablePlacement _in_xy bounds shrunk by each collision sphere's radius
+                  ("the footprint is inside the region", not "the sphere centres are"),
+                  clamped to the surface centre if the object is wider than the surface
+  diagnostics   : RELEASE_TRACE -- object pose/tilt/|v|/|w| at pre_release, after_open,
+                  after_detach and every 6 physics steps for SDL_RELEASE_TRACE_S (3.0 s)
+
+  exec rate     : SDL_EXEC_DT=0.08 s per planned waypoint (12.5 Hz), same as B3
+  particles     : 1024, 1000 opt steps, up to 3 planning attempts
+  upright tol   : SDL_UPRIGHT_TILT_TOL_DEG default 15.0 (planner-side carry rejection)
+
+GPU: NVIDIA GeForce RTX 5070, sole occupant of the batch.

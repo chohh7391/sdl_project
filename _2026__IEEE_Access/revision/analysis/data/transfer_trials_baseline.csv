@@ -1,0 +1,6 @@
+timestamp,seed,task,robot_cfg,plan_success,planning_time_s,num_satisfying,execute_success,max_transport_tilt_deg,failure_reason,beaker_xy,flask_xy
+2026-09-01T15:47:28,0,transfer,fr5_ag95,False,51.59,0,False,,plan_no_satisfying,0.5007;0.1977,0.5273;0.3632
+2026-09-01T15:48:56,1,transfer,fr5_ag95,True,24.31,124,True,7.19,,0.5228;0.1657,0.4366;0.3570
+2026-09-01T15:50:39,2,transfer,fr5_ag95,False,49.78,0,False,,plan_no_satisfying,0.4588;0.1303,0.4996;0.3379
+2026-09-01T15:52:10,3,transfer,fr5_ag95,True,25.60,250,True,4.01,,0.4879;0.1407,0.4452;0.3208
+2026-09-01T15:53:55,4,transfer,fr5_ag95,True,24.65,67,True,90.24,,0.5202;0.1422,0.4882;0.3719

@@ -1,0 +1,22 @@
+B2 transfer batch -- seeds 0..29 -- 2026-09-08
+start: 2026-09-08T16:21:47+09:00
+
+CODE UNDER TEST (all changes measured this session; see REFACTOR.md 'side grasp'):
+  grasp        : SIDE grasp, 6-DOF, cutamp.samplers.grasp_side_sampler
+                 azimuth U[-pi,pi), inclination U[10,35] deg, height from gripper clearance
+  registry     : 121: "ag95": PlannerSpec("ag95", "fr5_ag95", 6),
+  held object  : excluded from robot_to_movables at held timesteps (cost_function)
+                 and from the cuRobo world on the Pick approach + final retract (motion_solver)
+  pre-grasp    : particles steered onto grasps reachable at grasp AND pre-grasp (APPROACH_RETREAT_M=0.05)
+  upright      : carry segments with tilt > 5 deg are REJECTED, not warned (motion_solver)
+  pour         : rate-bounded un-tilt back to the pre-pour attitude after pouring
+  go-home      : non-fatal, logged as GO_HOME_FALLBACK
+  exec rate    : SDL_EXEC_DT=0.08 s per planned waypoint (12.5 Hz)
+                 measured on seed 3: executed transport tilt 9.91 deg at 0.04 s -> 2.50 deg at 0.08 s
+  particles    : 1024, 1000 opt steps, up to 3 planning attempts
+
+GPU at start:
+name, utilization.gpu [%], memory.used [MiB]
+NVIDIA GeForce RTX 5070, 6 %, 1628 MiB
+pid, process_name, used_gpu_memory [MiB]
+end: 2026-09-08T18:06:42+09:00

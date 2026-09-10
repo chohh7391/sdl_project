@@ -1,0 +1,5 @@
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="10 mL" />
+  <Stir vessel="beaker_A" time="1 min" />
+  <HeatChill vessel="beaker_A" temp="60 C" active="true" />
+</procedure>

@@ -1,0 +1,25 @@
+B3 transfer batch -- seeds 0..29 -- 2026-09-08 (restart)
+goal: TASK SUCCESS + stability (author's direction); not tuned to the paper's numbers.
+NOTE: an earlier B3 attempt was discarded -- a missing import in Simulation._weld_parent
+      raised NameError in the gripper-close handler, so no trial ever grasped. Fixed and
+      verified on seed 4 before this restart (see below).
+start: 2026-09-08T22:29:16+09:00
+
+CODE UNDER TEST (delta vs the B2 batch):
+  + linear, orientation-locked final grasp approach (cuRobo hold_partial_pose, goal frame)
+  + grasped object welded to the NON-ACTUATED wrist flange (/World/Robot/wrist3_link),
+    not the finger tip: a side grasp offsets the vessel CoM laterally and gravity bent the
+    finger joints. Verified seed 4: planned carry 0.39 deg, executed 28.62 -> 2.51 deg,
+    final tilt 0.00 deg, placed in the goal region, task_success True
+  + carry-tilt rejection 5 -> 15 deg, derived from spill geometry (95% full -> 15.1 deg)
+  + task outcome measured from the SETTLED scene: final tilt/xy, upright, in-goal, poured
+  + harness retries a failed Isaac Sim boot 3x, else records sim_boot_failed as a row
+
+  side grasp: 6-DOF, azimuth U[-pi,pi), inclination U[10,35] deg
+  exec rate : SDL_EXEC_DT=0.08 s/waypoint; particles 1024 x 1000 steps; <=3 attempts
+
+GPU at start:
+7 %, 1752 MiB
+629146, /usr/share/rustdesk/rustdesk
+911026, /home/home/env_isaaclab/bin/python
+end: 2026-09-08T23:59:22+09:00 exit=0

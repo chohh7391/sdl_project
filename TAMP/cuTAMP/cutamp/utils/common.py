@@ -31,6 +31,13 @@ from cutamp.utils.shapes import MultiSphere
 Particles = Dict[str, Float[torch.Tensor, "num_particles *h d"]]
 
 
+# Distance the gripper retreats from a grasp along its approach axis to form the
+# pre-grasp ("approach") pose. cuTAMP does not constrain that pose, so both the
+# motion solver (which must reach it) and particle initialization (which steers
+# particles onto grasps reachable at BOTH poses) have to agree on it.
+APPROACH_RETREAT_M = 0.05
+
+
 def pose_list_to_mat4x4(pose: list[float] | None) -> Float[torch.Tensor, "4 4"]:
     """cuRobo pose list to 4x4 transformation matrix."""
     mat4x4 = torch.eye(4)
@@ -143,10 +150,27 @@ def approximate_goal_aabb(goal: Obstacle) -> Float[torch.Tensor, "2 3"]:
         upper = vertices.max(dim=0).values
         aabb = torch.stack([lower, upper])
     elif isinstance(goal, Cuboid):
-        # TODO: handle cases when the goal is not axis-aligned. i.e., has rotation
-        goal_xyz = torch.tensor(goal.dims)
-        aabb = torch.stack([-goal_xyz / 2, goal_xyz / 2])
-        aabb = transform_points(aabb, mat4x4)
+        # FIX B (REFACTOR.md STAGE B1): compute the TRUE axis-aligned bounding box
+        # of the (possibly rotated) cuboid by transforming ALL EIGHT corners and
+        # taking the min/max. The previous code transformed only the two diagonal
+        # corners [-dims/2, +dims/2]; for a surface with a yaw (e.g. the pour_region
+        # inherits the randomized flask's yaw) those two corners rotate so the
+        # resulting "lower" > "upper" (bounds swapped/degenerate), making EVERY
+        # placement register as out-of-bounds -> pour_region_in_xy = 0/1024 and a
+        # spurious planner failure on any layout whose flask yaw is far from 0.
+        # Enumerating all 8 corners is exact for any rotation and identical to the
+        # old result when the surface is axis-aligned.
+        goal_xyz = torch.tensor(goal.dims, dtype=mat4x4.dtype)
+        half = goal_xyz / 2
+        signs = torch.tensor(
+            [[sx, sy, sz] for sx in (-1.0, 1.0) for sy in (-1.0, 1.0) for sz in (-1.0, 1.0)],
+            dtype=mat4x4.dtype,
+        )
+        corners = signs * half  # (8, 3)
+        corners = transform_points(corners, mat4x4)
+        lower = corners.min(dim=0).values
+        upper = corners.max(dim=0).values
+        aabb = torch.stack([lower, upper])
     else:
         raise NotImplementedError(f"Goal type {type(goal)} not supported yet.")
 

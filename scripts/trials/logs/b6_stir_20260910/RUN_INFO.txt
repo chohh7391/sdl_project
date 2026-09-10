@@ -1,0 +1,57 @@
+B6 stir batch -- seeds 0..29 -- 2026-09-10
+csv:   _2026__IEEE_Access/revision/analysis/data/stir_b6_20260910.csv
+batch stdout: sdl_project/scripts/trials/logs/b6_stir_batch.out
+
+FIRST randomized-harness run of the Stir task (it had never been executed).
+task=stir  robot=fr5_dh3 (3-finger), per content/configs/xdl/tool_map.yml.
+Terminal condition: the vessel upright on the stirrer AND the stir bar inside it.
+
+CODE UNDER TEST = the B5 code PLUS, for Stir:
+  dh3 home      : Task._TOOL_HOME_OFFSET j3 +0.10 rad. The shared home parks the
+                  tool beside the shoulder and the 3-finger gripper has no
+                  self-collision margin there, so cuRobo rejected the very first
+                  motion segment's start state (constraint 1.3111) and Stir was
+                  unplannable for every seed. Applied at the tool-change joint
+                  restore as the DIFFERENCE between the two tools' offsets.
+  gripper open  : _open_gripper() drives to the opened position and verifies it,
+                  instead of a fixed repeat count. dh3 open ran 3 delta steps of
+                  1.16/5 rad, leaving the fingers at ~0.46 rad: the "released"
+                  vessel stayed in the hand and the retracting arm lifted it
+                  (z 0.158 -> 0.207 m). Measured need: dh3 22-23 steps, ag95 11
+                  (so ag95's hardcoded 10 was also one short).
+  release       : SDL_PLACE_SETTLE_STEPS=15 before opening; weld removed after.
+  vessel        : flask is now an OPEN-TOPPED collider (create_hollow_box_collider_rigid,
+                  Task.FLASK_WALL_M = 3 mm -> 64 mm clear opening). As a solid box it
+                  had no interior and the bar came to rest on its lid every time.
+                  Outer envelope unchanged, so the planner's Cuboid model is the same.
+  stir bar      : Task.STIR_BAR_DIMS / ENTITIES["magnet"] = [0.010, 0.010, 0.035].
+                  The old 45 mm cube's worst-yaw diagonal (63.6 mm) cannot clear a
+                  64 mm opening, i.e. the task was geometrically impossible.
+                  _MOVABLE_FOOTPRINT["magnet"] is deliberately left at 45 mm so
+                  every seeded layout stays bit-identical to the earlier batches.
+  placements    : goal_region and beaker_region sized from an explicit allowance
+                  (envs/stir.py VESSEL_CENTRING_ALLOWANCE_M / BAR_DROP_ALLOWANCE_M
+                  = 4 mm each, via envs/constants.region_dims_for). goal_region's
+                  top is the stirrer's planner top, so the vessel is set down on
+                  the plate rather than dropped 12 mm onto it.
+  drop tolerance: StablePlacement "beaker_region_in_xy" 1e-1 -> 1e-3. At 1e-1 the
+                  constraint was 100x looser than every other region and nearly
+                  vacuous.
+  harness       : run_trials.sh reaps stray sim/tamp processes before each seed and
+                  cross-checks the pose the driver read back against the pose this
+                  sim spawned. A survivor from a killed run had answered on the same
+                  ROS domain and three seeds in a row read a fourth seed's layout.
+                  This batch: 0 stray processes, 0 pose mismatches.
+  exec rate     : SDL_EXEC_DT=0.08 s per planned waypoint (12.5 Hz)
+  particles     : 1024, 1000 opt steps, up to 3 planning attempts
+
+RESULT: 30/30 task success [Wilson 88.6, 100.0].
+  planning 30/30, median 33.50 s, max 53.75 s, 30/30 within 60 s
+  transport tilt max 4.40 deg, 30/30 <= 5 deg; vessel final tilt max 0.02 deg
+  vessel centred on the stirrer: median 5.9 mm, max 13.5 mm
+  stir bar inside the vessel 30/30, offset from the vessel axis median 6.5 mm,
+    max 17 mm; it comes to rest 100-112 mm below the mouth, i.e. on the inner floor
+  log audit: 0 retries, 0 carry-tilt rejections, 0 go-home fallbacks,
+    1 linear-approach fallback
+
+GPU: NVIDIA GeForce RTX 5070, sole occupant of the batch.

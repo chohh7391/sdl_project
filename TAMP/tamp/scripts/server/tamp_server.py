@@ -31,13 +31,16 @@ import logging
 from cutamp.cost_reduction import CostReducer
 
 from envs.utils import TAMPEnvManager
+from orchestration.planner_api import PlanningResult, with_explicit_pour_steps
 from curobo.wrap.reacher.motion_gen import MotionGenPlanConfig
+import os as _os
 import numpy as np
 
 from curobo.types.state import JointState as CuroboJointState
 from curobo.types.math import Pose as CuroboPose
 from curobo.types.base import TensorDeviceType
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, String
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy
 import tf2_ros
 
 import os
@@ -56,7 +59,6 @@ class TAMP:
 
         self.config = config
 
-        self.env_manager = TAMPEnvManager()
         self.env = None
 
         self.current_env_name = "unknown"
@@ -78,9 +80,16 @@ class TAMP:
         self.max_attempts = 3
 
         self.cmd_js_names = ["j1", "j2", "j3", "j4", "j5", "j6"]
+        self.has_planned = False
 
 
     def update_config(self, config: TAMPConfiguration):
+        if self.has_planned and config.robot != self.config.robot:
+            raise RuntimeError(
+                "robot configuration cannot change after planning in this process "
+                f"({self.config.robot!r} -> {config.robot!r}); start the planner "
+                "process assigned to that configuration"
+            )
         self.config = config
 
 
@@ -95,7 +104,11 @@ class TAMP:
     ):
         self.current_env_name = name
 
-        self.env_manager.update_entities(
+        # A new manager produces an isolated world snapshot for every request.
+        # Reusing the old manager mutated Cuboids in place and leaked state from
+        # one task/trial into the next.
+        env_manager = TAMPEnvManager()
+        env_manager.update_entities(
             poses=poses,
             movables=movables,
             statics=statics,
@@ -104,10 +117,10 @@ class TAMP:
         )
 
         if name == "transfer" :
-            self.env, pour_region_pose = self.env_manager.load_env(name)
+            self.env, pour_region_pose = env_manager.load_env(name)
             self._log.info(f"pour_region_pose : {pour_region_pose}")
         else :
-            self.env = self.env_manager.load_env(name)
+            self.env = env_manager.load_env(name)
         
     
     def plan(
@@ -115,7 +128,9 @@ class TAMP:
         q_init: Optional[List[float]] = None,
         experiment_id: Optional[str] = None
     ):
+        self.has_planned = True
         self.total_num_satisfying = 0
+        self.last_plan_error = None
 
         start_time = time.time()
         attempts_used = 0
@@ -127,7 +142,7 @@ class TAMP:
                 attempts_used += 1
 
                 env = copy.deepcopy(self.env)
-                
+
                 try:
                     self.curobo_plan, self.total_num_satisfying = run_cutamp(
                         env=env,
@@ -138,7 +153,17 @@ class TAMP:
                         experiment_id=experiment_id
                     )
                 except Exception as e:
-                    print(f"An unexpected error occurred: {e}")
+                    # Do NOT silently turn a planner crash into a fake "0 satisfying":
+                    # doing so previously reported a genuinely SOLVED plan as a
+                    # planning failure (and retried it 3x). Surface the FULL
+                    # traceback so downstream crashes (e.g. an empty cuRobo
+                    # trajectory in solve_curobo) are diagnosable. Retry behaviour
+                    # is preserved by the enclosing loop.
+                    self._log.exception(
+                        "run_cutamp raised on attempt %d/%d for env '%s'",
+                        attempts_used, self.max_attempts, self.current_env_name,
+                    )
+                    self.last_plan_error = e
                     self.total_num_satisfying = 0
 
                 if self.total_num_satisfying > 0:
@@ -146,6 +171,15 @@ class TAMP:
                     break
         else:
             raise ValueError("update_env is needed before plan")
+
+        # All attempts crashed (never reached a real 0-satisfying result): make the
+        # failure visible rather than masquerading as "planned, found nothing".
+        if not success and self.last_plan_error is not None:
+            self._log.error(
+                "TAMP planning failed on all %d attempt(s) for env '%s' due to an "
+                "exception (see traceback above): %r",
+                attempts_used, self.current_env_name, self.last_plan_error,
+            )
         
         end_time = time.time()
         planning_time = end_time - start_time
@@ -159,7 +193,20 @@ class TAMP:
         #     planning_time=planning_time
         # )
 
-        return self.curobo_plan, self.total_num_satisfying
+        failure_reason = ""
+        if not success:
+            failure_reason = (
+                f"planner_exception:{type(self.last_plan_error).__name__}"
+                if self.last_plan_error is not None else "no_satisfying_particles"
+            )
+        return PlanningResult(
+            plan=self.curobo_plan,
+            success=success,
+            total_num_satisfying=int(self.total_num_satisfying or 0),
+            attempts=attempts_used,
+            planning_time_s=planning_time,
+            failure_reason=failure_reason,
+        )
     
 
     def motion_plan(
@@ -297,6 +344,23 @@ class TAMPServer(Node):
         # commands
         self.arm_commands_publisher = self.create_publisher(JointState, "isaac_arm_commands", 10)
         self.gripper_commands_cli = self.create_client(SetBool, "isaac_gripper_commands", callback_group=self.reentrant_group)
+
+        # MAJOR-1 (REFACTOR.md III): before a gripper CLOSE the executor tells the
+        # sim WHICH object the planner intends to grasp (the Pick op's target), so
+        # the sim welds that object instead of the geometric-nearest one. Latched
+        # (TRANSIENT_LOCAL + RELIABLE, depth 1) so the sim reliably has the name
+        # by the time the close service is called, even across the DDS boundary.
+        _latched_qos = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
+        self.grasp_target_pub = self.create_publisher(String, "set_grasp_target", _latched_qos)
+        # Publishes the op_name currently being executed so an external harness
+        # can attribute measured carried-vessel tilt to the transport (MoveHolding)
+        # phase specifically, separate from the pour (R3#2 theta_max question).
+        self.current_op_pub = self.create_publisher(String, "tamp_current_op", _latched_qos)
         self.set_simulation_state_cli = self.create_client(SetSimulationState, "set_simulation_state", callback_group=self.reentrant_group)
 
         # TF
@@ -506,6 +570,12 @@ class TAMPServer(Node):
             request.num_initial_plans = 1
         if request.opt_viz_interval == 0:
             request.opt_viz_interval = 10
+        if request.time_dilation_factor == 0.0:
+            # 0.0 -> ZeroDivisionError in cuRobo trajectory retime (1.0 /
+            # time_dilation_factor). Clients (e.g. tamp_client.set_tamp_cfg) don't
+            # set this field, so it arrives as 0.0; default it like every other
+            # field above, matching the __main__ default of 0.5.
+            request.time_dilation_factor = 0.5
 
         config = TAMPConfiguration(
             num_particles=request.num_particles,
@@ -529,9 +599,12 @@ class TAMPServer(Node):
         )
         validate_tamp_config(config)
 
-        self.tamp.update_config(config=config)
-
-        response.success = True
+        try:
+            self.tamp.update_config(config=config)
+            response.success = True
+        except RuntimeError as exc:
+            self.get_logger().error(str(exc))
+            response.success = False
 
         return response
 
@@ -543,30 +616,44 @@ class TAMPServer(Node):
 
     def tamp_plan_cb(self, request, response):
 
-        pause_req = SetSimulationState.Request()
-        pause_req.state.state = 2 # pause
-
-        if not self.set_simulation_state_cli.wait_for_service(timeout_sec=1.0):
-            self.get_logger().error("Simulation Pause Failed")
-            return
-
-        pause_res = self.set_simulation_state_cli.call(pause_req)
-
-        q_init = self.joint_states.position[:6].tolist()  # num_dof = 6
+        # Planning runs in this process and does not require pausing Isaac Sim.
+        # Keeping the timeline playing preserves /isaac_joint_states, so q_init
+        # is the actual live state rather than an empty value/q_home fallback.
+        q_init = list(self.joint_states.position[:6])  # num_dof = 6
+        if len(q_init) < 6:
+            # isaac_joint_states not received yet (e.g. the sim is paused, so the
+            # Isaac ActionGraph joint-state publisher isn't ticking). An empty
+            # q_init makes best_particle["q0"] empty and crashes solve_curobo
+            # ("shape '[1, 6]' is invalid for input of size 0"). Fall back to the
+            # robot's home configuration so planning still runs.
+            from cutamp.robots import get_q_home
+            q_init = list(get_q_home(self.tamp.config.robot))
+            self.get_logger().warn(
+                f"isaac_joint_states unavailable ({len(self.joint_states.position)} dofs); "
+                f"using q_home for '{self.tamp.config.robot}' as q_init."
+            )
 
         try:
-            curobo_plan, total_num_satisfying = self.tamp.plan(q_init, None)
-            # print(f"curobo_plan: {curobo_plan}")
-            self.plan_to_execute = curobo_plan
-
-            encoded_curobo_plan = self.process_plan(curobo_plan)
-            response.plan_success = (total_num_satisfying > 0)
-            response.curobo_plan = encoded_curobo_plan
+            result = self.tamp.plan(q_init, None)
+            curobo_plan = with_explicit_pour_steps(result.plan)
+            total_num_satisfying = result.total_num_satisfying
+            response.plan_success = result.success
             response.total_num_satisfying = total_num_satisfying
+
+            if result.success:
+                self.plan_to_execute = curobo_plan
+                response.curobo_plan = self.process_plan(curobo_plan)
+            else:
+                # A failed request invalidates any plan left by an earlier call.
+                # Do not try to encode None and do not allow stale execution.
+                self.plan_to_execute = None
+                response.curobo_plan = []
 
             self.get_logger().info(
                 f"TAMP planning finished. Success: {response.plan_success}, "
-                f"Satisfying particles: {total_num_satisfying}"
+                f"Satisfying particles: {total_num_satisfying}, "
+                f"attempts: {result.attempts}, time: {result.planning_time_s:.3f}s, "
+                f"failure_reason: {result.failure_reason or 'none'}"
             )
 
         except Exception as e:
@@ -614,8 +701,10 @@ class TAMPServer(Node):
             elif plan_step["type"] == "gripper":
                 value.type = 1 
                 value.action = plan_step["action"]
+            elif plan_step["type"] == "pour":
+                value.type = 2
             else:
-                raise ValueError("type of plan_step must be 'trajectory' or 'gripper'")
+                raise ValueError("unsupported plan step type")
             
             processed_plan.append(value)
 
@@ -642,31 +731,25 @@ class TAMPServer(Node):
         for plan_index, plan_part in enumerate(self.plan_to_execute):
 
             current_op = plan_part.get("op_name", "")
-            # ---------------------------------------------------------
-            if self.last_operator == "Move_to_Surface" and current_op != "Move_to_Surface":
-                self.get_logger().info(
-                    f"Move_to_Surface 완료 → 다음 operator({current_op}) 실행 전 pouring 수행"
-                )
-
-                # posture 저장
-                self.saved_state_after_operator = self.joint_states.position[:6]
-
-                # pouring motion
-                self.pouring()
-
-                self.get_logger().info("Pouring 동작 완료. 다음 operator trajectory 실행.")
-            # ---------------------------------------------------------
-
-            # update last operator
-            self.last_operator = current_op
+            # Broadcast the op currently executing so an external harness can
+            # isolate transport (MoveHolding) tilt from the pour (R3#2).
+            self._publish_current_op(current_op)
 
             # trajectory or gripper execution logic
             plan_type = plan_part.get("type")
 
             if plan_type == "trajectory":
                 plan_trajectory = plan_part["plan"]
-                dt = plan_part.get("dt", 0.02)
-                dt = 0.04
+                # Replay period per planned waypoint. This deliberately overrides
+                # cuRobo's interpolation_dt (~0.02 s): the simulated arm is position
+                # controlled and chases each published target, so replaying slower
+                # reduces tracking error. That matters much more for a side grasp
+                # than a top grasp -- a side grasp maps wrist-roll tracking error
+                # onto the held vessel's tilt 1:1 (which is exactly why it can pour
+                # at all), whereas under a top grasp the same error becomes yaw.
+                # Configurable so the executed-tilt/execution-time trade-off can be
+                # measured and reported rather than hidden in a literal.
+                dt = float(_os.environ.get("SDL_EXEC_DT", "0.04"))
                 num_waypoints = plan_trajectory.position.shape[0]
 
                 for i in range(num_waypoints):
@@ -683,28 +766,53 @@ class TAMPServer(Node):
                 self.execute_gripper_action(plan_part)
                 time.sleep(1.0)
 
+            elif plan_type == "pour":
+                self.saved_state_after_operator = self.joint_states.position[:6]
+                self.pouring()
+                self.get_logger().info("Explicit pouring step completed.")
+
             else:
                 self.get_logger().error(f"Unknown plan type: {plan_type}")
                 response.execute_success = False
                 return response
 
         self.get_logger().info("Plan execution completed.")
+        self._publish_current_op("idle")
         response.execute_success = True
         return response
+
+    def _publish_current_op(self, op_name: str):
+        msg = String()
+        msg.data = str(op_name)
+        self.current_op_pub.publish(msg)
 
     def pouring(self):
 
         self.get_logger().info("Starting PD-controlled pouring with convolution shaping...")
 
-        Kp = 0.008        
-        Kd = 0.002        
+        Kp = 0.008
+        Kd = 0.002
 
-        weight_target = 50.0  
-        dt = 0.04            
-        max_steps = 800       
+        weight_target = 50.0
+        dt = 0.04
+        max_steps = 800
+
+        # --- Tilt-rate limit (IV-2) ---------------------------------------------------
+        # The PD output is convolution-shaped, so v_cmd (wrist angular velocity) can spike.
+        # Saturate it to a maximum consistent with a *controlled* pour so the wrist cannot
+        # slew abruptly (which would slosh/over-pour on real hardware and spike the tilt in sim).
+        # 0.5 rad/s (~28.6 deg/s): at the 25 Hz (dt=0.04 s) loop this caps each step to
+        # ~0.02 rad (~1.15 deg), keeping the tilt motion smooth.
+        MAX_TILT_RATE = 0.5     # [rad/s] wrist angular-velocity saturation
+        # --- Absolute pour-tilt safety cap (θ_max for the POUR, not the 5 deg transport bound) -
+        # Bounds runaway if the (synthetic) scale never reaches the target: stop after this much
+        # cumulative wrist rotation from the pour start. ~2.0 rad (~115 deg) is well past a normal
+        # pour (which stops on |error|<0.5), so it never fires on a healthy pour.
+        MAX_POUR_TILT = 2.0     # [rad] max cumulative wrist tilt from pour start
 
         current_q = list(self.joint_states.position[:6])
-        last_idx = 5  
+        last_idx = 5
+        theta_start = current_q[last_idx]   # wrist angle at pour start (for the absolute-tilt cap)
         prev_error = 0.0
 
         kernel_horizon = 2.5   # 필터 길이 1초
@@ -749,7 +857,24 @@ class TAMPServer(Node):
 
             v_cmd = float(np.dot(pd_segment, kernel_segment))        # wrist 각속도 (rad/s)
 
+            # (5b) tilt-rate limit: saturate wrist angular velocity to +/- MAX_TILT_RATE
+            v_cmd = max(-MAX_TILT_RATE, min(MAX_TILT_RATE, v_cmd))
+
             current_q[last_idx] += v_cmd * dt
+
+            # (5c) absolute pour-tilt safety cap: never rotate the wrist past MAX_POUR_TILT
+            tilt_from_start = current_q[last_idx] - theta_start
+            if abs(tilt_from_start) >= MAX_POUR_TILT:
+                current_q[last_idx] = theta_start + np.sign(tilt_from_start) * MAX_POUR_TILT
+                self.get_logger().warn(
+                    f"Pour tilt cap reached (|Δθ|>={MAX_POUR_TILT:.2f} rad). Stopping pouring."
+                )
+                # publish the clamped pose once, then stop
+                self.arm_commands.header.stamp = self.get_clock().now().to_msg()
+                self.arm_commands.name = self.tamp.cmd_js_names
+                self.arm_commands.position = current_q.copy()
+                self.arm_commands_publisher.publish(self.arm_commands)
+                break
 
             # (6) 명령 publish
             self.arm_commands.header.stamp = self.get_clock().now().to_msg()
@@ -774,6 +899,35 @@ class TAMPServer(Node):
 
         self.get_logger().info("✔ PD + convolution-shaped pouring finished.")
 
+        # Return the pour joint to its pre-pour attitude before the plan continues.
+        # The pour tilts the held vessel by design (with the side grasp the pour
+        # joint rotates about the ee approach axis, so vessel tilt tracks it 1:1),
+        # but the REMAINING plan steps still carry the vessel to its placement.
+        # Carrying it tilted would spill on real hardware and makes the measured
+        # transport tilt meaningless: before this, Place executed at 56.7 deg while
+        # the planner's own carry segments were 0.13 deg. Rate-bounded with the
+        # same MAX_TILT_RATE as the pour, and it ends exactly at theta_start.
+        self._untilt_pour_joint(current_q, last_idx, theta_start, MAX_TILT_RATE, dt)
+
+    def _untilt_pour_joint(self, current_q, joint_idx, target, max_rate, dt):
+        """Rate-bounded return of the pour joint to `target`, ending exactly there."""
+        start = float(current_q[joint_idx])
+        delta = float(target) - start
+        if abs(delta) <= 1e-9:
+            return
+        steps = max(1, int(np.ceil(abs(delta) / max(max_rate * dt, 1e-9))))
+        for step in range(1, steps + 1):
+            current_q[joint_idx] = start + delta * (step / steps)
+            self.arm_commands.header.stamp = self.get_clock().now().to_msg()
+            self.arm_commands.name = self.tamp.cmd_js_names
+            self.arm_commands.position = current_q.copy()
+            self.arm_commands_publisher.publish(self.arm_commands)
+            time.sleep(dt)
+        self.get_logger().info(
+            "Pour joint returned to its pre-pour attitude (%.3f rad) over %d rate-bounded steps."
+            % (float(target), steps)
+        )
+
 
     def execute_gripper_action(self, plan_part):
         """
@@ -785,9 +939,20 @@ class TAMPServer(Node):
             return
 
         request = SetBool.Request()
-    
+
         if plan_part["action"] == "close":
             request.data = True
+            # MAJOR-1: publish the planner's intended grasp target (if the plan
+            # step carries one) and give the latched topic a moment to be
+            # delivered + applied in the sim BEFORE the close service fires, so
+            # the sim welds the intended object rather than the nearest one.
+            target = plan_part.get("target")
+            if target:
+                msg = String()
+                msg.data = str(target)
+                self.grasp_target_pub.publish(msg)
+                self.get_logger().info(f"grasp target -> '{target}' (published before close)")
+                time.sleep(0.5)
         else:  # open
             request.data = False
 

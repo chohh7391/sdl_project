@@ -1,0 +1,154 @@
+{
+    "test_instructions": [
+        "Place 25 mL of water into flask_B. Agitate flask_B for 2 min. Pour 25 mL from flask_B into beaker_B.",
+        "Add 50 mL of water to beaker_B.",
+        "Pour 10 mL of water into flask_B.",
+        "Add 50 mL of water to flask_A. Wash flask_A.",
+        "Add 10 mL of ethanol to flask_B. Place bottle_A on plate_B.",
+        "Add 10 mL of ethanol to flask_B. Wash flask_B.",
+        "Introduce 50 mL of ethanol into the flask_B. Send 25 mL from flask_B to beaker_B.",
+        "Place 50 mL of ethanol into flask_A. Relocate box_A onto plate_B.",
+        "Pour 25 mL of water into beaker_B. Send 50 mL from beaker_B to flask_B.",
+        "Place 50 mL of water into flask_B.",
+        "Place 25 mL of ethanol into flask_A. Set the temperature of flask_A to 60 C.",
+        "Add 10 mL of water to beaker_A.",
+        "Place 10 mL of water into beaker_B. Move bottle_A to plate_B. Put bottle_A on top of plate_B.",
+        "Pour 10 mL of water into flask_A.",
+        "Introduce 25 mL of ethanol into the beaker_B.",
+        "Pour 50 mL of ethanol into flask_B. Transfer 10 mL from flask_B to flask_A. Bring flask_A to 0 C.",
+        "Pour 25 mL of ethanol into beaker_A. Place box_A on plate_A.",
+        "Place 10 mL of water into flask_B. Pour 25 mL from flask_B into flask_A.",
+        "Pour 10 mL of water into flask_A. Send 10 mL from flask_A to beaker_B. Perform cleaning on beaker_B.",
+        "Place 50 mL of water into flask_A.",
+        "Add 10 mL of water to flask_A. Mix the contents of flask_A for 2 min. Bring flask_A to 0 C.",
+        "Introduce 10 mL of water into the flask_B.",
+        "Add 25 mL of ethanol to beaker_A.",
+        "Add 50 mL of ethanol to beaker_A. Perform cleaning on beaker_A. Transfer 25 mL from beaker_A to beaker_B.",
+        "Pour 10 mL of water into beaker_B. Relocate bottle_A onto plate_A.",
+        "Introduce 25 mL of water into the flask_B. Stir flask_B for 1 min.",
+        "Introduce 10 mL of water into the beaker_B.",
+        "Add 50 mL of water to flask_A. Stir the solution in flask_A for 30 s. Transfer 25 mL from flask_A to beaker_A.",
+        "Add 50 mL of water to beaker_A. Heat beaker_A to 60 C. Adjust beaker_A to 60 C.",
+        "Introduce 25 mL of water into the beaker_A. Stir beaker_A for 1 min. Bring beaker_A to 25 C.",
+        "Introduce 25 mL of water into the flask_A. Agitate flask_A for 2 min.",
+        "Introduce 10 mL of ethanol into the flask_B. Stir flask_B for 30 s. Bring flask_B to 0 C.",
+        "Place 10 mL of ethanol into flask_B.",
+        "Introduce 50 mL of water into the beaker_B. Wash beaker_B. Heat beaker_B to 60 C.",
+        "Introduce 50 mL of ethanol into the beaker_A. Perform cleaning on beaker_A.",
+        "Add 25 mL of ethanol to beaker_B. Pour 50 mL from beaker_B into beaker_A.",
+        "Introduce 25 mL of water into the flask_A. Set the temperature of flask_A to 25 C.",
+        "Introduce 50 mL of ethanol into the beaker_A.",
+        "Pour 10 mL of water into beaker_B. Agitate beaker_B for 2 min. Send 10 mL from beaker_B to flask_A.",
+        "Introduce 50 mL of water into the flask_A. Stir the solution in flask_A for 1 min. Agitate flask_A for 2 min.",
+        "Place 10 mL of ethanol into flask_B. Set the temperature of flask_B to 0 C. Send 10 mL from flask_B to beaker_A.",
+        "Add 25 mL of water to beaker_A. Mix the contents of beaker_A for 30 s. Stir beaker_A for 1 min.",
+        "Place 50 mL of ethanol into beaker_B.",
+        "Pour 25 mL of water into flask_B. Wash flask_B. Place bottle_A on plate_A.",
+        "Pour 25 mL of ethanol into beaker_A.",
+        "Place 10 mL of water into beaker_B. Stir beaker_B for 1 min.",
+        "Add 25 mL of ethanol to beaker_A.",
+        "Add 50 mL of ethanol to flask_A. Rinse and clean flask_A. Wash flask_A.",
+        "Pour 50 mL of water into flask_B.",
+        "Introduce 25 mL of water into the flask_A. Mix the contents of flask_A for 2 min. Put bottle_A on top of plate_B.",
+        "Pour 10 mL of ethanol into flask_A. Transfer 10 mL from flask_A to flask_B. Agitate flask_B for 1 min.",
+        "Place 50 mL of water into flask_B. Put box_A on top of plate_A. Perform cleaning on flask_B.",
+        "Place 50 mL of ethanol into flask_A. Stir flask_A for 1 min. Bring flask_A to 0 C.",
+        "Pour 10 mL of ethanol into flask_A. Move bottle_A to plate_A. Set the temperature of flask_A to 0 C.",
+        "Pour 50 mL of ethanol into flask_A.",
+        "Place 50 mL of ethanol into beaker_A.",
+        "Introduce 10 mL of ethanol into the flask_B.",
+        "Add 10 mL of water to beaker_B.",
+        "Add 50 mL of ethanol to flask_B.",
+        "Add 25 mL of ethanol to flask_B. Move bottle_A to plate_B.",
+        "Add 10 mL of water to beaker_A. Move bottle_A to plate_A.",
+        "Add 25 mL of water to flask_B. Rinse and clean flask_B. Relocate box_A onto plate_A.",
+        "Pour 50 mL of ethanol into flask_A. Put box_A on top of plate_B. Send 10 mL from flask_A to flask_B.",
+        "Place 10 mL of water into flask_B. Send 10 mL from flask_B to flask_A. Pour 25 mL from flask_A into flask_B.",
+        "Pour 50 mL of ethanol into flask_B. Move box_A to plate_B.",
+        "Pour 10 mL of ethanol into flask_A. Adjust flask_A to 60 C.",
+        "Introduce 10 mL of ethanol into the flask_B.",
+        "Place 50 mL of water into beaker_B.",
+        "Place 25 mL of ethanol into beaker_A. Stir beaker_A for 1 min. Put bottle_A on top of plate_B.",
+        "Introduce 50 mL of water into the flask_B. Rinse and clean flask_B. Relocate box_A onto plate_B.",
+        "Pour 25 mL of water into beaker_A. Place box_A on plate_A. Stir the solution in beaker_A for 30 s.",
+        "Place 10 mL of water into beaker_B.",
+        "Pour 25 mL of ethanol into beaker_B. Put box_A on top of plate_A.",
+        "Add 10 mL of water to beaker_B. Agitate beaker_B for 30 s.",
+        "Pour 10 mL of water into flask_B.",
+        "Place 50 mL of water into flask_B. Agitate flask_B for 2 min.",
+        "Introduce 25 mL of ethanol into the beaker_A. Bring beaker_A to 60 C.",
+        "Place 10 mL of water into beaker_B. Relocate bottle_A onto plate_A.",
+        "Pour 25 mL of water into beaker_A. Adjust beaker_A to 25 C. Put box_A on top of plate_B.",
+        "Pour 25 mL of water into flask_B. Send 50 mL from flask_B to beaker_A.",
+        "Add 50 mL of ethanol to beaker_A.",
+        "Pour 10 mL of water into beaker_A. Send 25 mL from beaker_A to flask_A. Bring flask_A to 25 C.",
+        "Pour 25 mL of ethanol into flask_A. Send 25 mL from flask_A to beaker_A. Stir the solution in beaker_A for 30 s.",
+        "Introduce 25 mL of water into the beaker_A. Put box_A on top of plate_B.",
+        "Add 50 mL of ethanol to flask_A. Send 25 mL from flask_A to beaker_A.",
+        "Introduce 25 mL of water into the beaker_A.",
+        "Introduce 25 mL of ethanol into the beaker_A. Place box_A on plate_B.",
+        "Place 25 mL of ethanol into beaker_A.",
+        "Add 10 mL of water to flask_A. Perform cleaning on flask_A. Rinse and clean flask_A.",
+        "Pour 10 mL of water into flask_A.",
+        "Pour 25 mL of ethanol into beaker_A. Perform cleaning on beaker_A.",
+        "Introduce 10 mL of water into the flask_B. Mix the contents of flask_B for 2 min.",
+        "Add 50 mL of ethanol to flask_B.",
+        "Add 25 mL of water to flask_A.",
+        "Introduce 50 mL of ethanol into the flask_B. Send 50 mL from flask_B to beaker_A.",
+        "Introduce 25 mL of water into the beaker_A. Put bottle_A on top of plate_B. Stir beaker_A for 30 s.",
+        "Add 25 mL of ethanol to flask_A. Adjust flask_A to 60 C. Perform cleaning on flask_A.",
+        "Introduce 50 mL of water into the beaker_B. Heat beaker_B to 0 C.",
+        "Pour 50 mL of ethanol into beaker_A. Adjust beaker_A to 0 C. Send 50 mL from beaker_A to flask_A.",
+        "Add 25 mL of water to flask_A. Rinse and clean flask_A. Mix the contents of flask_A for 30 s."
+    ],
+    "labeled_xdl_testset": [
+        {
+            "is_actually_valid": true,
+            "xml": "<procedure><Add vessel='beaker_A' reagent='water' volume='10 mL' /></procedure>"
+        },
+        {
+            "is_actually_valid": true,
+            "xml": "<procedure><Add vessel='flask_A' reagent='ethanol' volume='50 mL' /><Stir vessel='flask_A' time='1 min' /></procedure>"
+        },
+        {
+            "is_actually_valid": true,
+            "xml": "<procedure><Add vessel='beaker_B' reagent='water' volume='25 mL' /><Transfer from_vessel='beaker_B' to_vessel='flask_B' volume='10 mL' /></procedure>"
+        },
+        {
+            "is_actually_valid": true,
+            "xml": "<procedure><Move object='box_A' place='plate_A' /></procedure>"
+        },
+        {
+            "is_actually_valid": false,
+            "xml": "<procedure><Stir vessel='beaker_A' time='30 s' /></procedure>"
+        },
+        {
+            "is_actually_valid": false,
+            "xml": "<procedure><Add vessel='beaker_A' reagent='water' volume='10 mL' /><Transfer from_vessel='beaker_A' to_vessel='beaker_A' volume='10 mL' /></procedure>"
+        },
+        {
+            "is_actually_valid": false,
+            "xml": "<procedure><Add vessel='magic_beaker' reagent='water' volume='10 mL' /></procedure>"
+        },
+        {
+            "is_actually_valid": false,
+            "xml": "<procedure><Add vessel='beaker_A' reagent='acid' volume='10 mL' /></procedure>"
+        },
+        {
+            "is_actually_valid": false,
+            "xml": "<procedure><Add vessel='beaker_A' volume='10 mL' /></procedure>"
+        },
+        {
+            "is_actually_valid": false,
+            "xml": "<procedure><Add vessel='beaker_A' reagent='water' volume='10 mL' /><HeatChill vessel='beaker_A' temp='60 C' /></procedure>"
+        },
+        {
+            "is_actually_valid": false,
+            "xml": "<procedure><Add vessel='beaker_A' reagent='water' volume='10 mL' > </procedure>"
+        },
+        {
+            "is_actually_valid": false,
+            "xml": "<procedure><Add vessel='beaker_A' reagent='water' volume='10 mL' /></wrong_root>"
+        }
+    ]
+}

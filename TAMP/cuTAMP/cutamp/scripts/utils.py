@@ -79,7 +79,13 @@ default_constraint_to_tol = {
         "shelf_support": 1e-2,
         "stove_in_xy": 1e-3,
         "stove_support": 1e-2,
-        "beaker_region_in_xy": 1e-1,
+        # 1e-1 here (100x looser than every other region) made the constraint
+        # almost vacuous: the stir bar could be planned ~25 mm outside the drop
+        # region and still "satisfy" it. That was only survivable because the bar
+        # could never enter the vessel anyway; with a hollow vessel and a real
+        # stir bar the bar has to actually clear the opening, so this uses the
+        # same tolerance as the other placement regions.
+        "beaker_region_in_xy": 1e-3,
         "beaker_region_support": 1e-2,
         "pour_region_in_xy": 1e-3,
         "pour_region_support": 1e-2,

@@ -20,6 +20,10 @@ from simulation_interfaces.srv import GetEntityState
 from tf2_ros import Buffer, TransformListener
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
 
+TAMP_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, TAMP_SRC)
+from orchestration.registry import get_environment_spec, get_planner_spec
+
 PROJECT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src", "sdl_project")
 sys.path.append(os.path.join(PROJECT_PATH, "LLM"))
 # Llama import
@@ -94,27 +98,20 @@ class TAMPClient(Node):
     def set_tamp_cfg(self, desired_tool: str):
 
         request = SetTampCfg.Request()
-
-        assert desired_tool in {"empty", "ag95", "vgc10", "dh3"}
+        spec = get_planner_spec(desired_tool)
 
         request.enable_visualizer = False
         request.viz_robot_mesh = False
         request.enable_experiment_logging = False
         request.rr_spawn = False
-        request.time_dilation_factor = 0.4
-
-        robot_name = "fr5"
-
-        if desired_tool == "empty":
-            request.robot = robot_name
-        else:
-            request.robot = robot_name + "_" + desired_tool
-            if desired_tool == "ag95":
-                request.grasp_dof = 6
-            elif desired_tool == "vgc10":
-                request.grasp_dof = 4
-            elif desired_tool == "dh3":
-                request.grasp_dof = 4
+        request.robot = spec.robot
+        request.grasp_dof = spec.grasp_dof
+        request.num_particles = spec.num_particles
+        request.num_resampling_attempts = spec.num_resampling_attempts
+        request.num_opt_steps = spec.num_opt_steps
+        request.num_initial_plans = spec.num_initial_plans
+        request.approach = spec.approach
+        request.time_dilation_factor = spec.time_dilation_factor
 
         response = self._call_service_and_wait(self.set_tamp_cfg_client, request)
         if response:
@@ -125,56 +122,17 @@ class TAMPClient(Node):
 
     def set_tamp_env(self, arg: str, step_attrs: dict = None, rearrange_info: Dict[str, str] = None):
 
-        request = SetTampEnv.Request()
         tag_name = arg.strip().lower()
-
-        all_entities = ["table", "stirrer", "box_goal", "beaker", "flask", "magnet",  "box"]
-        request.entities = all_entities
-
-        if tag_name == "transfer":
-            from_vessel = step_attrs.get("from_vessel")
-            to_vessel = step_attrs.get("to_vessel")
-            request.env_name = "transfer"
-            request.movables = [from_vessel, to_vessel]
-            request.statics = ["table", "goal_region", "stirrer", "magnet", "box"]
-            request.ex_collision = ["pour_region", "rearrange_region"]
-
-        elif tag_name == "stir":
-            vessel = step_attrs.get("vessel")
-            not_vessel = "beaker" if vessel == "flask" else "flask"
-            request.env_name = "stir"
-            request.movables = [vessel, "magnet"]
-            request.statics = ["table", "stirrer", not_vessel, "goal_region", "box"]
-            request.ex_collision = ["beaker_region", "rearrange_region"]
-
-        elif tag_name == "default":
-            request.env_name = "default"
-            request.movables = ["magnet"]
-            request.statics = ["table", "stirrer", "beaker", "flask", "box"]
-            request.ex_collision = []
-
-        elif tag_name == "move":
-            object = step_attrs.get("object")
-            request.env_name = "move"
-            request.movables = [object]
-            base_statics = ["table", "stirrer", "box", "beaker", "flask", "box_goal"]
-            request.statics = [obj for obj in base_statics if obj != object]
-            request.ex_collision = ["box_region", "rearrange_region"]
-
-        elif tag_name == "rearrange":
-            target_object = rearrange_info["target_entity"]
-            request.env_name = "rearrange"
-            request.movables = [target_object]
-            request.rearrange_grid = rearrange_info["target_grid"]
-            
-            # [수정된 부분] 타겟 물체가 무엇이든 statics 목록에서 자동으로 제외합니다.
-            base_statics = ["table", "stirrer", "beaker", "flask", "box_goal"]
-            request.statics = [obj for obj in base_statics if obj != target_object]
-            
-            request.ex_collision = ["pour_region", "beaker_region", "box_region", "rearrange_region"]
-
-        else:
-            raise ValueError("arg must be 'transfer' or 'stir' or 'default', 'move'")
+        spec = get_environment_spec(
+            tag_name, step_attrs=step_attrs, rearrange_info=rearrange_info
+        )
+        request = SetTampEnv.Request()
+        request.env_name = spec.name
+        request.entities = list(spec.entities)
+        request.movables = list(spec.movables)
+        request.statics = list(spec.statics)
+        request.ex_collision = list(spec.ex_collision)
+        request.rearrange_grid = spec.rearrange_grid
 
         response = self._call_service_and_wait(self.set_tamp_env_client, request)
         if response:

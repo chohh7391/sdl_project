@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import cmd
+import pathlib
 import sys
 
 import rclpy
@@ -10,6 +11,10 @@ from tamp_interfaces.srv import (
 from std_srvs.srv import SetBool
 from simulation_interfaces.srv import GetEntityState
 import time
+
+TAMP_SRC = pathlib.Path(__file__).resolve().parents[2] / "src"
+sys.path.insert(0, str(TAMP_SRC))
+from orchestration.registry import get_environment_spec, get_planner_spec
 
 
 class bcolors:
@@ -107,27 +112,13 @@ class ControlSuiteShell(cmd.Cmd):
     def do_set_tamp_env(self, arg):
 
         request = SetTampEnv.Request()
-
-        if arg.strip() == "transfer":
-            request.env_name = "transfer"
-            request.entities = ["beaker", "flask", "magnet"]
-            request.movables = ["beaker", "flask"]
-            request.statics = ["table", "goal_region", "stirrer", "magnet"]
-            request.ex_collision = ["pour_region"]
-        elif arg.strip() == "stir":
-            request.env_name = "stir"
-            request.entities = ["beaker", "flask", "magnet"]
-            request.movables = ["flask", "magnet"]
-            request.statics = ["table", "stirrer", "beaker", "goal_region"]
-            request.ex_collision = ["beaker_region"]
-        elif arg.strip() == "default":
-            request.env_name = "default"
-            request.entities = ["beaker", "flask", "magnet"]
-            request.movables = ["magnet"]
-            request.statics = ["table", "stirrer", "beaker", "flask", ]
-            request.ex_collision = []
-        else:
-            raise ValueError("arg must be 'transfer' or 'stir' or 'default'")
+        spec = get_environment_spec(arg)
+        request.env_name = spec.name
+        request.entities = list(spec.entities)
+        request.movables = list(spec.movables)
+        request.statics = list(spec.statics)
+        request.ex_collision = list(spec.ex_collision)
+        request.rearrange_grid = spec.rearrange_grid
 
         response = self._call_service_and_wait(self.set_tamp_env_client, request)
         if response:
@@ -139,19 +130,21 @@ class ControlSuiteShell(cmd.Cmd):
 
         request = SetTampCfg.Request()
 
-        assert desired_tool in {"empty", "ag95", "vgc10", "dh3"}
+        spec = get_planner_spec(desired_tool)
 
         request.curobo_plan = True
         request.enable_visualizer = False
         request.viz_robot_mesh = False
         request.enable_experiment_logging = False
 
-        robot_name = "fr5"
-
-        if desired_tool == "empty":
-            request.robot = robot_name
-        else:
-            request.robot = robot_name + "_" + desired_tool
+        request.robot = spec.robot
+        request.grasp_dof = spec.grasp_dof
+        request.num_particles = spec.num_particles
+        request.num_resampling_attempts = spec.num_resampling_attempts
+        request.num_opt_steps = spec.num_opt_steps
+        request.num_initial_plans = spec.num_initial_plans
+        request.approach = spec.approach
+        request.time_dilation_factor = spec.time_dilation_factor
 
         response = self._call_service_and_wait(self.set_tamp_cfg_client, request)
         if response:

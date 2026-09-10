@@ -9,12 +9,18 @@
 
 from typing import Optional
 
+import roma
 import torch
 from curobo.geom.types import Obstacle, Cuboid, Mesh
 from jaxtyping import Float
 
 from cutamp.utils.common import approximate_goal_aabb, pose_list_to_mat4x4, transform_points
 from cutamp.utils.shapes import MultiSphere
+
+# Side-grasp approach inclination band (radians above horizontal). See
+# `grasp_side_sampler` for the measurement that picked it.
+BETA_MIN = 10.0 * torch.pi / 180.0
+BETA_MAX = 35.0 * torch.pi / 180.0
 
 Grasp4DOF = Place4DOF = Float[torch.Tensor, "n 4"]
 Grasp6DOF = Place6DOF = Float[torch.Tensor, "n 6"]
@@ -88,6 +94,101 @@ def grasp_4dof_sampler(
     # Form full 4-DOF grasp
     grasp_4dof = torch.cat([translation, yaw.unsqueeze(-1)], dim=1)
     return grasp_4dof
+
+
+def grasp_side_sampler(
+    num_samples: int,
+    obj: Obstacle,
+    gripper_spheres: Float[torch.Tensor, "n 4"],
+) -> Grasp6DOF:
+    """Sample natural SIDE grasps on an upright vessel (2-finger gripper).
+
+    The gripper approaches horizontally, the fingers close across the vessel's
+    width, and the mouth stays clear -- so pouring is a wrist rotation. This is
+    the grasp the paper describes for Transfer ("2-finger gripper ... to enable
+    side-grasp pouring").
+
+    Why this sampler exists instead of the two upstream ones (all measured, see
+    REFACTOR.md "side grasp"):
+
+    * ``grasp_4dof_sampler`` is a TOP grasp: yaw-only about the vessel axis. For
+      a Cuboid vessel ``sample_yaw(num_faces=4)`` yields exactly 4 distinct
+      grasps, so 1024 particles explore 4 poses. Over the 30 randomized seeds
+      only 1-3 of those 4 are IK-reachable, and for 4 of the 30 seeds none is --
+      a structural planning-failure floor that no particle budget can fix.
+    * The pour joint (joint 6) rotates about the end-effector approach axis.
+      Under a top grasp that axis IS the vessel axis, so the pour spins the
+      vessel about itself and tilts it by exactly 0 deg at any joint angle;
+      under a side grasp the tilt tracks the joint 1:1.
+    * ``grasp_6dof_sampler`` is the upstream bookshelf sampler (its own
+      docstring says so): it draws pitch uniformly over 2*pi and samples the
+      grasp point *inside* the box, which does not describe a vessel grasp.
+
+    Three continuous parameters:
+      * azimuth ``phi ~ U[-pi, pi)`` -- which side to approach from,
+      * inclination ``beta`` -- how far ABOVE horizontal the gripper sits, i.e.
+        reaching in and down onto the vessel's side the way a hand does,
+      * height ``h`` -- where on the body to pinch, bounded so the gripper stays
+        on the vessel body (clear of the rim and of the support surface).
+
+    ``beta`` is not cosmetic. cuTAMP constrains the grasp pose but nothing
+    constrains the 5 cm pre-grasp pose that cuRobo then has to reach, and a purely
+    horizontal approach retreats radially straight out of the workspace. Measured
+    over the 30 seeds, grasp+pre-grasp IK both succeed for 46.9% of samples at
+    beta=0 but 69.2% at beta=30 deg (81.6-82.1% for the grasp alone), so the band
+    below is centred there. A 180 deg wrist flip was measured too and did not
+    help, so it is deliberately not sampled.
+
+    Tool frame of a sample: ``+z`` is the approach axis, radially outward and
+    tilted up by ``beta`` (so the gripper body ends up outside and above the
+    vessel); ``+y`` is tangential and stays horizontal (the finger-opening axis,
+    so the fingers close across the vessel); ``+x`` completes the frame, pointing
+    mostly down. The origin lies on the vessel axis, matching the 4-DOF
+    convention where the tool origin is the grasp centre, not the fingertip.
+    """
+    if not isinstance(obj, Cuboid):
+        raise ValueError(f"Side grasps expect a Cuboid vessel, got {type(obj)} for {obj.name!r}")
+    device = obj.tensor_args.device
+    half_z = float(obj.dims[2]) / 2.0
+
+    phi = (torch.rand(num_samples, device=device) * 2.0 - 1.0) * torch.pi
+    beta = BETA_MIN + (BETA_MAX - BETA_MIN) * torch.rand(num_samples, device=device)
+    cos_phi, sin_phi = torch.cos(phi), torch.sin(phi)
+    cos_beta, sin_beta = torch.cos(beta), torch.sin(beta)
+
+    zeros = torch.zeros_like(phi)
+    radial = torch.stack([cos_phi, sin_phi, zeros], dim=1)               # outward, horizontal
+    up = torch.zeros_like(radial); up[:, 2] = 1.0
+    tool_y = torch.stack([-sin_phi, cos_phi, zeros], dim=1)              # tangential: fingers close along this
+    tool_z = cos_beta.unsqueeze(1) * radial + sin_beta.unsqueeze(1) * up  # approach axis, tilted up by beta
+    tool_z = tool_z / tool_z.norm(dim=1, keepdim=True)
+    tool_x = torch.cross(tool_y, tool_z, dim=1)                          # completes a right-handed frame
+    rotmat = torch.stack([tool_x, tool_y, tool_z], dim=2)
+    rpy = roma.rotmat_to_euler("XYZ", rotmat)
+
+    # Vertical room the gripper needs around the pinch point, per sample: a
+    # gripper sphere at tool coords (a, b, c) with radius r sits at object-frame
+    # z = h - a*cos(beta) + c*sin(beta) +- r. Azimuth does not enter, but beta
+    # does, so the band is computed per sample rather than once.
+    g_a = gripper_spheres[:, 0].unsqueeze(0)
+    g_c = gripper_spheres[:, 2].unsqueeze(0)
+    g_r = gripper_spheres[:, 3].unsqueeze(0)
+    offset = -g_a * cos_beta.unsqueeze(1) + g_c * sin_beta.unsqueeze(1)   # [num_samples, n_spheres]
+    above = (offset + g_r).max(dim=1).values
+    below = (g_r - offset).max(dim=1).values
+    margin = 0.005
+    h_lo = -half_z + below + margin
+    h_hi = half_z - above - margin
+    # Vessel too short to hold the gripper inside its body: pinch at mid-height and
+    # let the collision constraints reject it if it is genuinely infeasible, rather
+    # than silently sampling a grasp off the object.
+    degenerate = h_hi < h_lo
+    h_lo = torch.where(degenerate, torch.zeros_like(h_lo), h_lo)
+    h_hi = torch.where(degenerate, torch.zeros_like(h_hi), h_hi)
+    h = h_lo + (h_hi - h_lo) * torch.rand(num_samples, device=device)
+
+    translation = torch.stack([zeros, zeros, h], dim=1)      # on the vessel axis
+    return torch.cat([translation, rpy], dim=1)
 
 
 def _grasp_6dof_sampler_for_multisphere(num_samples: int, obj: MultiSphere) -> Grasp6DOF:

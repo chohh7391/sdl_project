@@ -237,6 +237,34 @@ def check_tamp_world_not_in_collision(world: TAMPWorld, collision_tol: float = 1
 
         coll_cost = world.collision_fn(spheres).sum()
         if coll_cost > collision_tol:
-            raise ValueError(f"Initial state in collision for object '{obj.name}' with cost {coll_cost}")
+            # Say WHAT it is colliding with and by how much. The bare cost gives
+            # the caller nothing to act on, and the initial state comes from the
+            # simulator, so the answer is usually "this object settled somewhere
+            # the planner's world does not expect" -- which needs the poses to
+            # diagnose at all.
+            details = []
+            for other in world.world_cfg.objects if hasattr(world.world_cfg, "objects") else []:
+                try:
+                    name = other.name
+                    if name == obj.name:
+                        continue
+                    lo = torch.tensor(other.pose[:3], device=world.device)
+                    dims = torch.tensor(getattr(other, "dims", [0.0, 0.0, 0.0]), device=world.device)
+                    centres = spheres[0, 0, :, :3]
+                    radii = spheres[0, 0, :, 3]
+                    # signed distance from each sphere centre to the box surface
+                    d = (centres - lo).abs() - dims / 2.0
+                    outside = d.clamp(min=0.0).norm(dim=-1)
+                    inside = d.max(dim=-1).values.clamp(max=0.0)
+                    pen = (radii - (outside + inside)).clamp(min=0.0)
+                    if float(pen.max()) > 0.0:
+                        details.append(f"{name} (max penetration {float(pen.max()) * 1000:.1f} mm)")
+                except Exception:
+                    continue
+            raise ValueError(
+                f"Initial state in collision for object '{obj.name}' with cost {coll_cost}. "
+                f"Its pose is {[round(float(v), 4) for v in obj.pose]}, dims {getattr(obj, 'dims', None)}. "
+                f"Overlapping: {', '.join(details) if details else 'could not attribute (axis-aligned check only)'}"
+            )
 
     # TODO: catch collisions between spheres for each movable objects here

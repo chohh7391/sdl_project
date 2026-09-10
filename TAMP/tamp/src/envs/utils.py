@@ -4,6 +4,7 @@ from cutamp.envs import TAMPEnvironment
 from cutamp.envs.utils import unit_quat
 from cutamp.envs import TAMPEnvironment
 
+from envs.constants import PLANNER_Z_LIFT
 from envs.transfer import load_transfer_env
 from envs.stir import load_stir_env
 from envs.default import load_default_env
@@ -19,7 +20,11 @@ ENTITIES = {
     # objects
     "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.05, 0.05, 0.135], color=[255, 0, 0]),
     "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.07, 0.07, 0.12], color=[255, 0, 0]),
-    "magnet": Cuboid(name="magnet", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.045, 0.045, 0.03], color=[255, 0, 0]),
+    # Magnetic stir bar. Must match isaacsim Task.STIR_BAR_DIMS. It was a 45 mm
+    # cube, whose worst-yaw diagonal (63.6 mm) does not clear the flask's 64 mm
+    # opening, so the Stir terminal condition ("stir bar inside the vessel") was
+    # geometrically impossible. A real PTFE stir bar is ~10 mm across, 30-40 long.
+    "magnet": Cuboid(name="magnet", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.010, 0.010, 0.035], color=[255, 0, 0]),
     "box" : Cuboid(name="box", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.108, 0.108, 0.08], color=[0, 0, 255]),
     "box_goal" : Cuboid(name="box_goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.15, 0.15, 0.01], color=[0, 255, 0]),
 
@@ -64,7 +69,7 @@ class TAMPEnvManager:
                 self.entities[name.lower()].pose = pose
             
             # offset for avoiding collision
-            offset = 0.01
+            offset = PLANNER_Z_LIFT
             self.entities["beaker"].pose[2] += offset
             self.entities["flask"].pose[2] += offset
             self.entities["box"].pose[2] += offset

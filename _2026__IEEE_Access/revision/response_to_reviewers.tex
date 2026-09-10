@@ -1,0 +1,598 @@
+%% Response to Reviewers -- IEEE Access manuscript Access-2026-33062
+%% Structure follows "IEEE-Access-Response-to-Reviewers-template-6.26.23".
+%%
+%% House rule: red text (\nd{...}) marks claims that depend on experiments or
+%% re-analyses not yet completed. Each red span is written in definitive tense
+%% and maps to a concrete protocol in HARDWARE.md. Before submission:
+%%     grep -n '\\nd{' response_to_reviewers.tex     must return nothing.
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+\setlist{nosep}
+\emergencystretch=3em
+\hyphenpenalty=200
+
+\newcommand{\nd}[1]{\textcolor{red}{#1}}
+
+%% Internal status markers for the authors --------------------------------
+%% \begin{concern}[complete|pending]{title}{status note}
+%%   complete -> blue heading  : the response is finished, nothing pending
+%%   pending  -> red heading   : depends on experiments / re-analyses / config values
+%%                               (the note names the items in HARDWARE.md)
+%% Set \showstatusfalse before submission: headings turn black, notes vanish.
+\newif\ifshowstatus
+\showstatustrue
+\definecolor{statuscomplete}{RGB}{0,84,200}
+\definecolor{statuspending}{RGB}{205,0,0}
+\newcommand{\statusline}[2]{\ifshowstatus\par\noindent\textcolor{status#1}{\textbf{Status: \MakeUppercase{#1}.} #2}\par\smallskip\fi}
+
+\newcommand{\reviewer}[1]{\clearpage\section*{#1}}
+\newenvironment{concern}[3][pending]{\subsection*{\ifshowstatus\textcolor{status#1}{#2}\else#2\fi}\statusline{#1}{#3}\textbf{Reviewer's concern:}\begin{quote}\itshape}{\end{quote}}
+\newenvironment{response}{\textbf{Author response:}\par\smallskip}{\par\medskip}
+\newenvironment{action}{\textbf{Author action:}\par\smallskip}{\par\bigskip\noindent\hrulefill\par\bigskip}
+
+\begin{document}
+
+\textbf{Original Manuscript ID:} Access-2026-33062
+
+\textbf{Original Article Title:} ``LLM-Guided Tool-Aware Task and Motion Planning for Chemistry Lab Automation''
+
+\textbf{To:} IEEE Access Editor
+
+\textbf{Re:} Response to reviewers
+
+\bigskip
+Dear Editor,
+
+Thank you for allowing a resubmission of our manuscript, with an opportunity to address the reviewers' comments.
+
+We are uploading (a) our point-by-point response to the comments (below) (response to reviewers, under ``Author's Response Files''), (b) an updated manuscript with yellow highlighting indicating changes (as ``Highlighted PDF''), and (c) a clean updated manuscript without highlights (``Main Manuscript'').
+
+The revision addresses every concern raised by the three reviewers.
+Section, table, and figure numbers in our responses refer to the revised manuscript; because a summary table was added in Section~III-B4, Tables~1--8 of the original manuscript are now Tables~2--9.
+The principal changes are:
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Physical validation on the FR5 platform (new Section IV-F).}
+The physically deployable subset of the pipeline, comprising perception-derived state grounding, constrained planning, fixed-gripper execution, and adaptive pouring, is validated on the physical 6-DoF FR5 manipulator for the Transfer task, which carries the tightest orientation constraints and is the only task that requires closed-loop execution.
+The new section reports the accuracy and occlusion robustness of the multi-view perception pipeline, end-to-end success with perception-derived world states, adaptive-pouring accuracy against an electronic scale across two liquids, and the empirical basis of the upright-constraint threshold.
+\item \textbf{Fair and reproducible planner comparison (Sections IV-A4, IV-C, Appendix A).}
+Both planners are now documented to the same level of detail, the comparison is framed as a system-level wall-clock comparison on one workstation, and Table~5 reports Wilson confidence intervals, exact McNemar tests on the paired initial configurations, and a censoring-aware time-to-solution analysis.
+\item \textbf{Separation of generator accuracy from validator performance and an explicit train/test split (Section IV-B).}
+\item \textbf{Claims scoped to the evidence.}
+The validator-coverage claim, the execution-layer claim, and the generalization claims of the Action Reasoner are restated in terms of what was tested, with the remaining scope stated once in Section~V.
+\item \textbf{A consolidated account of language-model error containment (new Section III-B4)} in response to Reviewer~2.
+\end{enumerate}
+
+Best regards,
+
+Bohyeong Pak, Hyunho Cho, and Sanghyun Kim
+
+\ifshowstatus
+\bigskip\noindent\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\small
+\textbf{Reading guide (internal; disappears when \texttt{\string\showstatusfalse} is set in the preamble).}
+A \textcolor{statuscomplete}{\textbf{blue heading}} marks a concern whose response is complete and needs no further data.
+A \textcolor{statuspending}{\textbf{red heading}} marks a concern that still depends on pending experiments, re-analyses, or configuration values; its Status line names the items in \texttt{HARDWARE.md} (A = hardware, B = simulation/offline, C = values from lab records).
+\textcolor{red}{Red inline text} marks placeholder values that must be replaced by measurements before submission.}}
+\fi
+
+%% =====================================================================
+\reviewer{Reviewer \#1}
+
+\begin{concern}[complete]{Reviewer\#1, General comment}{Umbrella response; nothing pending.}
+The manuscript presents a coherent hierarchical framework combining natural-language protocol generation, context-aware tool and rearrangement reasoning, constrained task and motion planning, perception, and sensor-feedback execution skills.
+The proposed integration is relevant to flexible laboratory automation.
+However, several aspects of the current experimental design and interpretation need to be strengthened before the reported results can support the broader claims made for the complete framework.
+\end{concern}
+
+\begin{response}
+We thank the reviewer for the careful reading and for recognizing the relevance of the integration.
+The eight concerns below identified precisely where the original evidence fell short of the claims.
+We addressed them in two ways: by adding evidence where it could be obtained (physical validation of the perception and execution chain, a complete planner-comparison protocol, a proper statistical treatment, and separated generator/validator metrics), and by restating the remaining claims in terms of what was actually tested.
+\end{response}
+
+\begin{action}
+See the individual actions below.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#1, Concern \#1 (End-to-end validation of the Perception Module)}{Needs A1 (perception benchmark with 6-DoF ground truth), A2 (physical Transfer trials), and B1 (bootstrap noise injection).}
+Section III-C describes a multi-camera AprilTag-based perception pipeline with pose fusion and world-state construction, but Section IV-A states that the simulation World State is synchronized by directly extracting object poses and robot joint configurations from NVIDIA Isaac Sim.
+Consequently, the quantitative end-to-end experiments do not appear to exercise the proposed camera-based perception chain.
+The authors should clearly distinguish ground-truth simulator state from perception-derived state and either evaluate the complete perception pipeline, including localization error, occlusion robustness, and its influence on planning success, or explicitly restrict the end-to-end claims to planning and execution under externally supplied state estimates.
+This is a major but correctable issue because the Perception Module is presented as one of the four necessary components of the framework.
+\end{concern}
+
+\begin{response}
+The reviewer is correct: the simulation experiments in Section~IV used simulator-supplied ground-truth state, and the original text did not make this distinction explicit.
+We resolved this in both of the ways the reviewer suggests.
+First, every simulation result is now explicitly labeled as obtained under ground-truth state, and the corresponding claims are scoped to planning and execution under externally supplied state estimates.
+Second, the complete camera-based perception chain is evaluated on the physical FR5 platform in the new Section~IV-F.
+
+The perception evaluation covers the three aspects the reviewer lists.
+\emph{Localization error}: two calibrated RGB cameras (\nd{Intel RealSense D435, 1280$\times$720, 30\,Hz}) observe \nd{36} object poses (12 grids $\times$ 3 vessel types), which form the sample for the error statistics.
+The 6-DoF reference for each pose is obtained by probing three non-collinear points on the tag (its centre and two corners) with the robot tool tip; the probed points define the tag frame through forward kinematics and thus provide orientation as well as translation ground truth.
+Over the 36 poses the fused estimate has a mean translation error of \nd{2.1\,mm (max 4.6\,mm)} and a mean rotation error of \nd{1.2$^\circ$}, against \nd{2.9\,mm} and \nd{4.3\,mm} for the nearer and farther single camera respectively.
+Repeatability is reported separately: 100 consecutive frames at each pose give a frame-to-frame standard deviation of \nd{0.3\,mm}, which measures noise at a fixed pose and is not counted as additional error samples.
+\emph{Occlusion robustness}: three conditions (camera~1 fully covered, camera~2 fully covered, and the tag \nd{50\%} covered in one view) are each evaluated at \nd{12} poses (one per grid, beaker) with \nd{5} repetitions, i.e.\ \nd{60} observations per condition; detection continuity remained \nd{100\%} and the fused error rose to \nd{3.1\,mm} under single-camera fallback.
+\emph{Influence on planning success}: the end-to-end Transfer trials of Section~IV-F2 are planned entirely from perception-derived World States and achieve \nd{100\% planning success (20/20)} and \nd{95.0\% execution success (19/20)}.
+To characterize the tasks that were not run on hardware, we perturbed the simulator World State with 6-DoF residuals resampled by bootstrap from the 36 measured perception errors, rather than from a fitted Gaussian, and re-ran the 30-trial planning evaluation, obtaining \nd{100.0\%, 100.0\%, and 96.7\%} success for Transfer, Move, and Stir, unchanged within one trial from the ground-truth condition.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) rewording Section~IV-A1 and the captions of Tables~5, 8, and 9 to state that simulation results are obtained under simulator-supplied ground-truth state;
+(ii) adding Section~IV-F1 (\emph{Perception Accuracy and Occlusion Robustness}) with a new table reporting per-camera and fused localization error, repeatability, and occlusion behaviour;
+(iii) adding the perception-noise-injection result to Section~IV-C (new column in Table~5);
+and (iv) stating in the Introduction and Conclusion that the perception chain is validated on hardware in Section~IV-F.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#1, Concern \#2 (Scope of execution-layer validation)}{Needs A2 and A3 (pouring accuracy) plus the simulation thresholds in C; the claim removal and the scope paragraph can be applied to the manuscript now.}
+Sections III-E, IV-E, and Table 8 treat adaptive pouring, tool changing, and device operation as part of the integrated execution layer, while Section V-A acknowledges that all quantitative evaluation was performed in simulation and that the simulator does not reproduce the fluid-dynamic and sensing effects governing real liquid transfer.
+The statement that the Skill Library introduces no additional failure modes and that planning-stage verification is sufficient to predict end-to-end outcomes is therefore stronger than the evidence supports.
+The authors should define precisely which execution uncertainties are represented in the simulation, report the criteria used to classify execution success, and restrict conclusions about execution robustness to the phenomena actually modeled.
+Validation with the physical FR5 platform would be required to support claims concerning quantitative pouring accuracy or robustness to real sensor and fluid effects.
+This is a major but correctable issue.
+\end{concern}
+
+\begin{response}
+We agree that the original statement overreached, and we have removed it.
+The revision does three things.
+
+\emph{Modeled uncertainties are now stated explicitly.}
+The simulator represents rigid-body contact and grasp friction (PhysX), joint-space trajectory-tracking error, and randomized object and robot initial states.
+It does not represent fluid dynamics, scale latency or noise, or gripper compliance under load.
+Conclusions drawn from Table~9 are accordingly restricted to the rigid-body execution of planned trajectories.
+
+\emph{Execution-success criteria are now defined.}
+A simulated trial is counted as an execution success only if (i) no contact is reported between the robot or the grasped object and any non-target object during the trajectory, (ii) the grasped object remains within \nd{5\,mm} of its grasp-frame pose throughout, (iii) the upright constraint ($\theta \le 5^\circ$) holds at every control step (\nd{60\,Hz}), and (iv) the terminal condition of the operator is met (final placement within \nd{10\,mm/5$^\circ$} of the target for Move; pour configuration reached above the target vessel for Transfer; stir bar inside the vessel for Stir).
+The coincidence of planning and execution rates in Table~9 is now interpreted as showing that rigid-body execution of the planned trajectories introduced no additional failures under these modeled phenomena, and nothing more.
+
+\emph{Quantitative pouring and real sensor effects are validated on the physical FR5.}
+Section~IV-F3 reports adaptive pouring against an electronic scale (\nd{A\&D EK-610i, 0.01\,g resolution, 10\,Hz RS-232 stream}) for target volumes of 5, 10, and 20\,mL with 10 trials each, using water and a glycerol--water mixture (\nd{80\,wt\%, 1.21\,g/mL, 60\,mPa$\cdot$s at the measured 22$^\circ$C}).
+The closed-loop skill achieves a mean absolute transfer error of \nd{0.42\,g} for water and \nd{0.71\,g} for the viscous liquid, with overshoot never exceeding \nd{1.0\,g} and a settling time of \nd{2.8\,s} after the target mass is reached.
+These results provide quantitative evidence, under the tested conditions, for the sensor and fluid effects the reviewer names: scale settling and streaming latency, weight-signal noise, and viscosity-dependent flow.
+Tool changing and device operation are not exercised on hardware; the revised Section~V states this scope once, and the claims for those two skills are limited to their simulated behaviour.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) deleting the sentence ``the Skill Library introduces no additional failure modes \ldots planning-stage verification alone is sufficient'' from Section~IV-E and replacing it with the scoped interpretation above;
+(ii) adding the list of modeled and unmodeled uncertainties and the four execution-success criteria to Section~IV-A4;
+(iii) adding Section~IV-F3 (\emph{Adaptive Pouring Accuracy}) with a new table of transfer error, overshoot, and settling time per liquid and target volume;
+and (iv) adding a paragraph to Section~V-A that limits the tool-changing and device-operation claims to simulation.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#1, Concern \#3 (Fairness and reproducibility of the planner comparison)}{Needs planner settings, commit hashes, and the tuning-set record from C (no experiment); B9 (256-particle ablation) is optional.}
+Section IV-C and Table 4 compare cuTAMP with PDDLStream, but the manuscript does not provide sufficient implementation detail to establish that the comparison uses comparable computational resources and appropriately configured planners.
+This is particularly important because cuTAMP evaluates 1,024 particles in parallel, whereas the computational configuration, stream definitions, sampling settings, retry policy, planner version, hardware allocation, and CPU or GPU resources used for PDDLStream are not reported with equivalent detail.
+The authors should provide enough information to reproduce both configurations and explain how the baseline parameters were selected.
+This is a major issue because the central claim of improved planning reliability depends directly on this comparison.
+\end{concern}
+
+\begin{response}
+We agree, and the revision documents both planners to the same level of detail.
+
+\emph{Common conditions.}
+Both planners run on the same workstation (\nd{Intel Core i9-13900K, NVIDIA RTX 4090, 64\,GB RAM}), on the identical 30 initial configurations per task (fixed seeds 0--29), with the same symbolic domain (operators, preconditions, and effects), the same collision geometry, the same orientation constraint ($\theta_{\max}=5^\circ$), and the same 60\,s wall-clock budget.
+The two planners do not use the same compute: cuTAMP runs its batched optimization on the GPU, whereas our PDDLStream implementation executes its streams on a single CPU thread.
+The revised text therefore presents Table~5 explicitly as a system-level wall-clock comparison of the two planners in their deployment configurations on one workstation, not as a compute-normalized comparison.
+Two observations bound what additional compute could change for the baseline: its early terminations (20.0\% on Transfer, 13.3\% on Stir) occur before the budget is exhausted and therefore do not depend on the time budget, and \nd{a cuTAMP ablation with 256 particles, which reduces the GPU work fourfold, still attains 100\% success on all three tasks within the budget}.
+
+\emph{PDDLStream configuration.}
+We use \nd{the authors' public reference implementation (\path{caelan/pddlstream}) with FastDownward as the discrete planner and the \emph{adaptive} algorithm}.
+The streams are: a grasp sampler (\nd{25 candidate grasps per object, side grasps for cylindrical vessels}), a placement sampler (\nd{uniform over the target grid}), an inverse-kinematics stream (\nd{numerical IK, 10 attempts per grasp--placement pair}) that rejects configurations violating the upright constraint, and a motion stream (\nd{RRT-Connect with 50 restarts}).
+The retry policy is \nd{unlimited stream re-instantiation within the 60\,s budget}; ``early termination'' in Table~5 denotes \nd{the planner returning infeasibility before the budget elapses because the adaptive algorithm reached its maximum stream-complexity level without finding a feasible binding}.
+Baseline parameters were selected by \nd{starting from the reference implementation's manipulation examples and tuning the sampler counts, to maximize baseline success, on 10 tuning configurations (seeds 100--109) that are disjoint from the 30 evaluation configurations}; the selected values are those at which further increases did not change the success rate within the budget.
+
+\emph{cuTAMP configuration.}
+1,024 particles, 1,000 optimization steps, \nd{Adam with learning rate $10^{-2}$}, cost weights \nd{$w_{\text{coll}}=10$, $w_{\text{up}}=5$, $w_{\text{goal}}=1$}, three re-initializations on failure.
+All settings, together with the stream definitions and domain files, are listed in Appendix~A and released on the project page.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) adding Section~IV-A4 (\emph{Implementation Details and Reproducibility}) with the common conditions, the configuration of both planners, and the explicit statement that Table~5 is a system-level wall-clock comparison rather than a compute-normalized one;
+(ii) adding Appendix~A (Table~A1) that lists every parameter of both planners side by side, including software versions and commit hashes, hardware, stream definitions, sampler counts, retry policy, and stopping criteria;
+and (iii) adding a sentence to Section~IV-C explaining how the baseline parameters were selected.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#1, Concern \#4 (Statistical treatment of planning success and latency)}{McNemar and restricted-mean values are final; needs B2 (Kaplan--Meier figure and cuTAMP time band from logs). Wording changes can be applied now.}
+Table 4 reports only 30 trials per condition and calculates planning-time mean and standard deviation over successful trials only, while failed PDDLStream runs include both timeouts and early terminations.
+Excluding these trials from the latency statistics makes direct interpretation of the reported planning-time distributions difficult and can bias conclusions regarding temporal predictability.
+The authors should report uncertainty for the success proportions, provide an appropriate statistical comparison between planners, and present a time-to-solution analysis that accounts explicitly for failed and timed-out trials rather than characterizing only successful runs.
+The claim of reduced planning-time variance should also be formulated consistently with this treatment.
+This is a major but correctable issue.
+\end{concern}
+
+\begin{response}
+We agree and have reworked the statistical treatment.
+
+\emph{Uncertainty of success proportions.}
+Table~5 now reports Wilson 95\% confidence intervals: PDDLStream 66.7\% [48.8, 80.8] on Transfer, 83.3\% [66.4, 92.7] on Move, and 60.0\% [42.3, 75.4] on Stir; cuTAMP 100.0\% [88.6, 100.0] on all three.
+
+\emph{Statistical comparison.}
+Because both planners were run on the same 30 initial configurations per task, the design is paired, and we use the exact McNemar test on the discordant pairs.
+With cuTAMP succeeding on every configuration, the discordant pairs are exactly the baseline failures, giving $p = 2.0\times10^{-3}$ (Transfer, 10 discordant pairs), $p = 0.063$ (Move, 5), and $p = 4.9\times10^{-4}$ (Stir, 12).
+The difference is therefore significant on the two orientation- and insertion-constrained tasks, which are the tasks the paper's argument concerns; on Move, where the baseline already succeeds on 83\% of configurations, it is not significant at this sample size, and the text now says so.
+Tasks are reported separately and no pooled statistic is used, because the tasks differ in difficulty.
+
+\emph{Time-to-solution with censoring.}
+Timed-out and early-terminated trials are unsolved within the budget and are treated as right-censored at 60\,s, not as observed durations.
+Table~5 and a new figure now report (a) the solved fraction as a function of wall-clock time (Kaplan--Meier estimate) for each planner and task and (b) the restricted mean time-to-solution over the 60\,s budget, which is 24.8, 10.1, and 24.5\,s for PDDLStream and 31.2, 17.6, and 28.8\,s for cuTAMP on Transfer, Move, and Stir respectively.
+Conditional latency over successful trials is retained as a separate column, so that the reader sees that PDDLStream is faster when it succeeds ($7.21 \pm 10.26$\,s versus $31.18 \pm 1.44$\,s on Transfer) while failing on one third of the configurations.
+The solved-fraction curves show the two regimes directly: PDDLStream solves its easy instances within seconds and then plateaus below 100\%, whereas cuTAMP solves every instance within a band of \nd{29--34\,s}.
+
+\emph{Consistent formulation of the latency claim.}
+The claim is no longer stated as ``reduced variance'' and is not a claim about mean speed.
+The abstract, Section~IV-C, and the Conclusion now state that cuTAMP returns a valid plan within the budget on every configuration and that the time at which it does so lies in a bounded band by construction, whereas the baseline's solved-fraction curve plateaus below 100\% with a tail that ends in timeouts; among successful trials PDDLStream is faster, and the revised text says so.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) adding Wilson 95\% CIs and exact McNemar $p$-values to Table~5;
+(ii) adding the restricted mean time-to-solution over the 60\,s budget beside the conditional latency of successful trials, with the censoring rule stated in the caption;
+(iii) adding a new figure of the Kaplan--Meier solved fraction versus wall-clock time;
+and (iv) rewording the abstract, Section~IV-C, Section~V-D, and the Conclusion so that the latency claim refers to a bounded band of termination times rather than reduced variance.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#1, Concern \#5 (XDL Generator evaluation and test-set independence)}{Needs B3 (reference XDL written blind, field-level scoring) and B4 (split confirmed from dataset scripts).}
+Section IV-B1 reports 97 valid protocols from 100 test instructions, but the three unsuccessful cases are attributed to contradictions already present in the user instructions and are rejected at the physical-feasibility validation stage.
+This evaluation therefore mixes protocol-generation accuracy with the downstream validator's ability to reject an invalid requested sequence.
+The authors should separate generator accuracy from validator performance and report whether the generated operators, arguments, object identities, numerical values, and procedural ordering match independently defined ground truth for valid commands.
+The manuscript should also explain how training, validation, and test instructions were separated at the template, synonym, object, and compositional levels to demonstrate that the reported performance is not due to overlap between combinatorially generated training and test patterns.
+This is a major but readily correctable issue.
+\end{concern}
+
+\begin{response}
+We agree that the original metric conflated the two components, and we now report them separately.
+
+\emph{Generator accuracy against ground truth.}
+Each of the 100 test instructions has a reference XDL protocol \nd{written by one author before any model output was inspected; a second author independently re-annotated a random 30\% subset, with full agreement}.
+The revised Section~IV-B1 reports field-level exact-match accuracy of the generated protocol against this reference: operator sequence \nd{100/100}, vessel identities \nd{100/100}, numerical values with units \nd{100/100}, and procedural ordering \nd{100/100}; entire-program exact match after canonicalization is \nd{100/100}.
+Fields are compared after canonicalization: vessel identifiers are case-folded, volumes are expressed in mL, temperatures in $^\circ$C, and times in s, numerical values are compared after unit conversion, and attribute types (vessel references, quantities with units, durations) are checked against the XDL schema.
+The three instructions containing a contradiction were transcribed faithfully by the generator (their reference protocols contain the same contradiction), so they count as generator successes and as validator true negatives.
+Generator accuracy is therefore \nd{100\%}, and the validator's rejection of the three contradictory protocols is reported separately in Section~IV-B2.
+
+\emph{Train/validation/test separation.}
+The revised Section~IV-A3 describes the split at each level.
+\nd{Synonym templates: the paraphrase templates of each operator were partitioned 70/10/20 into training, validation, and test, so no test instruction shares a template with training.
+Object identifiers: one of the four instance identifiers per vessel type (e.g.\ \texttt{beaker\_D}) appears only in the test set.
+Compositions: 6 of the 36 ordered operator pairs (repeats included) and 10 of the three-step compositions are held out for testing.
+Numerical values: test values are drawn from the same ranges but are disjoint from every value used in training.}
+Test instructions additionally embed the operators in longer sentences with distractor clauses that do not occur in training.
+The reported accuracy is thus obtained on instructions that are novel at the template, object, compositional, and numerical levels simultaneously.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) replacing Table~2 with a field-level accuracy table (operators, arguments, identities, values, ordering) and separating the three contradictory instructions into the validator evaluation;
+(ii) adding the train/validation/test separation protocol to Section~IV-A3;
+and (iii) rewording Section~IV-B1 so that ``97 valid protocols'' is no longer presented as the generator's accuracy.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#1, Concern \#6 (Overstatement of XDL Validator coverage)}{Claim narrowing can be applied now; B5 (validator extension) is optional---if skipped, delete the two red spans and this block is complete.}
+Section IV-B2 concludes that the three-layer validator provides complete and non-overlapping coverage of physically relevant failure modes based on a benchmark containing 20 valid and 80 invalid samples constructed from a limited set of injected error categories.
+The tested conditions support successful detection of those specified error classes, but they do not establish complete physical-feasibility coverage for laboratory procedures.
+Capacity limits, chemical incompatibility, unavailable tools, unreachable configurations, device-state conflicts, contamination constraints, and other physically relevant conditions are outside the demonstrated benchmark.
+The authors should either broaden the validation substantially or narrow the claim to the explicitly tested syntactic, object-existence, and symbolic state-precondition failures.
+This is a major but readily correctable issue.
+\end{concern}
+
+\begin{response}
+We agree and have narrowed the claim to what the benchmark tests.
+The revised Section~IV-B2 states that the validator intercepts all injected errors of the four tested classes (missing attribute, undefined tag or attribute, non-existent object, and symbolic state-precondition violation), and no longer claims complete coverage of physically relevant failure modes.
+The conditions the reviewer lists are now named explicitly: unreachable configurations are resolved downstream by the TAMP Module, which reports infeasibility after the bounded retries; chemical incompatibility and contamination constraints are outside the validator's scope and are stated as such in Section~V-C.
+\nd{We additionally extended the physical-feasibility layer with two symbolic checks that require no chemical knowledge, vessel capacity (cumulative volume must not exceed the registered capacity) and device placement (HeatChill and Stir require the vessel to be located on the corresponding device), and extended the benchmark accordingly to 20 valid and 120 invalid samples across six error classes, on which the validator again achieves zero false positives and zero false negatives.}
+Per-class recall is reported in the revised Table~3 (\nd{20/20 for each class}), and the text states that these figures characterize the tested classes only and are not a statement about untested failure modes.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) replacing the sentence ``provides complete and non-overlapping coverage of the physically relevant failure modes'' with a statement scoped to the tested classes;
+(ii) \nd{adding the capacity and device-placement checks to Section~III-B2 and the two new error classes to Table~3 and Table~4};
+and (iii) listing the untested condition classes in Section~V-C as outside the validator's scope.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#1, Concern \#7 (Generalization and context-aware rearrangement claims)}{Needs B6 (unseen-level definitions verified by script) and B7 (three-step ablation); the wording restriction can be applied now.}
+The Action Reasoner is evaluated within the same six-operator and 12-grid abstraction used to construct its combinatorial training dataset, and the rearrangement ablation in Table 7 is limited to two short procedure sequences with 30 trials per condition.
+These experiments demonstrate useful performance within the defined task distribution, but they provide limited evidence for broader context-aware generalization or for the conclusion that procedural context is the decisive factor across multi-step chemical workflows.
+The authors should specify exactly what is unseen in the Action Reasoner test set, including object classes, spatial configurations, and task combinations, and either broaden the sequence-level evaluation or restrict the generalization claims to the tested workspace and operator distribution.
+This is a moderate to major but correctable issue.
+\end{concern}
+
+\begin{response}
+We agree and have done both: the test set is now specified precisely, and the claims are restricted to the tested workspace and operator distribution, with the sequence-level evaluation extended within that distribution.
+
+\emph{What is unseen.}
+The revised Section~IV-D1 states that, relative to the 3,000 fine-tuning samples, the 600 test scenarios are unseen at three levels:
+\nd{object classes (the bottle and box classes, which require the suction gripper, do not occur in fine-tuning);
+spatial configurations (a test layout counts as unseen only if its occupancy pattern, i.e.\ the set of occupied grids together with the object class in each, does not occur in training; relabelling object identifiers on a training pattern does not qualify, and all 600 test layouts satisfy this criterion);
+and task combinations (4 of the 36 ordered current/next operator pairs, repeats included, are held out entirely).}
+Table~6 reports the object-class split explicitly.
+
+\emph{Restricted claim.}
+The sentence ``procedural context, rather than spatial clearance alone, is the decisive factor for maintaining reliable execution across multi-step chemical workflows'' now reads ``\ldots significantly improves sequence completion under the evaluated conditions (\nd{exact McNemar on the paired seeds, $p < 0.001$ against random rearrangement}) within the six-operator, 12-grid workspace''.
+The generalization statement in Section~V-C is likewise restricted to that workspace, and extension to new operators or apparatus is stated to require re-training.
+
+\emph{Extended sequence-level evaluation.}
+We added the two three-step workflows of Table~9 (Transfer\,$\rightarrow$\,Stir\,$\rightarrow$\,Move and Move\,$\rightarrow$\,Transfer\,$\rightarrow$\,Stir) to the rearrangement ablation, 30 trials per condition.
+Context-aware rearrangement completes \nd{93.3\% and 96.7\%} of sequences against \nd{36.7\% and 40.0\%} for random rearrangement and \nd{6.7\% and 13.3\%} without rearrangement, consistent with the two-step results.
+These results extend the evidence within the tested domain and are presented as such, not as evidence of broader generalization.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) adding the unseen-level specification to Section~IV-D1 and an object-class column to Table~6;
+(ii) restricting the generalization sentences in Sections~IV-D2, V-C, and the Conclusion to the tested workspace and operator distribution;
+and (iii) extending Table~8 with the two three-step workflows.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#1, Concern \#8 (Reproducibility of the experimental methodology)}{Needs the configuration values in C (no experiment); Section IV-A4 and Appendix A can be drafted now with red placeholders.}
+Several implementation details required to independently reproduce the reported results are either omitted or deferred to the project page.
+The manuscript should provide the essential experimental parameters directly, including the Isaac Sim version and simulation settings, workspace dimensions and randomization ranges, collision margins, robot and controller settings, planner objective and constraint parameters, stopping criteria, retry handling, random-seed policy, and precise definitions of planning and execution success.
+The same level of detail should be given for both the proposed method and the baseline.
+This is a major but correctable issue because the current description is sufficient to understand the architecture but not yet sufficient to reproduce the quantitative results.
+\end{concern}
+
+\begin{response}
+We agree, and every parameter the reviewer lists is now in the manuscript itself.
+The new Section~IV-A4 gives the essential settings in prose, and Appendix~A (Table~A1) lists them exhaustively for both the proposed method and the baseline.
+In summary:
+Isaac Sim \nd{4.2.0} with PhysX at \nd{1/60\,s} and \nd{4} solver substeps;
+a \nd{0.9\,m $\times$ 0.6\,m} table of which a \nd{0.6\,m $\times$ 0.45\,m} region is discretized into 12 grids of \nd{0.15\,m $\times$ 0.15\,m} arranged \nd{4 $\times$ 3}, the remainder holding the tool rack and fixed devices, with object positions randomized uniformly within \nd{$\pm$5\,cm} of each grid centre, yaw within \nd{$\pm$180$^\circ$}, and the robot initial configuration within \nd{$\pm$10$^\circ$} of its home pose;
+obstacle primitives enlarged by \nd{10\,mm} and target primitives by \nd{0\,mm};
+the simulated FR5 driven by \nd{joint-position control at 60\,Hz} and the physical FR5 by \nd{the vendor servo interface at 125\,Hz}, both with joint velocity and acceleration limits of \nd{180$^\circ$/s and 360$^\circ$/s$^2$};
+the cuTAMP objective (collision, upright, goal, and smoothness terms with the weights given in Concern~\#3), evaluated at \nd{32} interpolated points per trajectory segment rather than at waypoints only, the $\theta_{\max}=5^\circ$ constraint, 1,000 steps as the stopping criterion, and three re-initializations;
+the PDDLStream streams, sampler counts, 60\,s budget, and unlimited re-instantiation within the budget;
+fixed seeds 0--29 per task shared by both planners, \nd{which are the seeds of the original experiments}; and
+the definitions of planning success (a trajectory returned within the budget that satisfies all constraints at every waypoint) and execution success (the four criteria given in Concern~\#2).
+The project page now hosts only videos and the configuration files that reproduce Table~A1, not information absent from the paper.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) adding Section~IV-A4 (\emph{Implementation Details and Reproducibility});
+(ii) adding Appendix~A with Table~A1 listing all simulation, robot, controller, planner, and evaluation parameters for both planners;
+and (iii) rewording the last sentence of the Section~IV preamble so that the project page is referenced for videos and configuration files only.
+\end{action}
+
+%% =====================================================================
+\reviewer{Reviewer \#2}
+
+\begin{concern}[complete]{Reviewer\#2, Comment \#1}{Acknowledgement only.}
+The academic direction of integrating LLMs and TAMP for flexible chemistry lab automation is highly encouraging and valuable.
+\end{concern}
+
+\begin{response}
+We thank the reviewer for this assessment and for the positive evaluation of the algorithmic and system design in the additional questions.
+\end{response}
+
+\begin{action}
+No change required.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#2, Concern \#2 (Physical robot experiments)}{Needs A1--A4 and the new Section IV-F.}
+However, as the current validation is limited to simulations, additional experimental results in a physical robot environment are essential to address the Sim-to-Real gap.
+
+\normalfont[From the additional questions:]\itshape\
+However, the validation is restricted to simulation (NVIDIA Isaac Sim), meaning it lacks physical robot experiments needed to verify real-world variables like fluid viscosity and sensor latency.
+\end{concern}
+
+\begin{response}
+We agree, and the revision adds physical experiments on the FR5 platform (new Section~IV-F), targeted at exactly the two variables the reviewer names.
+
+The physical experiments validate the physically deployable subset of the pipeline, comprising perception-derived state grounding, constrained planning, fixed-gripper execution, and adaptive pouring; tool changing, which requires end-effectors not available on our physical platform, is not exercised on hardware, and Section~V-A states this scope.
+The Transfer task was selected because it carries the tightest orientation constraints, is the task on which the planner comparison is most pronounced, and is the only task that requires closed-loop sensor-feedback execution; it is therefore the task on which the sim-to-real gap is largest.
+Section~IV-F reports four experiments:
+(1) perception accuracy and occlusion robustness of the dual-camera AprilTag pipeline (\nd{2.1\,mm} mean fused localization error);
+(2) \nd{20} end-to-end Transfer trials from a natural-language command, with the World State grounded by the physical cameras, achieving \nd{100\% planning and 95.0\% execution success};
+(3) adaptive-pouring accuracy against an electronic scale for water and a viscous glycerol--water mixture, with mean absolute error of \nd{0.42\,g and 0.71\,g} respectively and measured scale latency of \nd{95\,ms}, which the PD gains were tuned to absorb; and
+(4) a spillage sweep over fill level and tilt that grounds the $\theta_{\max}=5^\circ$ threshold.
+Execution success on hardware is within \nd{one trial} of the simulated rate for the same task, and the pouring error is below the \nd{1\,g} tolerance used in the protocol, which quantifies the sim-to-real gap for the phenomena the simulator does not model.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) adding Section~IV-F (\emph{Physical Validation on the FR5 Platform}) with subsections F1--F4, two new tables, and one new figure of execution keyframes;
+(ii) revising Section~V-A to quantify the sim-to-real gap from these results;
+and (iii) adding the hardware results to the abstract and Conclusion.
+Videos of the physical trials are provided as supplementary material.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[complete]{Reviewer\#2, Concern \#3 (Missing Author Response Table)}{Administrative; this document is the response.}
+The manuscript requires significant improvements in administrative, specifically regarding the missing Author Response Table.
+
+\normalfont[From the additional questions:]\itshape\
+However, the presentation falls short due to the missing IEEE Access mandatory author response table and a lack of depth regarding error-handling mechanisms for LLM hallucinations.
+\end{concern}
+
+\begin{response}
+As this was the initial submission, no prior reviewer comments existed.
+For the present resubmission, we provide the requested point-by-point response document.
+\end{response}
+
+\begin{action}
+This document, structured according to the IEEE Access Response to Reviewers template, is uploaded under ``Author's Response Files''.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#2, Concern \#4 (Defense mechanisms against LLM hallucinations)}{Section III-B4 can be written now from existing mechanisms; B8 (adversarial test) is optional---if skipped, delete the red span and this block is complete.}
+It is strongly recommended to elaborate on the defense mechanisms against LLM hallucinations to ensure system reliability and to perform a major revision addressing these critical points.
+\end{concern}
+
+\begin{response}
+We agree that these mechanisms deserve a consolidated treatment; in the original manuscript they were distributed across Sections~III-B, III-B2, and V-C.
+The revision adds Section~III-B4 (\emph{Containment of Language-Model Errors}), which presents the five mechanisms as a layered defence and links each to the evidence in Section~IV:
+
+\begin{enumerate}[leftmargin=2em]
+\item \emph{Discrete, schema-bounded output spaces.}
+Both LLM components are trained to emit only elements of finite sets: the XDL Generator six operators with typed attributes, and the Action Reasoner a tool inventory, a boolean, and a grid index.
+Decoding is not grammar-constrained, so a malformed or out-of-schema output can in principle occur; what the design guarantees is that such an output cannot reach the planner, because every output is parsed against the schema by a deterministic checker before use, and no language model ever produces a continuous spatial quantity (zero out-of-schema outputs were observed in 100 generated protocols, Section~IV-B1).
+\item \emph{Three-layer validation against the grounded World State.}
+Syntactic, object-existence, and state-precondition checks reject any protocol that references a non-existent object or an impossible state before planning begins (zero false negatives on the injected-error benchmark, Section~IV-B2).
+Object existence is checked against the perception inventory, not against the model's own belief.
+\item \emph{Geometric realization by optimization, not by the LLM.}
+The Action Reasoner names a grid; cuTAMP resolves the pose by collision-checked optimization and reports infeasibility rather than executing an invalid placement (100\% category-level grid accuracy, Section~IV-D1).
+\item \emph{Stage-wise re-grounding.}
+The World State is refreshed from perception before every procedure (Algorithm~1), so a wrong assumption at one stage cannot persist silently into the next.
+\item \emph{Fail-closed behaviour.}
+Every rejection halts the workflow with a diagnostic naming the offending step; the system never proceeds on an unverified plan.
+\end{enumerate}
+\nd{We additionally stress-tested the containment with 70 adversarial instructions in seven categories of 10: out-of-schema operations such as ``centrifuge'', references to fictitious vessels, existing but wrong targets, volumes and temperatures outside the permitted ranges, conflicting long sequences, prompt-injection phrasing embedded in otherwise valid commands, and ambiguous but grammatically valid commands.
+All 60 instructions in the first six categories were intercepted at the validator with the correct error class and none reached the planner; the 10 ambiguous-but-valid commands passed validation, as expected, and are reported as the residual exposure.}
+That residual exposure, namely instructions that are ambiguous yet schema-valid and precondition-consistent, is stated in Section~V-C.
+\end{response}
+
+\begin{action}
+We updated the manuscript by
+(i) adding Section~III-B4 with the five-mechanism description and a summary table linking each mechanism to its evidence;
+(ii) \nd{adding the adversarial-instruction test to Section~IV-B2};
+and (iii) cross-referencing the new section from the Introduction and Section~V-D.
+\end{action}
+
+%% =====================================================================
+\reviewer{Reviewer \#3}
+
+\begin{concern}[complete]{Reviewer\#3, General comment (Summary and key strengths)}{Acknowledgement only.}
+Summary of the Work.
+The manuscript introduces an integrated hierarchical decision-making and planning framework for autonomous chemistry laboratories.
+By coupling a fine-tuned lightweight LLM (Llama 3.2 1B) for Chemical Description Language (XDL) protocol synthesis and context-aware action reasoning (end-effector selection and target grid placement) with cuTAMP for differentiable motion planning, the framework achieves robust constraint handling and bounded planning times.
+Validation across randomized simulation trials in NVIDIA Isaac Sim demonstrates high success rates (97.78\% end-to-end) and significant improvements over parameter-binding baselines like PDDLStream under tight orientation constraints.
+
+Key Strengths.
+Effective Hierarchical Integration: The separation of discrete symbolic decision-making (LLM) from continuous geometric optimization (cuTAMP) and sensor-feedback primitives cleanly bounds model responsibilities.
+Technical Rigor: Clear mathematical formulations for the SidePick approach angle sampling, MoveHolding upright orientation cost J\_up(q), and inverse-distance weighted dual-camera pose fusion.
+Bounded Planning Latency: Utilizing cuTAMP successfully mitigates the stochastic, unbounded termination times characteristic of sequential sampling planners on low-redundancy 6-DoF manipulators.
+Comprehensive Evaluation: Extensive ablations covering protocol generation accuracy, solver reliability, tool selection, rearrangement strategy, and multi-step workflow execution.
+\end{concern}
+
+\begin{response}
+We thank the reviewer for the accurate summary and the positive assessment.
+\end{response}
+
+\begin{action}
+No change required.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#3, Concern \#1 (Fluid dynamics and sim-to-real transfer)}{Needs the A3 and A4 numbers; the qualitative property-by-property discussion can be written now.}
+The manuscript notes that Isaac Sim abstracts fluid-dynamic effects.
+Please expand briefly on how real-world fluid properties (viscosity variations, sloshing, surface tension, scale latency) might impact the Adaptive Pouring feedback loop during physical deployment on the FR5 arm.
+\end{concern}
+
+\begin{response}
+We expanded Section~V-A and, beyond discussion, now report measurements on the physical FR5 (Section~IV-F3).
+Each property affects the loop in a specific way, and the revised text treats them in turn.
+\emph{Viscosity} changes the flow rate for a given tilt and therefore the effective plant gain; the measured mean absolute error rises from \nd{0.42\,g} for water to \nd{0.71\,g} for the glycerol--water mixture (\nd{80\,wt\%, 22$^\circ$C, 1.21\,g/mL, 60\,mPa$\cdot$s}) under the same PD gains, and overshoot stayed below \nd{1.0\,g} in both cases.
+\emph{Sloshing} matters during transport rather than pouring; the upright constraint and \nd{the acceleration limit of 0.5\,m/s$^2$ on MoveHolding segments} suppress it, and the spillage sweep of Section~IV-F4 shows no spillage at $\theta_{\max}=5^\circ$ up to \nd{70\%} fill.
+\emph{Surface tension} delays the onset of flow at the rim and produces a residual drip after the tilt is reversed; the loop absorbs this as a dead-time and a small late mass increment, which the measured overshoot bound of \nd{1.0\,g} includes.
+\emph{Scale latency} was measured at \nd{95\,ms} end-to-end (settling plus serial streaming); the PD gains were tuned with this delay in the loop, and the tilt-rate limit ensures that the mass poured during one latency interval stays below the tolerance.
+\end{response}
+
+\begin{action}
+We updated the manuscript by expanding the second paragraph of Section~V-A into a property-by-property discussion that cites the hardware measurements of Sections~IV-F3 and IV-F4.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#3, Concern \#2 (Upright constraint threshold)}{Needs A4 (fill-level and tilt spill sweep).}
+The maximum allowable tilt angle is fixed at theta\_max = 5$^\circ$.
+Clarify whether this threshold was selected based on a specific vessel fill-level ratio or fluid viscosity range.
+\end{concern}
+
+\begin{response}
+The threshold was selected from a fill-level sweep rather than from a viscosity range, and the revision reports the sweep.
+In Section~IV-F4, MoveHolding trajectories were executed on the physical FR5 with the beaker and the flask at fill levels of 30, 50, and 70\%, under tilt limits of 5, 10, and 15$^\circ$, five trials per condition, with spillage determined by weighing the vessel before and after transport.
+Spillage is declared when the mass loss exceeds \nd{three times the repeatability of the scale (0.03\,g)}; the vessel exterior is wiped before each weighing, evaporation over the trial interval is bounded by a stationary control vessel weighed over the same interval, and all conditions use identical velocity and acceleration limits (\nd{0.25\,m/s and 0.5\,m/s$^2$}).
+\nd{No spillage occurred at 5$^\circ$ for any fill level; at 10$^\circ$ spillage occurred in 2 of 5 trials at 70\% fill; at 15$^\circ$ it occurred at every fill level of 50\% and above.}
+The 5$^\circ$ threshold is therefore the largest tested tilt with zero spillage at the highest fill level used in the protocols, \nd{70\%}.
+Viscosity has a second-order effect at these tilt angles (a more viscous liquid sloshes less), so water is the conservative test liquid.
+\end{response}
+
+\begin{action}
+We updated the manuscript by replacing the footnote in Section~III-D1 with a reference to the new Section~IV-F4, which reports the fill-level and tilt sweep in a table.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[pending]{Reviewer\#3, Concern \#3 (Perception resilience)}{Needs the A1 occlusion numbers and A5 (fallback policy implemented exactly as described).}
+The state grounding relies on AprilTags.
+Discuss potential fallback or recovery behavior if tags become obscured by steam, condensation, or chemical residue in physical laboratory conditions.
+\end{concern}
+
+\begin{response}
+Section~V-B now describes the fallback hierarchy explicitly and Section~IV-F1 measures its first level.
+\emph{Transient, single-view obscuration} (steam or the manipulator crossing one camera's view): the fusion rule falls back to the unobscured view; in the occlusion test this preserved \nd{100\%} detection continuity with an error of \nd{3.1\,mm}.
+\emph{Obscuration in both views during motion}: no planning input is consumed while the robot is moving, so the last validated pose is retained for monitoring only and is never used to plan.
+\emph{Obscuration at a stage boundary}: every stage boundary requires a fresh detection of each object involved in the next procedure; the system waits up to \nd{5\,s} for one and, if none is obtained in either view, halts and reports the affected object rather than planning on stale geometry.
+This fail-closed rule covers persistent obscuration by condensation or chemical residue as well as transient obscuration that outlasts the wait.
+Operationally, tags are laminated and mounted on the vessel wall away from the rim and from heated surfaces, which keeps condensation and splashes off the tag in practice.
+Marker-free pose estimation is the natural extension for environments in which these measures are insufficient.
+\end{response}
+
+\begin{action}
+We updated the manuscript by restructuring the first paragraph of Section~V-B into the three-level fallback description above, with the first level cross-referenced to the occlusion measurements of Section~IV-F1.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[complete]{Reviewer\#3, Concern \#4a (Units in table captions and headers)}{Editorial only; apply the unit audit in access\_revised.tex.}
+Double-check that all table captions and column headers explicitly denote measurement units (e.g., planning time in seconds in Table 4).
+\end{concern}
+
+\begin{response}
+We audited every table and every numerical quantity in the text.
+Table~5 already carried ``Planning Time (s)''; all other headers now state units or percentages explicitly, the new hardware tables state units for error (mm, $^\circ$, g), time (s, ms), and volume (mL), and inference times in the text are given in seconds with a space between value and unit throughout.
+\end{response}
+
+\begin{action}
+We updated the manuscript by adding units to all table headers and captions and normalizing number--unit spacing according to the IEEE style guide.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[complete]{Reviewer\#3, Concern \#4b (Notation consistency across figures)}{Editorial only; Figures 1 and 3 need redrawing (no data involved).}
+Ensure consistency in notation across figure diagrams (e.g., Figure 1 and Figure 3 process blocks).
+\end{concern}
+
+\begin{response}
+We unified the block labels and symbols across Figures~1, 2, 3, 5, and 9 so that each module, sub-stage, and data product (World State, XDL protocol, $T_m$, $T_a$, $b_r$, $G^*$) is named identically in every figure and in the text, and matches the notation of Algorithm~1.
+\end{response}
+
+\begin{action}
+We updated the manuscript by redrawing the affected process blocks of Figures~1 and 3 with the unified labels and checking Figures~2, 5, and 9 against them.
+\end{action}
+
+%% ---------------------------------------------------------------------
+\begin{concern}[complete]{Reviewer\#3, Concern \#5 (Suggested references)}{Already applied in access\_revised.tex as references [21] and [32].}
+Are the references provided applicable and sufficient?:
+[1] Peng, Qucheng, et al. ``NavigScene: Bridging local perception and global navigation for beyond-visual-range autonomous driving.'' Proceedings of the 33rd ACM International Conference on Multimedia. 2025.
+[2] Peng, Q., Xue, H., Wang, P., \& Chen, C. (2026, March). Lifelong Domain Adaptive 3D Human Pose Estimation. In Proceedings of the AAAI Conference on Artificial Intelligence (Vol. 40, No. 10, pp. 8358--8366).
+\end{concern}
+
+\begin{response}
+We thank the reviewer for the pointers and have added both works where they inform the discussion.
+NavigScene is cited in Section~II-B, alongside the vision-language-action models discussed there, as an example of vision-language reasoning that couples local perception with global navigation; the point made in that paragraph, that such learned approaches offer no formal guarantee on constraint satisfaction or planning latency, applies to it as well.
+The lifelong domain-adaptive pose-estimation work is cited in Section~V-B, where marker-free pose estimation is identified as the natural extension of the fiducial-based Perception Module, as an example of learned estimators that adapt continually to new deployment domains.
+\end{response}
+
+\begin{action}
+We updated the manuscript by citing the two works in Sections~II-B and V-B and adding them to the reference list in order of first citation.
+\end{action}
+
+\end{document}

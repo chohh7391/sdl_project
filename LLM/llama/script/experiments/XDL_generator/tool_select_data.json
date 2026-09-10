@@ -1,0 +1,1102 @@
+[
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"tube_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"tube_A\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"tube_A\" to_vessel=\"beaker_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"tube_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"tube_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"plate\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"flask_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "vgc10"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "vgc10"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"tube_A\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"flask_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"plate\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"tube_A\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"tube_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"plate\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"tube_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"plate\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"tube_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"flask_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"tube_A\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"tube_A\" to_vessel=\"tube_B\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"tube_A\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "vgc10"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"plate\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "vgc10"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"beaker_A\" to_vessel=\"tube_A\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"tube_A\" to_vessel=\"flask_A\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"plate\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "vgc10"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"flask_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "vgc10"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"tube_A\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_B\" place=\"plate\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "vgc10"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"tube_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "vgc10"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"beaker_A\" place=\"plate\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"tube_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"tube_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"beaker_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"flask_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"tube_A\" to_vessel=\"tube_B\" volume=\"10mL\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "ag95",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"flask_A\" time=\"30s\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "dh3",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"tube_A\" to_vessel=\"tube_B\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"box_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"flask_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle\" place=\"tray\" />",
+            "is_space_constrained": "True"
+        },
+        "expected_output": [
+            "vgc10",
+            "True",
+            "dh3"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Transfer from_vessel=\"tube_A\" to_vessel=\"tube_B\" volume=\"10mL\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "ag95",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Stir vessel=\"flask_A\" time=\"30s\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "dh3",
+            "False",
+            "None"
+        ]
+    },
+    {
+        "instruction": {
+            "xdl": "<Move object=\"bottle_A\" place=\"tray\" />",
+            "is_space_constrained": "False"
+        },
+        "expected_output": [
+            "vgc10",
+            "False",
+            "None"
+        ]
+    }
+]

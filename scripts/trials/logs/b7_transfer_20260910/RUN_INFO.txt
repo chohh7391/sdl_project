@@ -1,0 +1,22 @@
+B7 transfer batch -- seeds 0..29 -- 2026-09-10
+csv: _2026__IEEE_Access/revision/analysis/data/transfer_b7_20260910.csv
+batch stdout: sdl_project/scripts/trials/logs/b7_transfer_batch.out
+
+WHY: a re-run of B4 on the code version the Stir work produced, so all three
+tasks are measured on ONE version. Two changes reach Transfer:
+  * ENTITIES["magnet"] 45 mm cube -> 10 x 10 x 35 mm stir bar. The magnet is one
+    of Transfer's STATICS, so the planner's collision problem changes.
+  * _open_gripper() drives the gripper to its opened position instead of a fixed
+    repeat count. Measured need for ag95 is 11 steps, and the old hardcoded value
+    was 10 -- one short (it still released, but only just).
+Layouts are unchanged from B4 (_MOVABLE_FOOTPRINT is deliberately frozen), so the
+two batches are directly comparable seed by seed.
+
+RESULT: 30/30 task success [Wilson 88.6, 100.0], same as B4.
+  final tilt after release: 0.00 deg on all 30
+  transport tilt <= 5 deg: 27/30 (B4: 24/30); max 11.38 deg (B4: 11.18)
+  planning median 55.26 s, max 167.58 s, within 60 s 22/30 (B4: 23/30)
+  placement error from goal centre: median 13.8 mm, max 23.6 mm (B4: 11.2 / 20.5)
+  0 stray processes, 0 pose mismatches (new harness pre-flight + integrity check)
+
+GPU: NVIDIA GeForce RTX 5070, sole occupant of the batch.
