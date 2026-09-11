@@ -84,31 +84,38 @@ Move 오차는 추종오차가 아니다 — 배치 제약이 "발자국이 영�
 - [ ] **B2. AprilTag perception in-the-loop** (렌더 카메라 → 검출 → 융합 → World State) + perception noise 주입
       재실행(표 마지막 열 `\nd{}`) · R1#1 · **R1 최우선 concern**
 
-      **진행 (2026-09-11)**
+      **진행 (2026-09-11) — 파이프라인은 동작하며 위치오차 9.7 mm**
       - [x] 세 패키지 빌드 — `apriltag_ros`, `perception_manager`, `perception_interfaces`(기존).
             `ros-humble-apriltag` 설치돼 있음. 빌드 11 초, 무경고.
-      - [x] **파이프라인 설계 확인** — `perception_manager.cpp`가 이미 `beaker→beaker_tag`, `flask→flask_tag`를
-            매핑하고 `base_link→camera_N→tag` TF를 합성해 **2-카메라 융합**(카메라 거리 기준)까지 구현.
-            `apriltag_ros`는 `/{cam}/rgb`+`/{cam}/camera_info`를 받아 태그 TF를 broadcast. sim이 내보내는
-            토픽 이름과 정확히 일치.
-      - [x] **씬에 태그가 없었다** → tag36h11 이미지를 코드북에서 생성하고 **검출기로 역검증**
-            (`assets/apriltag/generate_tags.py`, id 0·1). 시각 전용 텍스처 quad 빌더
-            `object.create_apriltag_plate` 추가(콜라이더 없음 → 계획·접촉 결과에 영향 불가).
-            `SDL_APRILTAG=1`로만 활성.
-      - [x] **첫 게이트 통과** — 렌더 영상에서 tag36h11 **id 0 검출**(hamming 0, decision margin 235).
-            즉 Isaac Sim 렌더 → ROS 영상 → apriltag_ros 체인이 동작한다.
-      - [ ] **막힌 지점: perception 자세가 39 cm 틀리다.** 알려진 태그(테이블 위 0.35, 0.00, 0.001)에 대해
-            `base_link→beaker_tag`가 **(0.651, 0.246, −0.037)**, yaw 15.7° 오차.
-            검출기는 발행된 `camera_info`(f=601.5 px)와 **자기일관적**이다 — 즉 내부 파라미터 문제가 아니다.
-            기하상 태그는 화면 중심에서 **아래로만 40 px** 떨어져야 하는데 실측은 **대각선으로 141 px**
-            (실효 f≈2112 px). 방향까지 틀리므로 **카메라 외부 파라미터(TF 프레임)와 실제 렌더 시점의 규약 불일치**다
-            (Isaac USD 카메라 프레임 vs ROS optical 프레임, `Camera(orientation=)`의 축 해석).
-            **배제된 가설**: fisheyePolynomial/rational-polynomial 왜곡 모델 — 핀홀로 교체해도 오차 불변
-            (픽셀 위치만 17 px 이동). D가 전부 0이라 왜곡 모델 자체가 불필요했고 deprecated 경고도 사라져,
-            정리 목적으로 핀홀을 유지한다.
-      - [ ] 다음: 카메라 TF를 실제 렌더 광학 프레임과 일치시키고 **같은 알려진 태그로 재측정**.
-            그 뒤 태그를 vessel에 부착(현재 카메라는 z=1.5에서 수직 하향이라 0.08 m 태그가 30 px뿐 →
-            **비스듬한 카메라 배치 + 더 큰 태그**를 검토해야 한다).
+      - [x] **태그는 이미 씬에 있었다** — `beaker.usd` / `flask.usd` 안에 Isaac AprilTag MDL 프림이
+            각각 들어 있다(`apriltag_00`, `apriltag_01`, tag_id 0·1). 용기 **로컬 (0.15, 0, −0.06)**,
+            즉 용기에서 15 cm 옆 테이블에 놓인 판이다. 처음엔 바이너리 USDC를 텍스트 grep해 놓쳤다.
+      - [x] **종단 검증** — 렌더 영상에서 tag36h11 id 0 검출(hamming 0, margin 235), TF
+            `base_link→beaker_tag` 산출. 지상진실(비커 (0.5007,0.1977) + 로컬 0.15 m, yaw 15.7°)과 비교:
+            **수평 위치오차 9.7 mm, yaw 오차 0.0°**. 즉 Isaac Sim 렌더 → 검출 → TF 합성 경로가
+            그대로 동작한다.
+      - [x] 카메라 자체 점검 로그 추가(`utils/camera.py`) — 의도 K, prim `focalLength`/aperture,
+            `get_intrinsics_matrix()`, 세 축규약의 world pose, 그리고 **알려진 월드점의 투영**.
+            이걸로 내부·외부 파라미터가 정상임을 확인했다(fx=601.53 세 곳 일치, 투영이 기하와 일치).
+      - [x] `set_projection_type("fisheyePolynomial")`+rational-polynomial을 **핀홀로 교체** —
+            D가 전부 0이라 왜곡 모델이 불필요하고 Isaac Sim 6에서 deprecated 경고가 났다. 측정된 자세는
+            불변이므로 **정리 목적**이다(수정 아님).
+      - **기록용 오진 정정**: 초기에 "위치오차 39 cm, 외부 파라미터 불일치"로 판단했으나 **틀렸다.**
+            직접 만든 테이블 태그의 지상진실과 **씬에 원래 있던 비커 태그의 검출**을 비교한 탓이다.
+            태그를 끈 상태에서도 같은 픽셀에서 검출되는 것으로 확인하고 철회했다. 직접 만든 태그 생성기·
+            플레이트 빌더는 불필요해져 제거했다.
+
+      **남은 것**
+      - [ ] **태그→객체 변환** — 태그는 용기에서 0.15 m 옆이다. `perception_manager`가 그 오프셋을 적용해
+            *객체* 포즈를 내야 한다(현재 `object_configs.yaml`의 `grasping_offsets`는 legacy cube/cylinder용).
+      - [ ] **2-카메라 융합 확인** — 코드는 있으나 두 카메라가 동시에 태그를 보는 배치에서 미검증.
+            현재 카메라는 z=1.5 수직 하향이고 원고는 **"두 방향에서 관측"**이라고 적고 있다(불일치).
+      - [ ] **카메라를 D435로** — 저자 확인: 실물은 **D435**. 코드는 `camera.py` docstring·K 모두 **L515**
+            640×480이고, 원고는 **D435 1280×720**(`\nd{}` 3곳)이다. 셋을 일치시켜야 한다.
+      - [ ] **World State 연결** — 현재 드라이버는 `GetEntityState`(지상진실)로 포즈를 얻는다.
+            perception 산출로 바꾸는 경로(플래그로 전환)와, 그 조건의 계획 성공률 측정.
+      - [ ] **occlusion 측정** — R1#1이 명시적으로 요구.
+
 - [ ] **B3. XDL generator field-level 채점** (100-set: operator / 인자 / 객체 / 수치 / 순서) + split 문서화 · R1#5
 - [ ] **B4. Action Reasoner unseen 레벨 정의** + 3-step ablation · R1#7
 - [ ] **B5. validator** — 주장 축소(텍스트) 또는 capacity·device-placement 체크 확장 · R1#6

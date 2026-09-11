@@ -5,6 +5,7 @@ import isaacsim.core.utils.stage as stage_utils
 from isaacsim.core.utils.numpy import rotations as rot_utils
 from dataclasses import dataclass
 import math
+import os
 
 
 @dataclass
@@ -94,6 +95,67 @@ def initialize_camera(camera):
     # there is nothing for a distortion model to represent, and
     # set_projection_type is deprecated in Isaac Sim 6 (it warns on every call).
     camera.set_lens_distortion_model("pinhole")
+
+    # Self-check. The pose the detector reports is only as good as the agreement
+    # between the intrinsics published on camera_info (which the ROS helper reads
+    # off this prim) and the projection the renderer actually uses. Measured
+    # through a tag at a known table pose, the render behaved as if the focal
+    # length were ~2100 px while camera_info said 601.5 -- a tag 0.2 m away from
+    # the first one fell outside the image entirely, which only a much narrower
+    # field of view explains. Print what the prim ended up with so the two can be
+    # compared instead of assumed.
+    try:
+        prim = camera.prim
+        print("[Camera] %s intended fx=%.1f cx=%.1f (K) | prim focalLength=%s "
+              "hAperture=%s vAperture=%s | resolution=%s"
+              % (camera.prim_path, camera_info.fx, camera_info.cx,
+                 prim.GetAttribute("focalLength").Get(),
+                 prim.GetAttribute("horizontalAperture").Get(),
+                 prim.GetAttribute("verticalAperture").Get(),
+                 camera.get_resolution()), flush=True)
+        print("[Camera] %s get_intrinsics_matrix() =\n%s"
+              % (camera.prim_path, camera.get_intrinsics_matrix()), flush=True)
+        # The remaining unknown: whether the frame the renderer projects from is
+        # the frame the TF graph publishes. The intrinsics agree (prim, Isaac and
+        # camera_info all give fx = 601.53), so a tag that should land 40 px from
+        # the principal point and lands 141 px away has to be a geometry
+        # mismatch, not a lens one.
+        print("[Camera] %s world pose (world axes) = %s | (usd) = %s | (ros) = %s"
+              % (camera.prim_path,
+                 camera.get_world_pose(camera_axes="world"),
+                 camera.get_world_pose(camera_axes="usd"),
+                 camera.get_world_pose(camera_axes="ros")), flush=True)
+        # Decisive check: ask the camera itself where a known world point lands
+        # in the image, using its own model. If this matches the geometry but the
+        # detector disagrees, the problem is downstream (the published image or
+        # camera_info); if it matches the detector, the axes were mis-derived.
+        import numpy as _np
+        probes = _np.array([[0.35, 0.00, 0.001], [0.35, -0.20, 0.001],
+                            [0.45, 0.00, 0.001]])
+        try:
+            print("[Camera] %s projects world points %s -> image %s"
+                  % (camera.prim_path, probes.tolist(),
+                     camera.get_image_coords_from_world_points(probes).tolist()),
+                  flush=True)
+        except Exception as exc:
+            print("[Camera] projection probe unavailable: %r" % (exc,), flush=True)
+        # Dump one frame so the image the detector is given can be inspected
+        # directly, rather than inferred from its output.
+        dump = os.environ.get("SDL_CAMERA_DUMP", "").strip()
+        if dump:
+            try:
+                import imageio.v2 as _iio
+                rgba = camera.get_rgba()
+                if rgba is not None and getattr(rgba, "size", 0):
+                    out = os.path.join(dump, os.path.basename(camera.prim_path) + ".png")
+                    _iio.imwrite(out, (rgba[:, :, :3]).astype("uint8"))
+                    print("[Camera] wrote %s shape=%s" % (out, rgba.shape), flush=True)
+                else:
+                    print("[Camera] get_rgba() empty at init (needs a rendered frame)", flush=True)
+            except Exception as exc:
+                print("[Camera] frame dump failed: %r" % (exc,), flush=True)
+    except Exception as exc:
+        print("[Camera] intrinsics self-check unavailable: %r" % (exc,), flush=True)
     # camera.add_normals_to_frame()
     # camera.add_motion_vectors_to_frame()
     # camera.add_distance_to_image_plane_to_frame()
