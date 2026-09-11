@@ -144,8 +144,16 @@ concern을 닫지 못하면 reject (binary review).
             최종: TP 20 / FN 0 / FP 0 / TN 100, 정확도 100% [96.9, 100]. §4.2.1의 96/100은 불변.
       - [ ] capacity·device-placement 체크는 **미구현** — 추가할지, 원고 847행의 해당 span을 삭제할지
             저자 판단 필요.
-- [ ] **B6/B7 — Action Reasoner unseen 레벨 정의 + 3-step ablation** — split(3000/2400/600)에서
-      unseen 기준 도출; two-step 루프(`tamp_xdl_parser.py run_xdl`)를 three-step으로 확장. (R1#7)
+- [~] **B6/B7 — Action Reasoner unseen 레벨 + 3-step ablation** (R1#7)
+      - [x] **출하 체크포인트가 테스트셋으로 학습됐음을 확인** (`train.py`가 3000건 전체를 씀;
+            max_steps 564 = ceil(3000/16)×3, 2400건이면 450). 원고 수치는 in-sample이었다.
+      - [x] **원고의 unseen 3레벨은 현행 split에서 전부 거짓** (bottle/box가 학습에 370건,
+            unseen 점유 패턴 0/600, 보류된 연산자쌍 0개).
+      - [x] **2400건 재학습 + 600건 held-out 평가** — main/rearrange/aux 모두 100%,
+            grid exact 74.5%, **재배치 필요 건 한정 45.2%** (원고 76.5%는 정답이 `None`인 321건에
+            희석된 값).
+      - [ ] unseen 주장을 유지할지(정의대로 holdout 재학습) 축소할지 결정 필요.
+      - [ ] two-step → three-step ablation 미착수.
 - [ ] **B8 — adversarial 명령 스트레스 테스트 (선택):** 70개 명령 / 7 class를 validator에 투입.
       생략 시 빨간 span 삭제; 5-메커니즘 텍스트는 유지. (R2#4)
 - [ ] **B9 — 256-particle cuTAMP ablation (선택):** "추가 연산" 논거 보강. (R1#3)

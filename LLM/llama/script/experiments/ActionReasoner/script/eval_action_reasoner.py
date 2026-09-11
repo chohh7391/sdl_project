@@ -9,9 +9,16 @@ from unsloth import FastLanguageModel
 # Config
 # =========================
 # LLAMA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "llama")
-MODEL_DIR = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/model/checkpoint"
-TEST_PATH = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/dataset/action_reasoner_test.jsonl"
-RESULT_PATH = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/results/eval_results.jsonl"
+_AR = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner"
+# Overridable so the same evaluation can be pointed at a checkpoint trained on
+# the 2400-sample split, which the shipped one was not (see train.py).
+MODEL_DIR = os.environ.get("AR_MODEL_DIR", os.path.join(_AR, "model/checkpoint"))
+TEST_PATH = os.environ.get("AR_TEST_PATH",
+                           os.path.join(_AR, "dataset/action_reasoner_test.jsonl"))
+RESULT_PATH = os.environ.get("AR_RESULT_PATH",
+                             os.path.join(_AR, "results/eval_results.jsonl"))
+print("[eval] model=%s" % MODEL_DIR)
+print("[eval] test =%s" % TEST_PATH)
 
 MAX_SEQ_LEN = 512
 

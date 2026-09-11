@@ -11,9 +11,22 @@ from transformers import TrainingArguments
 # Config
 # =========================
 MODEL_NAME = "unsloth/Llama-3.2-1B-bnb-4bit"
-DATA_PATH = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/dataset/action_reasoner_dataset.jsonl"
-OUTPUT_DIR = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/model/"
+# NOTE: the default DATA_PATH is the FULL 3000-sample dataset, not the 2400
+# train split that split_dataset.py writes. The shipped checkpoint was trained
+# with it -- max_steps 564 == ceil(3000/16) * 3 epochs, where the 2400 split
+# would give 450 -- so the 600-item "test" set was inside the training data and
+# the accuracies measured on it are in-sample. AR_DATA_PATH / AR_OUTPUT_DIR
+# override both so a split-respecting run can be done without disturbing the
+# original checkpoint.
+DATA_PATH = os.environ.get(
+    "AR_DATA_PATH",
+    "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/dataset/action_reasoner_dataset.jsonl")
+OUTPUT_DIR = os.environ.get(
+    "AR_OUTPUT_DIR",
+    "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/model/")
 SAVE_DIR = os.path.join(OUTPUT_DIR, "checkpoint")
+print("[train] data=%s" % DATA_PATH)
+print("[train] output=%s" % OUTPUT_DIR)
 
 MAX_SEQ_LEN = 512
 LR = 1e-4
