@@ -127,12 +127,16 @@ concern을 닫지 못하면 reject (binary review).
       집합 전반에서 재현되도록 개선. 재측정한 새 숫자가 기존 headline 값을 대체.
 - [ ] **B1 — perception noise 주입.** 측정된 perception 오차에서 6-DoF residual을 bootstrap
       해 sim World State에 주입, seeded planning eval 재실행. (R1#1)
-- [ ] **B2 — time-to-solution 분석** (생성된 로그로): KM solved-fraction 곡선, budget 내
-      restricted mean, cuTAMP time band. (R1#4)
-- [ ] **B2e — 렌더 perception 기반 end-to-end (D2):** 자연어 명령 → World State를 Isaac Sim
-      AprilTag 파이프라인으로 grounding → planning + execution 성공률 보고. (R1#1, R2#2)
-- [ ] **B3/B4 — generator field-level 정확도 + split** — `LLM/llama/script/experiments/`의 100
-      test set으로 field별 채점(§4.3), split 문서화. (R1#5)
+- [x] **B2 — time-to-solution 분석** — `analysis/compare_planners.py`가 KM solved-fraction과
+      budget 내 restricted mean을 낸다. 양쪽 planner를 **같은 예산으로 검열**한다(cuTAMP 기록 런에는
+      벽시계 상한이 없었고 transfer 최장 167.58 s였다). (R1#4)
+- [x] **B2e — 렌더 perception 기반 end-to-end (D2)** — `SDL_STATE_SOURCE=perception`으로 30 seed
+      transfer 실행. **task 성공 15/30 = 50.0% [33.2, 66.8]** vs 지상진실 30/30 = 100%,
+      paired exact McNemar p = 6.1e-5. 손실 분해: 미검출 9 / 계획 불가 5 / 실행 1. (R1#1, R2#2)
+- [x] **B3/B4 — generator field-level 정확도 + split** — 정답 라벨이 없어 생성기 템플릿을 역변환해
+      100/100 복원(겹치는 27/27이 학습 정답과 일치해 독립 검증됨). **unseen 73건 완전일치
+      94.5% [86.7, 97.8]**, 전체 96.0%; 인자 필드는 100%이고 오류는 전부 연산자·순서.
+      학습셋과 **27/100 문자열 겹침**을 측정해 문서화. (R1#5)
 - [ ] **B5 — validator 확장 (선택):** `validator.py`에 capacity·device-placement 체크 추가,
       벤치마크 6-class로 확장. 생략 시 해당 빨간 span 2개 삭제하고 축소된 주장 유지. (R1#6)
       - [ ] 먼저 **injected-error 벤치(20 valid/80 invalid)가 코드로 생성되는지 확인**
@@ -160,14 +164,19 @@ concern을 닫지 못하면 reject (binary review).
 ## 4. 오프라인 분석 스크립트 (Claude, 시뮬레이터 불필요)
 
 `_2026__IEEE_Access/revision/analysis/`(신규)에 둘 것.
-- [ ] **4.1 seeded 벤치 로그 생성/수집:** cuTAMP(Isaac Sim)와 PDDLStream(PyBullet
-      `run_*_trials.py --seed`)을 **동일 30개 seed**로 돌려 per-trial CSV(`success`,
-      `planning_time_sec`, attempts) 산출. (dep: §1 env + §3-B harness)
-- [ ] **4.2 통계 스크립트:** 각 성공률의 Wilson 95% CI; paired seed에 대한 exact McNemar;
-      budget에서 우측 censoring한 KM solved-fraction + restricted-mean time-to-solution.
-      표에 들어갈 정확한 값 출력.
-- [ ] **4.3 XDL field 채점 스크립트:** 생성 protocol vs reference를 canonicalize 후 field별
-      비교(operator seq / vessel id / 수치+단위 / 순서 / 전체 프로그램). (R1#5)
+- [x] **4.1 seeded 벤치 로그 생성/수집** — cuTAMP 로그는 기존 30 seed 런(b7/b8/b6). PDDLStream은
+      스톡 러너가 자체 레이아웃을 샘플링해 paired가 아니었으므로, `analysis/export_layouts.py`로
+      Isaac 레이아웃을 오프라인 재현(로그 30개와 비트 일치 검증)하고
+      `examples/pybullet/fr5_paired/`에서 **동일 레이아웃·로봇·툴·물체 치수·목표 술어**로 실행.
+      결과 CSV는 `analysis/data/pddlstream_{transfer,move,stir}_paired_180s.csv`.
+- [x] **4.2 통계 스크립트** — `analysis/compare_planners.py`. 측정값(동일 예산 검열):
+      transfer @60 s cuTAMP 22/30 = 73.3% vs PDDLStream 19/30 = 63.3%, **McNemar p = 0.61(유의 아님)**;
+      @120 s 27/30 vs 19/30, p = 0.039; @180 s 30/30 vs 19/30, p = 0.00098.
+      move 30/30 vs **30/30**, p = 1 (불일치 0); stir 30/30 vs 22/30, p = 0.0078.
+      **원고의 66.7/83.3/60 %는 실측 63.3/100/73.3 %와 불일치**하고 Move 우위는 성립하지 않는다.
+- [x] **4.3 XDL field 채점 스크립트** — `analysis/` 대신 실험 옆에 둠
+      (`LLM/llama/script/experiments/XDL_generator/{xdl_ground_truth,score_xdl}.py`), 라벨 복원과
+      채점이 같은 어휘를 공유해야 해서다. 정답 대비 자기검증 100%. (R1#5)
 - [ ] **4.4 validator 벤치 러너:** injected-error 집합에 대한 confusion matrix + class별 recall.
 
 ---
