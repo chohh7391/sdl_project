@@ -232,6 +232,56 @@ class Task(ABC, BaseTask):
     def _bounding_radius(dims_xy):
         return 0.5 * float(np.hypot(dims_xy[0], dims_xy[1]))
 
+    # The tag plate is a 0.1 m square; at an arbitrary yaw its half-extent is
+    # half the diagonal. The vessels' VISUAL glass is what covers a neighbouring
+    # tag and is wider than their colliders (flask +/-0.069 m against a 0.07 m
+    # box), so the clearance test uses whichever is larger.
+    _TAG_PLATE_HALF_M = 0.05 * np.sqrt(2.0)
+    _TAG_OFFSET_M = 0.15
+    _VISUAL_RADIUS_M = {"beaker": 0.051, "flask": 0.069}
+
+    def _clear_tag_angle(self, name, step_deg=2.0):
+        """World angle for `name`'s tag plate that clears every other object.
+
+        Returns the local angle to author (world angle minus the vessel's own
+        yaw), or None if the vessel is not placed. Over the 30 seeded layouts a
+        clearing angle exists for both vessels on every seed, the tightest
+        margin being 0.106 m.
+        """
+        if name not in self.default_positions:
+            return None
+        here = np.asarray(self.default_positions[name], dtype=float)
+        others = []
+        for other, pos in self.default_positions.items():
+            if other == name or other not in self._MOVABLE_FOOTPRINT:
+                continue
+            r = self._bounding_radius(self._MOVABLE_FOOTPRINT[other])
+            r = max(r, self._VISUAL_RADIUS_M.get(other, 0.0))
+            others.append((float(pos[0]), float(pos[1]), r))
+
+        best, best_margin = None, -1e9
+        for deg in np.arange(0.0, 360.0, step_deg):
+            th = np.deg2rad(deg)
+            px = here[0] + self._TAG_OFFSET_M * np.cos(th)
+            py = here[1] + self._TAG_OFFSET_M * np.sin(th)
+            if abs(px) > self._WORKSPACE_HALF_M or abs(py) > self._WORKSPACE_HALF_M:
+                continue
+            if np.hypot(px, py) < self._BASE_KEEPOUT_M + self._TAG_PLATE_HALF_M:
+                continue
+            margin = min((np.hypot(px - ox, py - oy)
+                          - (self._TAG_PLATE_HALF_M + r))
+                         for ox, oy, r in others) if others else 9.0
+            if margin > best_margin:
+                best_margin, best = margin, th
+        if best is None:
+            return None
+        quat = self.default_orientations.get(name)
+        yaw = 0.0 if quat is None else float(
+            2.0 * np.arctan2(quat[3], quat[0]))
+        print("[Task]   tag mount for %-7s world %6.1f deg, clearance %.3f m"
+              % (name, np.rad2deg(best), best_margin))
+        return float(best - yaw)
+
     @staticmethod
     def _yaw_quat(yaw):
         """Scalar-first (w, x, y, z) quaternion for a yaw rotation about +Z."""
@@ -568,6 +618,11 @@ class Task(ABC, BaseTask):
         # A lifted tag changes the tag->object vector perception_manager applies,
         # so keep its tag_to_object_ z in step with the world z printed below.
         _tag_z_min = float(os.environ.get("SDL_TAG_Z_MIN", "0.005"))
+        # "raise" lifts the plate above the glassware (default; keeps yaw),
+        # "clear" swings it to the clearest bearing (loses yaw), "yaw" is the
+        # asset's own behaviour, kept for the occlusion sensitivity analysis.
+        _tag_mount = os.environ.get("SDL_TAG_MOUNT", "raise").strip()
+        _tag_height = float(os.environ.get("SDL_TAG_HEIGHT", "0.18"))
         from pxr import Gf, UsdGeom as _UG
         from isaacsim.core.utils.stage import get_current_stage as _gcs
         for _nm in ("beaker", "flask"):
@@ -587,10 +642,56 @@ class Task(ABC, BaseTask):
                     _wz2 = _xf.ComputeLocalToWorldTransform(0.0).Transform(
                         Gf.Vec3d(0.0, 0.0, 0.0))[2]
                     _wz = _wz2
+                # --- mounting direction (perception, R1#1) --------------
+                # The plate is authored 0.15 m along the vessel's OWN local +x,
+                # so its world direction follows the vessel's randomized yaw.
+                # Near +/-90 deg that swings the plate underneath the other
+                # vessel, whose visual glass reaches +/-0.069 m -- twice its
+                # 0.07 m collider -- and the neighbour's body or base disc then
+                # covers the tag's data cells. Measured over the 30 seeded
+                # layouts, 16 of the 60 vessel-seeds put a plate on top of
+                # something, which is what the detection misses are.
+                #
+                # SDL_TAG_MOUNT="clear" instead picks the mounting direction
+                # that maximises clearance from every other object, as one would
+                # when siting a marker on a real bench; "yaw" keeps the authored
+                # behaviour for the occlusion sensitivity analysis. The plate
+                # stays rigidly attached and is rotated with the offset, so its
+                # own +x still points away from the vessel and
+                # perception_manager's tag_to_object_ = (-0.15, 0, z) is
+                # unchanged.
+                if _tag_mount == "raise":
+                    # Mount the plate on a post above the bench. The vessels are
+                    # 0.12-0.135 m tall and the cameras look down at about 50
+                    # deg, so a plate above the tallest vessel cannot be covered
+                    # by a neighbour's body whatever the layout -- the clearance
+                    # is by construction rather than by search, and because the
+                    # plate keeps the vessel's own yaw the tag still measures
+                    # it. The only calibration this costs is the tag->object z,
+                    # one constant per vessel, like the tag's edge length.
+                    if _tr is not None:
+                        _v = _tr.Get()
+                        _tr.Set((_v[0], _v[1],
+                                 _v[2] + (_tag_height - _wz)))
+                        _wz = _tag_height
+                elif _tag_mount == "clear":
+                    _phi = self._clear_tag_angle(_nm)
+                    if _phi is not None and _tr is not None:
+                        _v = _tr.Get()
+                        _rad = float(np.hypot(_v[0], _v[1])) or 0.15
+                        _tr.Set((_rad * float(np.cos(_phi)),
+                                 _rad * float(np.sin(_phi)), _v[2]))
+                        _or = _ops.get("xformOp:orient")
+                        if _or is not None:
+                            # match the attribute's own precision (Quatf/Quatd)
+                            _qc = type(_or.Get()) if _or.Get() is not None \
+                                else Gf.Quatf
+                            _or.Set(_qc(float(np.cos(_phi / 2.0)), 0.0, 0.0,
+                                        float(np.sin(_phi / 2.0))))
                 _wc = _xf.ComputeLocalToWorldTransform(0.0).Transform(
                     Gf.Vec3d(0.0, 0.0, 0.0))
-                print("[Task]   tag %s world=(%.4f,%.4f,%.4f)"
-                      % (_tp, _wc[0], _wc[1], _wc[2]))
+                print("[Task]   tag %s world=(%.4f,%.4f,%.4f) mount=%s"
+                      % (_tp, _wc[0], _wc[1], _wc[2], _tag_mount))
 
         # spawn box_goal -- STATIC goal tray. A static collider (no rigid body)
         # needs no mass/inertia, removing the previous PhysX

@@ -1,5 +1,7 @@
 #include "perception_manager/perception_manager.hpp"
 
+#include <cstdlib>
+
 using namespace std::chrono_literals;
 
 PerceptionManager::PerceptionManager() : Node("perception_manager")
@@ -19,8 +21,14 @@ PerceptionManager::PerceptionManager() : Node("perception_manager")
     // The flask's plate is authored coplanar with the table and so never
     // rendered; task.py lifts it to 5 mm, which shortens this z by the lift
     // (0.0601 -> 0.0550). Keep this in step with SDL_TAG_Z_MIN.
-    tag_to_object_["beaker"] = tf2::Vector3(-0.15, 0.0, 0.0622);
-    tag_to_object_["flask"] = tf2::Vector3(-0.15, 0.0, 0.0550);
+    // With SDL_TAG_MOUNT=raise (the default) the plate sits on a post at
+    // 0.18 m so neighbouring glassware cannot cover it; the vessel centre is
+    // then BELOW the tag. beaker centre 0.0675 m, flask centre 0.0600 m.
+    // SDL_TAG_Z overrides the mount height if task.py's is changed.
+    const double tag_z = std::getenv("SDL_TAG_Z")
+                             ? std::atof(std::getenv("SDL_TAG_Z")) : 0.18;
+    tag_to_object_["beaker"] = tf2::Vector3(-0.15, 0.0, 0.0675 - tag_z);
+    tag_to_object_["flask"] = tf2::Vector3(-0.15, 0.0, 0.0600 - tag_z);
 
     auto update_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     
