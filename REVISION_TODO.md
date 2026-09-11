@@ -81,6 +81,42 @@ Move 오차는 추종오차가 아니다 — 배치 제약이 "발자국이 영�
 
 - [ ] **B1. PDDLStream 베이스라인** — 표의 66.7 / 83.3 / 60 %와 McNemar p값이 **전부 미검증 하드코딩**.
       동일 30 seed 실행 + 설정 기록 + paired exact McNemar + KM/RMTS · R1#3, R1#4 · **가장 취약**
+
+      **진행 (2026-09-11) — transfer 완료, move·stir 미완**
+      - [x] **동일 레이아웃 확보.** 스톡 러너는 자기 범위에서 레이아웃을 샘플링하므로 그 행과 cuTAMP를
+            짝지으면 애초에 paired가 아니다. `Task._randomize_layout`이 시드의 순함수(PCG64, 고정 추출
+            순서)이므로 Isaac을 띄우지 않고 재현하는 익스포터를 만들고(`analysis/export_layouts.py`),
+            **시뮬레이터가 실제로 로그에 남긴 30개 레이아웃과 비트 단위로 일치**함을 검증한 뒤에만
+            내보내도록 했다(불일치 시 내보내기 거부). 물체 5개와 6관절 home 모두 일치.
+      - [x] **씬 정합** (`examples/pybullet/fr5_paired/`): 같은 시드 물체 포즈·arm home, 같은 fr5_ag95
+            URDF, 스톡 0.2 m 블록 대신 **cuTAMP 자신의 직육면체 치수**로 생성한 URDF
+            (`make_models.py`), magnet·box·stirrer를 고정 장애물로 배치(→`get_fixed()`가 플래너에 전달),
+            목표는 (0.35,−0.35)의 0.1 m 정사각형 + 동일한 `HandEmpty ∧ Poured ∧ On`.
+            남는 차이는 본질적인 것(PyBullet vs Isaac Sim, 샘플링 vs 배치 최적화)이며 **실행은 비교하지
+            않고 계획 성공·계획 시간만** 비교한다.
+      - [x] **정합 직후 0/30이었고, 원인을 한 요소씩 갈라 찾았다: 로봇 베이스 높이.**
+            Isaac USD 로봇은 프림 원점이 **베이스 바닥**(`fr5_ag95.usd` z 0.0000..0.2174)이라 원점에
+            두면 테이블 탑에 서지만, URDF는 `base_link` 원점이 바닥보다 0.0455 m 위여서 `base_link`를
+            0에 두면 베이스가 테이블에 45.5 mm 박히고 모든 구성이 충돌한다. 나머지는 무해:
+            첫 10 시드에서 matched table 10/10, matched goal 8/10, matched obstacles 7/10,
+            matched geometry 6/10, seeded home 8/10 (동일 레이아웃의 스톡 씬은 6/10).
+      - [x] **양쪽을 같은 예산으로 검열**(`analysis/compare_planners.py`). 기록된 cuTAMP 런에는 벽시계
+            상한이 없었다(transfer 최장 167.58 s)는데 베이스라인만 `--max-time`에서 끊겼으므로, 예산
+            이후에 나온 계획은 그 예산 하의 성공이 아니다.
+
+            | 예산 | cuTAMP | PDDLStream | exact McNemar p |
+            |---|---|---|---|
+            | 60 s | **22/30 = 73.3%** [55.6, 85.8] | **19/30 = 63.3%** [45.5, 78.1] | **0.61 (유의 아님)** |
+            | 120 s | 27/30 = 90.0% [74.4, 96.5] | 19/30 = 63.3% | **0.039** |
+            | 180 s | 30/30 = 100% [88.6, 100] | 19/30 = 63.3% | **0.00098** |
+
+            PDDLStream은 19/30에서 **포화**한다(모든 성공이 17.66 s 이내, 해결시 median 1.94 s).
+            cuTAMP는 예산이 늘수록 개선된다(해결시 median 55.27 s). 즉 **논문이 명시한 60 s 예산에서는
+            cuTAMP 우위가 유의하지 않다.** 원고의 66.7 % 및 유의성 주장은 짝지은 검정을 통과하지 못한다.
+            RMTS: 60 s에서 cuTAMP 53.19 s vs PDDLStream 24.52 s.
+      - [ ] **미완**: ①PDDLStream은 확률적이라 재실행마다 ±1 시드 흔들린다(60 s 전용 런 18/30 vs
+            180 s 런의 60 s 검열 19/30) — 반복 실행으로 per-seed 성공확률을 보고할지 결정 필요.
+            ②move·stir는 아직 페어드 러너에 문제 생성기를 붙이지 않았다.
 - [ ] **B2. AprilTag perception in-the-loop** (렌더 카메라 → 검출 → 융합 → World State) + perception noise 주입
       재실행(표 마지막 열 `\nd{}`) · R1#1 · **R1 최우선 concern**
 
