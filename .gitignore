@@ -97,3 +97,6 @@ third_party/
 *.tmp
 *.swp
 nohup.out
+
+# Isolated env for the PDDLStream baseline (CPU-only, pybullet).
+.venv-pddl/
