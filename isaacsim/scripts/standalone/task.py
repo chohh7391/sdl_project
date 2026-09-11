@@ -557,6 +557,40 @@ class Task(ABC, BaseTask):
         )
         self.scene.add(self.box)
 
+        # --- AprilTag render fix (perception, R1#1) ---------------------------
+        # The tag plates ship inside the vessel assets as thin quads lying on the
+        # table 0.15 m from the vessel (see perception_manager's tag_to_object_).
+        # flask.usd places its quad at a local z that lands the plate exactly on
+        # the table plane (world z = -0.000) while beaker.usd's clears it by
+        # 5 mm, so the flask tag is coplanar with the table top, never renders,
+        # and is never detected.  Lift any tag that sits below SDL_TAG_Z_MIN to
+        # that height; repaired here so the vendored assets stay untouched.
+        # A lifted tag changes the tag->object vector perception_manager applies,
+        # so keep its tag_to_object_ z in step with the world z printed below.
+        _tag_z_min = float(os.environ.get("SDL_TAG_Z_MIN", "0.005"))
+        from pxr import Gf, UsdGeom as _UG
+        from isaacsim.core.utils.stage import get_current_stage as _gcs
+        for _nm in ("beaker", "flask"):
+            for _tid in ("00", "01"):
+                _tp = "/World/%s/visual/apriltag_%s" % (_nm, _tid)
+                _pr = _gcs().GetPrimAtPath(_tp)
+                if not (_pr and _pr.IsValid()):
+                    continue
+                _xf = _UG.Xformable(_pr)
+                _ops = {o.GetOpName(): o for o in _xf.GetOrderedXformOps()}
+                _tr = _ops.get("xformOp:translate")
+                _wz = _xf.ComputeLocalToWorldTransform(0.0).Transform(
+                    Gf.Vec3d(0.0, 0.0, 0.0))[2]
+                if _tr is not None and _wz < _tag_z_min:
+                    _v = _tr.Get()
+                    _tr.Set((_v[0], _v[1], _v[2] + (_tag_z_min - _wz)))
+                    _wz2 = _xf.ComputeLocalToWorldTransform(0.0).Transform(
+                        Gf.Vec3d(0.0, 0.0, 0.0))[2]
+                    print("[Task]   tag lift %s world z %.4f -> %.4f"
+                          % (_tp, _wz, _wz2))
+                else:
+                    print("[Task]   tag %s world z %.4f (no lift)" % (_tp, _wz))
+
         # spawn box_goal -- STATIC goal tray. A static collider (no rigid body)
         # needs no mass/inertia, removing the previous PhysX
         # 'negative mass / invalid inertia' warning. Box collider matches
