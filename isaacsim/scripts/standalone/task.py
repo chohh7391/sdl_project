@@ -22,7 +22,7 @@ from isaacsim.core.prims import SingleRigidPrim
 from fr5 import FR5
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
-from object import (create_box_collider_rigid, create_box_collider_static,
+from object import (create_apriltag_plate, create_box_collider_rigid, create_box_collider_static,
                     create_hollow_box_collider_rigid, create_single_rigid_prim_from_usd)
 from camera import CameraInfo, set_world_pose_from_view
 
@@ -135,6 +135,17 @@ class Task(ABC, BaseTask):
     # cuTAMP box footprint [dx, dy] -- used for conservative circle-vs-circle
     # non-overlap rejection (holds for ANY yaw). Values match the box colliders
     # spawned in set_object() (which match TAMP/tamp/src/envs/utils.py ENTITIES).
+    # AprilTag edge length [m]; must equal the `size`/`sizes` the detector is
+    # configured with in perception/apriltag_ros/cfg/tags_36h11.yaml, because the
+    # pose it reports scales with it.
+    APRILTAG_SIZE_M = 0.08
+    # Known table positions for the first perception gate: fixed, so the pose the
+    # detector reports can be compared against ground truth.
+    APRILTAG_TABLE_POSES = {
+        0: (0.35, 0.00),
+        1: (0.35, -0.20),
+    }
+
     # Wall thickness of the hollow flask [m]. 3 mm leaves a 64 mm clear opening
     # in the 70 mm outer envelope and is thick enough for stable PhysX contacts.
     FLASK_WALL_M = 0.003
@@ -526,6 +537,24 @@ class Task(ABC, BaseTask):
             dims=[0.108, 0.108, 0.08],
         )
         self.scene.add(self.box)
+
+        # --- AprilTag markers (perception in the loop, Reviewer 1 #1) ----------
+        # Visual-only, so they cannot change any planning or contact result.
+        # Enabled with SDL_APRILTAG so existing batches are unaffected; the first
+        # gate is simply "does the detector see a tag through the rendered
+        # cameras", which is what these fixed table tags answer. Tag ids and edge
+        # size must match perception/apriltag_ros/cfg/tags_36h11.yaml.
+        if os.environ.get("SDL_APRILTAG", "").strip() not in ("", "0"):
+            tag_dir = os.path.join(ASSET_PATH, "apriltag")
+            for tag_id, (tx, ty) in self.APRILTAG_TABLE_POSES.items():
+                create_apriltag_plate(
+                    prim_path="/World/apriltag_%d" % tag_id,
+                    png_path=os.path.join(tag_dir, "tag36h11_%02d.png" % tag_id),
+                    size=self.APRILTAG_SIZE_M,
+                    position=(tx, ty, 0.001),   # lying on the table, just proud of it
+                )
+            print("[Task]   AprilTag plates spawned: %s (size %.3f m)"
+                  % (sorted(self.APRILTAG_TABLE_POSES), self.APRILTAG_SIZE_M))
 
         # spawn box_goal -- STATIC goal tray. A static collider (no rigid body)
         # needs no mass/inertia, removing the previous PhysX

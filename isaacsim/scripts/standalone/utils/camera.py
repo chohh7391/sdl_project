@@ -83,15 +83,17 @@ def initialize_camera(camera):
     camera.set_vertical_aperture(camera_info.vertical_aperture / 10.0)
     camera.set_clipping_range(0.05, 1.0e5)
 
-    camera.set_projection_type("fisheyePolynomial")
-    
-    camera.set_rational_polynomial_properties(
-        camera_info.width, camera_info.height,
-        camera_info.cx, camera_info.cy,
-        camera_info.diagonal_fov, camera_info.D
-    )
-    
-    # camera.set_lens_distortion_model("pinhole")
+    # PINHOLE, deliberately. The focal length and apertures above are set from
+    # the published intrinsics with their ratio preserved, so the camera's own
+    # pinhole projection matches camera_info exactly (f/A * width = 601.5 px).
+    # Overlaying a fisheyePolynomial / rational-polynomial model on top of that
+    # did NOT: measured through the rendered image, a tag at a known table pose
+    # came out as if the focal length were about 1611 px rather than 601.5, so
+    # every pose the detector produced was wrong -- 0.39 m of error for a tag
+    # 1.5 m from the camera. The distortion coefficients are all zero anyway, so
+    # there is nothing for a distortion model to represent, and
+    # set_projection_type is deprecated in Isaac Sim 6 (it warns on every call).
+    camera.set_lens_distortion_model("pinhole")
     # camera.add_normals_to_frame()
     # camera.add_motion_vectors_to_frame()
     # camera.add_distance_to_image_plane_to_frame()

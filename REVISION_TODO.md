@@ -83,6 +83,32 @@ Move 오차는 추종오차가 아니다 — 배치 제약이 "발자국이 영�
       동일 30 seed 실행 + 설정 기록 + paired exact McNemar + KM/RMTS · R1#3, R1#4 · **가장 취약**
 - [ ] **B2. AprilTag perception in-the-loop** (렌더 카메라 → 검출 → 융합 → World State) + perception noise 주입
       재실행(표 마지막 열 `\nd{}`) · R1#1 · **R1 최우선 concern**
+
+      **진행 (2026-09-11)**
+      - [x] 세 패키지 빌드 — `apriltag_ros`, `perception_manager`, `perception_interfaces`(기존).
+            `ros-humble-apriltag` 설치돼 있음. 빌드 11 초, 무경고.
+      - [x] **파이프라인 설계 확인** — `perception_manager.cpp`가 이미 `beaker→beaker_tag`, `flask→flask_tag`를
+            매핑하고 `base_link→camera_N→tag` TF를 합성해 **2-카메라 융합**(카메라 거리 기준)까지 구현.
+            `apriltag_ros`는 `/{cam}/rgb`+`/{cam}/camera_info`를 받아 태그 TF를 broadcast. sim이 내보내는
+            토픽 이름과 정확히 일치.
+      - [x] **씬에 태그가 없었다** → tag36h11 이미지를 코드북에서 생성하고 **검출기로 역검증**
+            (`assets/apriltag/generate_tags.py`, id 0·1). 시각 전용 텍스처 quad 빌더
+            `object.create_apriltag_plate` 추가(콜라이더 없음 → 계획·접촉 결과에 영향 불가).
+            `SDL_APRILTAG=1`로만 활성.
+      - [x] **첫 게이트 통과** — 렌더 영상에서 tag36h11 **id 0 검출**(hamming 0, decision margin 235).
+            즉 Isaac Sim 렌더 → ROS 영상 → apriltag_ros 체인이 동작한다.
+      - [ ] **막힌 지점: perception 자세가 39 cm 틀리다.** 알려진 태그(테이블 위 0.35, 0.00, 0.001)에 대해
+            `base_link→beaker_tag`가 **(0.651, 0.246, −0.037)**, yaw 15.7° 오차.
+            검출기는 발행된 `camera_info`(f=601.5 px)와 **자기일관적**이다 — 즉 내부 파라미터 문제가 아니다.
+            기하상 태그는 화면 중심에서 **아래로만 40 px** 떨어져야 하는데 실측은 **대각선으로 141 px**
+            (실효 f≈2112 px). 방향까지 틀리므로 **카메라 외부 파라미터(TF 프레임)와 실제 렌더 시점의 규약 불일치**다
+            (Isaac USD 카메라 프레임 vs ROS optical 프레임, `Camera(orientation=)`의 축 해석).
+            **배제된 가설**: fisheyePolynomial/rational-polynomial 왜곡 모델 — 핀홀로 교체해도 오차 불변
+            (픽셀 위치만 17 px 이동). D가 전부 0이라 왜곡 모델 자체가 불필요했고 deprecated 경고도 사라져,
+            정리 목적으로 핀홀을 유지한다.
+      - [ ] 다음: 카메라 TF를 실제 렌더 광학 프레임과 일치시키고 **같은 알려진 태그로 재측정**.
+            그 뒤 태그를 vessel에 부착(현재 카메라는 z=1.5에서 수직 하향이라 0.08 m 태그가 30 px뿐 →
+            **비스듬한 카메라 배치 + 더 큰 태그**를 검토해야 한다).
 - [ ] **B3. XDL generator field-level 채점** (100-set: operator / 인자 / 객체 / 수치 / 순서) + split 문서화 · R1#5
 - [ ] **B4. Action Reasoner unseen 레벨 정의** + 3-step ablation · R1#7
 - [ ] **B5. validator** — 주장 축소(텍스트) 또는 capacity·device-placement 체크 확장 · R1#6
