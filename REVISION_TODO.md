@@ -250,8 +250,21 @@ Move 오차는 추종오차가 아니다 — 배치 제약이 "발자국이 영�
             **스모크 테스트**: seed 0은 `source=perception beaker:perception flask:perception
             magnet:ground_truth`로 plan·execute 성공(goal 오차 9.4 mm, 최대 이송 tilt 4.49°),
             seed 20은 `set_tamp_env_failed`로 기록된다.
-      - [ ] **퍼셉션 상태 30 seed transfer 런 — 진행 중** (2026-09-11 17:55 시작, ~2.5 h).
-            지상진실 상태의 `b7` 런(30/30, planning median 55.3 s)과 짝지어 비교한다.
+      - [x] **퍼셉션 상태 30 seed transfer 런 완료** (2026-09-11). 지상진실 `b7` 런과 같은 30 시드.
+
+            | 상태 출처 | plan 성공 | **task 성공** | 계획시간 median |
+            |---|---|---|---|
+            | 지상진실 | 30/30 = 100% [88.6, 100] | **30/30 = 100%** [88.6, 100] | 55.26 s |
+            | 퍼셉션 | 16/30 = 53.3% [36.1, 69.8] | **15/30 = 50.0%** [33.2, 66.8] | 53.36 s |
+
+            짝지은 exact McNemar **p = 6.1e-5** (지상진실만 성공 15, 퍼셉션만 성공 0).
+            **손실 15건의 분해**: 미검출로 상태 자체를 못 만든 것 **9건**(`set_tamp_env_failed`),
+            포즈는 얻었으나 만족 입자가 없어 계획 실패 **5건**(`plan_no_satisfying`),
+            실행 후 판정 실패 **1건**(`task_incomplete`).
+            계획 시간은 두 조건이 사실상 같아(53.36 vs 55.26 s) **퍼셉션 스택의 GPU 부하가 계획을
+            느리게 한다는 우려는 기각**된다(양쪽 모두 163–168 s 이상치가 있다).
+            손실의 다수(9/15)는 알고리즘이 아니라 **태그판 배치**에서 온다(위 occlusion 항목) —
+            판 위치를 옮기면 이 수치는 다시 받아야 한다.
 
 - [ ] **B3. XDL generator field-level 채점** (100-set: operator / 인자 / 객체 / 수치 / 순서) + split 문서화 · R1#5
 - [ ] **B4. Action Reasoner unseen 레벨 정의** + 3-step ablation · R1#7
