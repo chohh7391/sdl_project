@@ -61,6 +61,10 @@ STATE_SOURCE="${SDL_STATE_SOURCE:-ground_truth}"
 export SDL_STATE_SOURCE="$STATE_SOURCE"
 PERCEPTION_READY_TIMEOUT="${PERCEPTION_READY_TIMEOUT:-45}"
 
+# Added to each layout seed to form the planner's seed, so a repetition of the
+# whole batch explores a different planner stream over the SAME layouts.
+PLANNER_SEED_OFFSET="${PLANNER_SEED_OFFSET:-0}"
+
 SEEDS=("$@")
 if [[ ${#SEEDS[@]} -eq 0 ]]; then SEEDS=(0 1 2 3 4); fi
 
@@ -167,7 +171,10 @@ for seed in "${SEEDS[@]}"; do
   fi
 
   # --- 2. fresh tamp_server ------------------------------------------------
+  # SDL_PLANNER_SEED makes cuTAMP's particle initialisation reproducible for
+  # this layout; without it the same seed can plan differently between runs.
   ROS_DOMAIN_ID="$ROS_DOMAIN_ID" SDL_USE_SOURCE=1 SDL_STATE_SOURCE="$STATE_SOURCE" \
+    SDL_PLANNER_SEED="$((seed + PLANNER_SEED_OFFSET))" \
     setsid bash "$TAMP_SH" >"$TAMP_LOG" 2>&1 &
   TAMP_PGID=$!
   echo "[seed $seed] tamp pgid=$TAMP_PGID; waiting for server ready (<= ${TAMP_READY_TIMEOUT}s)"

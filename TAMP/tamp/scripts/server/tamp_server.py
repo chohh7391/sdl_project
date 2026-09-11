@@ -35,6 +35,8 @@ from orchestration.planner_api import PlanningResult, with_explicit_pour_steps
 from curobo.wrap.reacher.motion_gen import MotionGenPlanConfig
 import os as _os
 import numpy as np
+import random
+import torch
 
 from curobo.types.state import JointState as CuroboJointState
 from curobo.types.math import Pose as CuroboPose
@@ -132,6 +134,25 @@ class TAMP:
         self.total_num_satisfying = 0
         self.last_plan_error = None
 
+        # cuTAMP initialises its particles with torch.rand / torch.randint and
+        # nothing seeds them, so the same layout can plan differently on two
+        # runs -- measured: of five transfer seeds that failed on one 30-seed
+        # batch, four succeeded when re-run unchanged. A single unseeded run is
+        # therefore not a stable per-seed outcome, and a paired McNemar built on
+        # one is comparing one draw against another. Seeding here makes a trial
+        # reproducible from SDL_PLANNER_SEED (the harness sets it to the layout
+        # seed); each attempt of the retry loop gets its own derived seed so
+        # retries still explore, deterministically.
+        self._plan_base_seed = None
+        _seed_env = os.environ.get("SDL_PLANNER_SEED", "").strip()
+        if _seed_env:
+            try:
+                self._plan_base_seed = int(_seed_env)
+            except ValueError:
+                self._log.warning(
+                    "SDL_PLANNER_SEED=%r is not an int; leaving the planner "
+                    "unseeded", _seed_env)
+
         start_time = time.time()
         attempts_used = 0
         success = False
@@ -140,6 +161,16 @@ class TAMP:
             for _ in range(self.max_attempts):
 
                 attempts_used += 1
+
+                if self._plan_base_seed is not None:
+                    _s = self._plan_base_seed * 1000 + attempts_used
+                    random.seed(_s)
+                    np.random.seed(_s % (2 ** 32))
+                    torch.manual_seed(_s)
+                    if torch.cuda.is_available():
+                        torch.cuda.manual_seed_all(_s)
+                    self._log.info("[plan] seeded attempt %d with %d",
+                                   attempts_used, _s)
 
                 env = copy.deepcopy(self.env)
 
