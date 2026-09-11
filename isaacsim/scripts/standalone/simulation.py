@@ -287,7 +287,7 @@ class Simulation(Node):
     }
 
     def _lip_world_xy(self, name):
-        """World (x, y) of the pouring lip of a tilted vessel, or None.
+        """World (x, y, z) of the pouring lip of a tilted vessel, or None.
 
         The liquid leaves the rim, not the vessel's axis, and the rim point it
         leaves from is the LOWEST one. Modelling the vessel as a cylinder of
@@ -320,9 +320,9 @@ class Simulation(Node):
         u = np.array([0.0, 0.0, -1.0]) - (-n[2]) * n   # -z projected onto the rim plane
         un = np.linalg.norm(u)
         if un < 1e-6:
-            return (float(pos[0]), float(pos[1]))      # upright: rim is level
+            return (float(pos[0]), float(pos[1]), float(top[2]))   # upright: rim is level
         lip = top + (dims[0] / 2.0) * (u / un)
-        return (float(lip[0]), float(lip[1]))
+        return (float(lip[0]), float(lip[1]), float(lip[2]))
 
     @staticmethod
     def _tilt_from_upright_deg(quat_wxyz):
@@ -472,7 +472,7 @@ class Simulation(Node):
 
         lip_msg = Float32MultiArray()
         lip = self._lip_world_xy(carried) if (tilt >= 0 and carried is not None) else None
-        lip_msg.data = [float(lip[0]), float(lip[1])] if lip is not None else []
+        lip_msg.data = [float(v) for v in lip] if lip is not None else []
         self.carried_lip_pub.publish(lip_msg)
 
     def _tick_release_trace(self):

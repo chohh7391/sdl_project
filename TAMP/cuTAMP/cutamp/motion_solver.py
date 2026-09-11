@@ -131,6 +131,28 @@ POUR_PATH_STEPS = int(_os.environ.get("SDL_POUR_PATH_STEPS", "25"))
 POUR_PATH_MAX_DQ = 0.25  # [rad]
 # A path that cannot reach at least this much tilt is not a usable pour.
 POUR_PATH_MIN_TILT_RAD = 0.70  # ~40 deg
+# Bringing the lip DOWN to the mouth as the vessel tilts. The lip starts a whole
+# vessel height above the target's rim, because the vessel has to stand clear of
+# it while upright, so pouring from there drops the stream ~150 mm. Tilting about
+# the lip swings the body backwards and upwards (at 60 deg the vessel's lowest
+# point is ~0.12 m back from the target's axis, well outside it), so past a gate
+# angle the lip can descend to the height the vessel's BOTTOM started at -- i.e.
+# POUR_CLEARANCE above the rim -- which is the pour surface's own height. No
+# descent before the gate, where the body still overlaps the target.
+# Below this tilt the vessel's body still overlaps the target's footprint, so the
+# lip cannot come down yet. Derived, not guessed: the source vessel's bottom rim
+# clears the target when -H sin(theta) + r_source < -r_target, which for the
+# 135 mm beaker and the 70 mm flask is theta > 26.4 deg. 30 deg leaves a margin.
+# It was first set at 40 deg, which left the descent barely engaged on pours that
+# stop early -- one seed stopped at 49.8 deg and still fell 163 mm.
+POUR_DESCENT_GATE_RAD = 0.52   # ~30 deg
+# Descending costs reach: the arm has to translate as well as rotate, and on some
+# layouts the full descent runs out of workspace part way through (measured: 2 of
+# 3 seeds only reached 32.6 deg and fell back to the old wrist pour, which undoes
+# the horizontal fix). Try progressively smaller descents and keep the first that
+# tilts far enough, so a layout gets as much of the drop removed as it can take
+# and never ends up worse than the level-lip path.
+POUR_DESCENT_FRACTIONS = (1.0, 0.6, 0.3, 0.0)
 
 
 def _rot_about_axis(axis, angle):
@@ -177,54 +199,79 @@ def _make_lip_pivot_pour_path(world, start_js, obj, surface, world_from_obj, ik_
     angles = torch.linspace(0.0, POUR_MAX_TILT_RAD, POUR_PATH_STEPS, device=device)
     rots = _rot_about_axis(axis, angles)                       # [n, 3, 3]
 
-    poses = torch.eye(4, device=device).repeat(POUR_PATH_STEPS, 1, 1)
-    poses[:, :3, :3] = rots @ world_from_ee[:3, :3]
-    poses[:, :3, 3] = (rots @ (world_from_ee[:3, 3] - lip).unsqueeze(-1)).squeeze(-1) + lip
+    # Descend the lip from its upright height towards the pour surface's height,
+    # ramped in over the tilt range past the gate.
+    surface_z = float(surface_obj.pose[2])
+    descent_total = max(float(lip[2]) - surface_z, 0.0)
+    ramp = ((angles - POUR_DESCENT_GATE_RAD)
+            / max(POUR_MAX_TILT_RAD - POUR_DESCENT_GATE_RAD, 1e-6)).clamp(0.0, 1.0)
+
+    base = torch.eye(4, device=device).repeat(POUR_PATH_STEPS, 1, 1)
+    base[:, :3, :3] = rots @ world_from_ee[:3, :3]
+    base[:, :3, 3] = (rots @ (world_from_ee[:3, 3] - lip).unsqueeze(-1)).squeeze(-1) + lip
 
     # Its own IK solver: the world's is locked to the particle-batch call shape
     # that particle_initialization compiled its CUDA graph with (see
     # TAMPWorld.new_ik_solver). Built once and cached on the world.
-    n_pose = poses.shape[0]
-    query = poses
+    n_pose = base.shape[0]
     # Seed and regularise towards the CURRENT configuration. A 6-DOF arm has
     # several IK branches for the same pose, and unseeded batch IK happily
     # returns a different branch for each waypoint -- at theta = 0 it returned a
     # branch the arm was not even in, so the path was rejected at its first step.
     start_q = start_js.position[0]
     n_seeds = 12
-    seed = start_q.view(1, 1, -1).expand(n_seeds, query.shape[0], -1).contiguous()
-    retract = start_q.view(1, -1).expand(query.shape[0], -1).contiguous()
+    seed = start_q.view(1, 1, -1).expand(n_seeds, n_pose, -1).contiguous()
+    retract = start_q.view(1, -1).expand(n_pose, -1).contiguous()
     solver = getattr(world, "_pour_ik_solver", None)
     if solver is None:
         solver = world.new_ik_solver()
         world._pour_ik_solver = solver
-    ik = solver.solve_batch(
-        Pose.from_matrix(query), retract_config=retract, seed_config=seed
-    )
-    success = ik.success.view(-1)[:n_pose]
-    solutions = ik.solution[:, 0][:n_pose]
 
-    # Walk forward while the IK stays on the same branch; a jump means the arm
-    # would have to flip, which is not a pour.
-    path = [start_js.position[0]]
-    reached = 0.0
-    for k in range(POUR_PATH_STEPS):
-        if not bool(success[k]):
+    best = None
+    for fraction in POUR_DESCENT_FRACTIONS:
+        query = base.clone()
+        query[:, 2, 3] = query[:, 2, 3] - descent_total * fraction * ramp
+
+        ik = solver.solve_batch(
+            Pose.from_matrix(query), retract_config=retract, seed_config=seed
+        )
+        success = ik.success.view(-1)[:n_pose]
+        solutions = ik.solution[:, 0][:n_pose]
+
+        # Walk forward while the IK stays on the same branch; a jump means the
+        # arm would have to flip, which is not a pour.
+        path = [start_js.position[0]]
+        reached = 0.0
+        for k in range(POUR_PATH_STEPS):
+            if not bool(success[k]):
+                break
+            if torch.max(torch.abs(solutions[k] - path[-1])) > POUR_PATH_MAX_DQ:
+                break
+            path.append(solutions[k])
+            reached = float(angles[k])
+        if reached >= POUR_PATH_MIN_TILT_RAD:
+            best = (fraction, reached, path)
             break
-        if torch.max(torch.abs(solutions[k] - path[-1])) > POUR_PATH_MAX_DQ:
-            break
-        path.append(solutions[k])
-        reached = float(angles[k])
-    if reached < POUR_PATH_MIN_TILT_RAD:
+        _log.debug(
+            "Pour path with %.0f%% descent only reached %.1f deg.",
+            fraction * 100.0, math.degrees(reached),
+        )
+
+    if best is None:
         _log.warning(
-            "Lip-pivot pour path only reachable to %.1f deg (needs %.1f); "
+            "Lip-pivot pour path not reachable to %.1f deg at any descent; "
             "falling back to the wrist-joint pour.",
-            math.degrees(reached), math.degrees(POUR_PATH_MIN_TILT_RAD),
+            math.degrees(POUR_PATH_MIN_TILT_RAD),
         )
         return None
+
+    fraction, reached, path = best
     _log.info(
-        "Lip-pivot pour path: %d waypoints to %.1f deg, lip held at (%.4f, %.4f).",
+        "Lip-pivot pour path: %d waypoints to %.1f deg, lip held at (%.4f, %.4f), "
+        "descending %.0f mm (%.0f%% of the %.0f mm drop to z=%.4f).",
         len(path) - 1, math.degrees(reached), float(lip[0]), float(lip[1]),
+        descent_total * fraction * 1000.0, fraction * 100.0,
+        descent_total * 1000.0, surface_z,
     )
     return torch.stack(path)
 

@@ -29,7 +29,21 @@ def load_transfer_env(
     # if the target vessel's height changes (or under position randomization). Derive it instead.
     from_vessel = movables[0]
     to_vessel = movables[1]
-    POUR_CLEARANCE = 0.05  # [m] gap between beaker bottom and flask rim so the tilted beaker clears the rim; tunable
+    # Gap between the source vessel's BOTTOM and the target's rim while the
+    # source is still upright. It sets how far the stream falls, because the lip
+    # is a whole vessel height above the bottom: at 0.05 the lip sat 185 mm over
+    # the mouth. Tilting about the lip RAISES the body (the vessel hangs below
+    # the pivot), so the upright state is what this has to clear -- and the
+    # planner models the vessel PLANNER_Z_LIFT higher than the simulator does, so
+    # the real gap is this minus that.
+    #
+    # Kept at 0.05 rather than tightened: at 0.02 the whole pour placement drops
+    # 30 mm and the arm loses reach, and the lip-pivot pour path then failed on
+    # most layouts (it fell back to the old wrist pour, which undoes the
+    # horizontal fix and is far worse than a longer drop). The fall height is
+    # instead reduced by lowering the lip DURING the tilt, once the vessel's body
+    # has swung clear -- see POUR_DESCENT_* in cutamp/motion_solver.py.
+    POUR_CLEARANCE = 0.05
     rim_z = to_vessel.pose[2] + to_vessel.dims[2] / 2.0  # flask top / mouth height
 
     # The liquid leaves the source vessel's LIP, not its axis, so centring the

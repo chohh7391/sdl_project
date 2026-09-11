@@ -62,6 +62,9 @@ CSV_HEADER = [
     # threshold should be set from the measured distribution rather than before
     # it (the target vessel's real mouth radius is about 17 mm).
     "pour_peak_tilt_deg", "pour_lip_err_mm", "pour_start_lip_err_mm",
+    # How far the stream falls: the lip's height above the target vessel's mouth
+    # at peak tilt. The horizontal miss and the fall height are separate defects.
+    "pour_lip_height_mm",
 ]
 
 # Goal region for the transfer task, mirroring the xy that
@@ -192,7 +195,7 @@ class TaskOrchestrator(Node):
 
     def _lip_cb(self, msg):
         d = list(msg.data)
-        self.carried_lip_xy = (d[0], d[1]) if len(d) == 2 else None
+        self.carried_lip_xy = tuple(d[:3]) if len(d) == 3 else None
 
     def _tilt_cb(self, msg):
         t = float(msg.data)
@@ -314,12 +317,14 @@ class TaskOrchestrator(Node):
         if pour_target and self.pour_peak_lip_xy is not None:
             tgt = self._get_pose(pour_target)
             if tgt is not None:
-                lx, ly = self.pour_peak_lip_xy
+                lx, ly, lz = self.pour_peak_lip_xy
+                # ENTITIES: flask dims [0.07, 0.07, 0.12] -> mouth at centre + 0.06
+                row["pour_lip_height_mm"] = f"{(lz - (tgt[2] + 0.06)) * 1000:.1f}"
                 row["pour_lip_err_mm"] = (
                     f"{math.hypot(lx - tgt[0], ly - tgt[1]) * 1000:.1f}"
                 )
                 if self.pour_start_lip_xy is not None:
-                    sx, sy = self.pour_start_lip_xy
+                    sx, sy = self.pour_start_lip_xy[:2]
                     row["pour_start_lip_err_mm"] = (
                         f"{math.hypot(sx - tgt[0], sy - tgt[1]) * 1000:.1f}"
                     )
@@ -368,6 +373,7 @@ class TaskOrchestrator(Node):
             "placed_upright": False, "placed_in_goal": False, "task_success": False,
             "target_obj": "", "goal_err_mm": "", "aux_check": "",
             "pour_peak_tilt_deg": "", "pour_lip_err_mm": "", "pour_start_lip_err_mm": "",
+            "pour_lip_height_mm": "",
         }
 
         # Canonical sequence: (tool -> cfg) -> env -> plan -> execute.
@@ -519,6 +525,7 @@ def main():
             "beaker_xy": "", "flask_xy": "",
             "target_obj": "", "goal_err_mm": "", "aux_check": "",
             "pour_peak_tilt_deg": "", "pour_lip_err_mm": "", "pour_start_lip_err_mm": "",
+            "pour_lip_height_mm": "",
         }
         node.get_logger().error(f"trial exception: {e}")
     append_csv(args.csv, row)
