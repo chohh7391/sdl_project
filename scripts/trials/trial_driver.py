@@ -34,7 +34,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoS
 
 from tamp_interfaces.srv import Plan, Execute, SetTampEnv, SetTampCfg, ToolChange
 from simulation_interfaces.srv import GetEntityState
-from std_msgs.msg import Float32, String
+from std_msgs.msg import Float32, Float32MultiArray, String
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "TAMP" / "tamp" / "src"))
@@ -56,6 +56,12 @@ CSV_HEADER = [
     # bar inside the vessel). Recorded raw so a tighter acceptance threshold can
     # be applied later without re-running the batch.
     "target_obj", "goal_err_mm", "aux_check",
+    # Where the pour would actually have landed: the carried vessel's lip at the
+    # instant of maximum tilt, as a horizontal distance from the target vessel's
+    # axis. RECORDED ONLY -- it is not yet part of task_success, because the
+    # threshold should be set from the measured distribution rather than before
+    # it (the target vessel's real mouth radius is about 17 mm).
+    "pour_peak_tilt_deg", "pour_lip_err_mm",
 ]
 
 # Goal region for the transfer task, mirroring the xy that
@@ -92,6 +98,8 @@ TASK_OUTCOMES = {
         "half_xy": (GOAL_REGION_HALF_M, GOAL_REGION_HALF_M),
         "require_pour": True,
         "aux": None,
+        # transfer.py pours into movables[1]; pour_region is placed at its xy.
+        "pour_target": "flask",
     },
     "move": {
         "target": "box",
@@ -142,6 +150,13 @@ class TaskOrchestrator(Node):
         # pooling them reported the bar's 30 deg as a vessel tilt.
         self.tilt_target = None
         self.max_tilt_by_obj = {}
+        # Where the carried vessel's pouring lip is, and where it was at the
+        # instant of MAXIMUM tilt during the pour -- that is the moment the
+        # stream would be running, so it is the only instant at which "is the
+        # pour actually over the target vessel?" has an answer.
+        self.carried_lip_xy = None
+        self.pour_peak_tilt = -1.0
+        self.pour_peak_lip_xy = None
         self.saw_pour = False            # did the explicit pour step actually execute?
 
         latched = QoSProfile(
@@ -152,6 +167,7 @@ class TaskOrchestrator(Node):
         self.create_subscription(String, "tamp_current_op", self._op_cb, latched)
         self.create_subscription(Float32, "carried_tilt_deg", self._tilt_cb, 10)
         self.create_subscription(String, "carried_obj", self._carried_obj_cb, 10)
+        self.create_subscription(Float32MultiArray, "carried_lip_xy", self._lip_cb, 10)
 
         self.tool_change_cli = self.create_client(ToolChange, "tool_change")
         self.cfg_cli = self.create_client(SetTampCfg, "set_tamp_cfg")
@@ -169,11 +185,18 @@ class TaskOrchestrator(Node):
     def _carried_obj_cb(self, msg):
         self.carried_obj = msg.data or ""
 
+    def _lip_cb(self, msg):
+        d = list(msg.data)
+        self.carried_lip_xy = (d[0], d[1]) if len(d) == 2 else None
+
     def _tilt_cb(self, msg):
         t = float(msg.data)
         if t < 0:
             return  # nothing attached
         self.max_any_tilt = max(self.max_any_tilt, t)
+        if self.current_op == "pouring" and t > self.pour_peak_tilt:
+            self.pour_peak_tilt = t
+            self.pour_peak_lip_xy = self.carried_lip_xy
         # attached (t >= 0) and not in the pour/idle phase => transport carry
         if self.current_op not in NON_TRANSPORT_OPS:
             obj = self.carried_obj
@@ -273,6 +296,20 @@ class TaskOrchestrator(Node):
         row["placed_upright"] = upright
         row["placed_in_goal"] = in_goal
 
+        # Where the stream would have landed. Measured at the peak-tilt instant of
+        # the pour, against the target vessel's axis as it stands at scoring time
+        # (the target vessel is never moved in this task).
+        if self.pour_peak_tilt >= 0:
+            row["pour_peak_tilt_deg"] = f"{self.pour_peak_tilt:.2f}"
+        pour_target = spec.get("pour_target")
+        if pour_target and self.pour_peak_lip_xy is not None:
+            tgt = self._get_pose(pour_target)
+            if tgt is not None:
+                lx, ly = self.pour_peak_lip_xy
+                row["pour_lip_err_mm"] = (
+                    f"{math.hypot(lx - tgt[0], ly - tgt[1]) * 1000:.1f}"
+                )
+
         poured_ok = self.saw_pour if spec["require_pour"] else True
 
         aux_ok = True
@@ -301,7 +338,9 @@ class TaskOrchestrator(Node):
             f"outcome[{task}]: task_success={row['task_success']} target={target} "
             f"final_tilt={tilt:.2f}deg xy=({x:.4f},{y:.4f}) "
             f"goal_err={row['goal_err_mm']}mm upright={upright} in_goal={in_goal} "
-            f"poured={row['poured']} aux={row['aux_check'] or 'n/a'}"
+            f"poured={row['poured']} aux={row['aux_check'] or 'n/a'} "
+            f"pour_peak_tilt={row['pour_peak_tilt_deg'] or 'n/a'}deg "
+            f"pour_lip_err={row['pour_lip_err_mm'] or 'n/a'}mm"
         )
 
     def run_trial(self, seed, task, robot_cfg, plan_timeout, exec_timeout):
@@ -314,6 +353,7 @@ class TaskOrchestrator(Node):
             "poured": False, "final_tilt_deg": "", "final_xy": "",
             "placed_upright": False, "placed_in_goal": False, "task_success": False,
             "target_obj": "", "goal_err_mm": "", "aux_check": "",
+            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "",
         }
 
         # Canonical sequence: (tool -> cfg) -> env -> plan -> execute.
@@ -464,6 +504,7 @@ def main():
             "failure_reason": f"driver_exception:{type(e).__name__}:{e}",
             "beaker_xy": "", "flask_xy": "",
             "target_obj": "", "goal_err_mm": "", "aux_check": "",
+            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "",
         }
         node.get_logger().error(f"trial exception: {e}")
     append_csv(args.csv, row)

@@ -4,7 +4,7 @@ import numpy as np
 from isaacsim import SimulationApp
 
 from std_srvs.srv import SetBool
-from std_msgs.msg import Float32, String
+from std_msgs.msg import Float32, Float32MultiArray, String
 from geometry_msgs.msg import Wrench
 from tamp_interfaces.srv import ToolChange, GetRobotInfo, GetToolInfo
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy
@@ -180,6 +180,12 @@ class Simulation(Node):
         # held). Stir carries the vessel and then the stir bar, and a stir bar's
         # orientation is not a spill constraint, so the two must not be pooled.
         self.carried_obj_pub = self.create_publisher(String, "carried_obj", 10)
+        # World (x, y) of the carried vessel's pouring lip. `poured` only ever
+        # recorded that the pour STEP ran, and the simulator's scale is a wrist
+        # angle proxy, so a pour that misses the target vessel entirely still
+        # counted. This is what lets a trial be scored on where the stream would
+        # actually land.
+        self.carried_lip_pub = self.create_publisher(Float32MultiArray, "carried_lip_xy", 10)
 
         self.step = 0
 
@@ -272,6 +278,51 @@ class Simulation(Node):
             "box": self.task.box,
             "magnet": self.task.magnet,
         }
+
+    # Full side lengths [m] of the spawned colliders, matching task.py set_object().
+    # Only needed for vessels whose POURING LIP has to be located.
+    _VESSEL_DIMS = {
+        "beaker": (0.05, 0.05, 0.135),
+        "flask": (0.07, 0.07, 0.12),
+    }
+
+    def _lip_world_xy(self, name):
+        """World (x, y) of the pouring lip of a tilted vessel, or None.
+
+        The liquid leaves the rim, not the vessel's axis, and the rim point it
+        leaves from is the LOWEST one. Modelling the vessel as a cylinder of
+        radius = half its width (the box collider is a stand-in for round
+        glassware), that point is
+
+            lip = centre + (H/2) n + r u,     u = normalize(-z + (z.n) n)
+
+        where n is the vessel's own axis in world and u is the downhill
+        direction of the rim plane. Undefined while the vessel is upright, where
+        the whole rim is level -- that case returns the vessel's own xy.
+        """
+        dims = self._VESSEL_DIMS.get(name)
+        cand = self._movable_candidates().get(name)
+        if dims is None or cand is None:
+            return None
+        try:
+            pos, quat = cand.get_world_pose()
+        except Exception:
+            return None
+        w, x, y, z = [float(v) for v in quat]
+        # third column of the rotation matrix = the body's +Z in world
+        n = np.array([2 * (x * z + w * y), 2 * (y * z - w * x), 1 - 2 * (x * x + y * y)])
+        nn = np.linalg.norm(n)
+        if nn < 1e-9:
+            return None
+        n = n / nn
+        pos = np.asarray(pos, dtype=float)
+        top = pos + (dims[2] / 2.0) * n
+        u = np.array([0.0, 0.0, -1.0]) - (-n[2]) * n   # -z projected onto the rim plane
+        un = np.linalg.norm(u)
+        if un < 1e-6:
+            return (float(pos[0]), float(pos[1]))      # upright: rim is level
+        lip = top + (dims[0] / 2.0) * (u / un)
+        return (float(lip[0]), float(lip[1]))
 
     @staticmethod
     def _tilt_from_upright_deg(quat_wxyz):
@@ -418,6 +469,11 @@ class Simulation(Node):
         name_msg = String()
         name_msg.data = "" if tilt < 0 or carried is None else str(carried)
         self.carried_obj_pub.publish(name_msg)
+
+        lip_msg = Float32MultiArray()
+        lip = self._lip_world_xy(carried) if (tilt >= 0 and carried is not None) else None
+        lip_msg.data = [float(lip[0]), float(lip[1])] if lip is not None else []
+        self.carried_lip_pub.publish(lip_msg)
 
     def _tick_release_trace(self):
         """Log the released object's state for a short window after release."""
