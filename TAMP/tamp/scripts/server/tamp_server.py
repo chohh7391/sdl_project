@@ -500,11 +500,43 @@ class TAMPServer(Node):
 
     #     return response
     
-    # Using GT Data
+    # World State source. "ground_truth" reads the simulator's own poses;
+    # "perception" reads the AprilTag pipeline's fused TF for the tagged
+    # vessels and the simulator only for the untagged furniture (table,
+    # stirrer, trays), which carries no tag in either the simulated or the
+    # physical cell. Set with SDL_STATE_SOURCE.
+    PERCEPTION_ENTITIES = ("beaker", "flask")
+
+    def _perception_pose(self, entity):
+        """base_link -> entity from the perception TF, or None.
+
+        Same convention as the ground-truth path: the object's own pose,
+        w-first quaternion, no z correction -- the planner lift is applied
+        downstream in envs/utils.py, so adding one here would double it.
+        """
+        try:
+            t = self.tf_buffer.lookup_transform(
+                "base_link", entity, rclpy.time.Time())
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
+                tf2_ros.ExtrapolationException) as exc:
+            self.get_logger().warn(
+                "[state] %s has no perception pose: %s" % (entity, exc))
+            return None
+        p, q = t.transform.translation, t.transform.rotation
+        return [p.x, p.y, p.z, q.w, q.x, q.y, q.z]
+
     async def set_tamp_env_cb(self, request, response):
 
         while not self.get_entity_state_cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
+
+        state_source = os.environ.get("SDL_STATE_SOURCE", "ground_truth").strip()
+        if state_source not in ("ground_truth", "perception"):
+            self.get_logger().error(
+                "[state] unknown SDL_STATE_SOURCE %r; refusing to guess"
+                % state_source)
+            response.success = False
+            return response
 
         env_name = request.env_name
         entities = request.entities
@@ -521,7 +553,24 @@ class TAMPServer(Node):
             "rearrange_grid": rearrange_grid,
         }
 
+        sources = {}
         for entity in entities:
+            if (state_source == "perception"
+                    and entity in self.PERCEPTION_ENTITIES):
+                entity_pose = self._perception_pose(entity)
+                if entity_pose is None:
+                    # A tagged vessel the pipeline never localized. Falling back
+                    # to ground truth here would silently report a
+                    # perception-in-the-loop result that was not one.
+                    self.get_logger().error(
+                        "[state] no perception pose for %s; the trial is a "
+                        "perception failure, not a planning one" % entity)
+                    response.success = False
+                    return response
+                entities_states["poses"][entity] = entity_pose
+                sources[entity] = "perception"
+                continue
+
             get_entity_state_request = GetEntityState.Request()
             get_entity_state_request.entity = "/World/" + entity
 
@@ -540,6 +589,11 @@ class TAMPServer(Node):
                     get_entity_state_response.state.pose.orientation.z
                 ]
                 entities_states["poses"][entity] = entity_pose
+                sources[entity] = "ground_truth"
+
+        self.get_logger().info(
+            "[state] source=%s %s" % (state_source, " ".join(
+                "%s:%s" % (k, sources[k]) for k in sorted(sources))))
 
         self.tamp.update_env(
             name=env_name,
