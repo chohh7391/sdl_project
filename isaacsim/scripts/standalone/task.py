@@ -50,15 +50,30 @@ class Task(ABC, BaseTask):
         # Oblique views from the +x side at +/-y: about 1.2 m from the workspace
         # centre, so the same tag spans ~60 px at 1280x720, and both cameras can
         # see a tag at once (which is what the range-weighted fusion is for).
+        # Placement derived from two constraints rather than picked by eye:
+        #   coverage      -- at horizontal distance d the 69.4 deg HFOV spans
+        #                    +/-0.693 d, so d ~ 1.25 m covers the 1.4 m workspace;
+        #   self-occlusion -- a vessel hides its OWN tag when the vessel's
+        #                    shadow, h / tan(elevation), is longer than the tag's
+        #                    0.15 m offset. At 1.25 m out and 1.55 m up the
+        #                    elevation is 50 deg and the 0.135 m beaker casts
+        #                    0.113 m, so a tag is never hidden by its own vessel.
+        # The two azimuths are 90 deg apart (one from +x, one from +y) so a tag
+        # turned away from one camera still faces the other; both previously sat
+        # on the +x side and shared the same blind half of the yaw circle.
         self.camera_positions = [
-            np.array([1.00, 0.60, 0.80]),
-            np.array([1.00, -0.60, 0.80]),
+            np.array([1.45, 0.00, 1.55]),
+            np.array([0.20, 1.25, 1.55]),
         ]
         # Aimed at the workspace centre rather than given hand-written
         # quaternions; set_world_pose_from_view() builds the orientation.
+        # Aim at the workspace centre. Aiming further away than the objects put
+        # them at the bottom edge of the frame: the beaker's tag landed clipped
+        # by the image border, so the detector could not see a complete quad and
+        # reported nothing at all.
         self.camera_targets = [
-            np.array([0.25, 0.0, 0.05]),
-            np.array([0.25, 0.0, 0.05]),
+            np.array([0.20, 0.0, 0.05]),
+            np.array([0.20, 0.0, 0.05]),
         ]
         self.camera_orientations = [
             rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True),
