@@ -586,10 +586,11 @@ class Task(ABC, BaseTask):
                     _tr.Set((_v[0], _v[1], _v[2] + (_tag_z_min - _wz)))
                     _wz2 = _xf.ComputeLocalToWorldTransform(0.0).Transform(
                         Gf.Vec3d(0.0, 0.0, 0.0))[2]
-                    print("[Task]   tag lift %s world z %.4f -> %.4f"
-                          % (_tp, _wz, _wz2))
-                else:
-                    print("[Task]   tag %s world z %.4f (no lift)" % (_tp, _wz))
+                    _wz = _wz2
+                _wc = _xf.ComputeLocalToWorldTransform(0.0).Transform(
+                    Gf.Vec3d(0.0, 0.0, 0.0))
+                print("[Task]   tag %s world=(%.4f,%.4f,%.4f)"
+                      % (_tp, _wc[0], _wc[1], _wc[2]))
 
         # spawn box_goal -- STATIC goal tray. A static collider (no rigid body)
         # needs no mass/inertia, removing the previous PhysX

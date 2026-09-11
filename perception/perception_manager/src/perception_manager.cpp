@@ -13,12 +13,14 @@ PerceptionManager::PerceptionManager() : Node("perception_manager")
 
     // Tag -> object, in the tag's own frame. The tag is a plate on the table
     // 0.15 m to the vessel's side (so the vessel is at the tag's -x) and the
-    // vessel's CENTRE is a half-height above the plate. Values are the local
-    // offsets authored in beaker.usd / flask.usd; verified against the
-    // simulator's ground truth, which put the reported tag 0.151 m from the
-    // vessel at the vessel's own yaw.
+    // vessel's CENTRE is above the plate. Values are the local offsets authored
+    // in beaker.usd / flask.usd; verified against the simulator's ground truth,
+    // which put the reported tag 0.151 m from the vessel at the vessel's yaw.
+    // The flask's plate is authored coplanar with the table and so never
+    // rendered; task.py lifts it to 5 mm, which shortens this z by the lift
+    // (0.0601 -> 0.0550). Keep this in step with SDL_TAG_Z_MIN.
     tag_to_object_["beaker"] = tf2::Vector3(-0.15, 0.0, 0.0622);
-    tag_to_object_["flask"] = tf2::Vector3(-0.15, 0.0, 0.0601);
+    tag_to_object_["flask"] = tf2::Vector3(-0.15, 0.0, 0.0550);
 
     auto update_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     

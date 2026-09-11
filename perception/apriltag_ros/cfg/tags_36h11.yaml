@@ -2,7 +2,19 @@
     ros__parameters:
         image_transport: raw    # image format
         family: 36h11           # tag family name
-        size: 0.08              # tag edge size in meter
+        # Edge of the tag's BLACK border, which is what solvePnP is given.
+        # Measured, not assumed: the plate in beaker.usd / flask.usd is a 0.1 m
+        # quad, but NVIDIA's AprilTag.mdl mosaic renders the black square at
+        # 0.0781 +/- 0.0003 m, 2.4% under the nominal 0.8 x plate.  Measured by
+        # projecting the tags' known world squares with the published K and
+        # comparing the projected edge with the detector's own corners, over
+        # three camera-tag pairs; the detected edge is invariant to image
+        # resampling (+/-0.06 px), so this is geometry, not a pixel bias, and
+        # the camera model is sound (tag centres reproject within 0.8 px,
+        # implied fx 922.7-925.0 against the published 924.7).  Declaring the
+        # nominal 0.08 biased range long by 2.4%, i.e. the vessel pose 32-40 mm
+        # below the table.
+        size: 0.0781            # tag edge size in meter
         max_hamming: 0          # maximum allowed hamming distance (corrected bits)
 
         # see "apriltag.h" 'struct apriltag_detector' for more documentation on these optional parameters
@@ -21,4 +33,4 @@
         tag:
             ids: [0, 1]            # tag ID
             frames: [beaker_tag, flask_tag]  # optional frame name
-            sizes: [0.08, 0.08]   # optional tag-specific edge size # isaacsim cube size * 0.8
+            sizes: [0.0781, 0.0781]   # measured rendered edge; see note above
