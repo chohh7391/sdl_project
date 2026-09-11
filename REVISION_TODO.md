@@ -322,7 +322,37 @@ Move 오차는 추종오차가 아니다 — 배치 제약이 "발자국이 영�
             **논문에 보고할 일반화 수치는 unseen 73건의 94.5%** 이고, 오류 4건이 전부 unseen에 있으며
             모두 연산자 선택·순서 오류다(인자 오류 0건). 원고는 이 split을 명시해야 한다.
 - [ ] **B4. Action Reasoner unseen 레벨 정의** + 3-step ablation · R1#7
-- [ ] **B5. validator** — 주장 축소(텍스트) 또는 capacity·device-placement 체크 확장 · R1#6
+- [x] **B5. validator** — 벤치마크 구축 + 결함 1건 수정 · R1#6
+
+      **완료 (2026-09-11)**
+      - [x] **원고가 주장하는 벤치마크가 존재하지 않았다.** 표 캡션은 "20 valid / 80 invalid,
+            클래스별 recall 20/20"인데 코드의 셋은 `test_data_gen.py`에 손으로 적은 **12건
+            (valid 4 / invalid 8)** 뿐이었다(실행 결과도 TP 4 / TN 8).
+      - [x] **벤치마크를 구축했다** (`validator_benchmark.py`). valid 20건은 손으로 쓰지 않고 복원된
+            정답 절차 중 validator가 받아들이는 97건에서 **고정 stride**로 뽑았다(재현 가능).
+            invalid은 클래스별 20건씩, 문서화된 변형으로 주입한다. **모든 샘플은 집합에 들어가기 전에
+            실제로 invalid인지 검사**하며, 무효화에 실패한 변형은 버리고 그 사실을 보고한다.
+      - [x] **결함 발견·수정: validator가 정의되지 않은 *속성*을 잡지 못했다.**
+            `<Add vessel reagent volume foo='bar'/>`, `<Move object place speed='fast'/>`가 모두 통과했다.
+            원고는 "undefined tag **or attribute**"를 주장하므로 주장의 절반이 구현돼 있지 않았던 것이다.
+            `ALLOWED_ATTRS` 화이트리스트를 추가했다.
+            **원고가 한 클래스로 묶은 tag/attribute를 두 클래스로 분리해 채점**했다 — 묶어두면 변형
+            재시도 때문에 tag 쪽만 계속 뽑혀 **결함이 20/20 뒤에 숨는다.**
+
+            | 클래스 | 출하 상태 validator | 화이트리스트 추가 후 |
+            |---|---|---|
+            | missing_attribute | 20/20 | 20/20 |
+            | undefined_tag | 20/20 | 20/20 |
+            | **undefined_attribute** | **0/20 (오수용 20건)** | **20/20** |
+            | nonexistent_object | 20/20 | 20/20 |
+            | precondition_violation | 20/20 | 20/20 |
+
+            최종 혼동행렬: TP 20 / FN 0 / FP 0 / TN 100, **정확도 100% [96.9, 100]** (120 샘플, seed 0).
+            수정이 §4.2.1 수치를 바꾸지 않는지도 직접 확인했다 — 저장된 100개 생성에 대해 통과율은
+            **여전히 96/100**이고(어떤 생성도 스키마 외 속성을 쓰지 않는다) 실패 4건의 사유도 동일하다.
+      - [ ] **저자 판단 필요**: 원고 847행의 `\nd{, including vessel capacity and device placement}`는
+            현재 validator가 **하지 않는** 검사를 주장한다. 용기 용량·장치 배치 검사는 스키마에 없는
+            정보(용기 용량, 장치 좌표)를 요구하므로, 체크를 추가할지 그 span을 삭제할지 결정이 필요하다.
 - [ ] **B6. 실물 pouring 세션** + perception 스냅샷 · R2#2, R3#1 · **담당: 저자**
 - [ ] **B7. pouring skill 기하 개선 + 계측** · R1#2, R3#1, R3#2 · **저자 육안 관찰에서 제기됨**
       (비커가 플라스크 입구 위가 아닌 곳에서 기울어지는 경우가 잦다 = 용액을 밖에 쏟는 상황)

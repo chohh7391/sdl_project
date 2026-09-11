@@ -1,0 +1,846 @@
+{
+ "seed": 0,
+ "samples": [
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 0,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"flask_B\" time=\"2 min\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 4,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 8,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"25 mL\" />\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 12,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 16,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Move object=\"box_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 20,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_A\" time=\"2 min\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 25,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"flask_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 29,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"beaker_A\" time=\"1 min\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 34,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 38,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"beaker_B\" time=\"2 min\" />\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 42,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 46,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 50,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 54,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 58,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 62,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 66,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 70,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Move object=\"box_A\" place=\"plate_A\" />\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 74,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "valid",
+   "is_actually_valid": true,
+   "source_index": 78,
+   "mutation": "",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 51,
+   "mutation": "dropped Move.object",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"50 mL\" />\n  <Move place=\"plate_A\" />\n  <CleanVessel vessel=\"flask_B\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 35,
+   "mutation": "dropped Transfer.to_vessel",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Transfer from_vessel=\"beaker_B\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 40,
+   "mutation": "dropped HeatChill.temp",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <HeatChill vessel=\"flask_B\" active=\"true\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 76,
+   "mutation": "dropped Add.volume",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"60 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 17,
+   "mutation": "dropped Transfer.from_vessel",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Transfer to_vessel=\"flask_A\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 98,
+   "mutation": "dropped Add.volume",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"0 C\" active=\"true\" />\n  <Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 34,
+   "mutation": "dropped Add.reagent",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 12,
+   "mutation": "dropped Move.object",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n  <Move place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 89,
+   "mutation": "dropped Add.reagent",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 73,
+   "mutation": "dropped Add.reagent",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" volume=\"10 mL\" />\n  <Stir vessel=\"beaker_B\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 57,
+   "mutation": "dropped Add.volume",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 83,
+   "mutation": "dropped Add.volume",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 63,
+   "mutation": "dropped Transfer.volume",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 35,
+   "mutation": "dropped Add.volume",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"ethanol\" />\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 1,
+   "mutation": "dropped Add.volume",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 53,
+   "mutation": "dropped HeatChill.active",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 82,
+   "mutation": "dropped Add.volume",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 65,
+   "mutation": "dropped HeatChill.vessel",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <HeatChill temp=\"60 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 95,
+   "mutation": "dropped Move.object",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Move place=\"plate_B\" />\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "class": "missing_attribute",
+   "is_actually_valid": false,
+   "source_index": 25,
+   "mutation": "dropped Add.vessel",
+   "xml": "<procedure>\n  <Add reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"flask_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 18,
+   "mutation": "tag -> add",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />\n  <add vessel=\"beaker_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 11,
+   "mutation": "tag -> Filter",
+   "xml": "<procedure>\n  <Filter volume=\"10 mL\" reagent=\"water\" vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 67,
+   "mutation": "tag -> Shake",
+   "xml": "<procedure>\n  <Shake volume=\"50 mL\" reagent=\"water\" vessel=\"beaker_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 40,
+   "mutation": "tag -> Filter",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <HeatChill vessel=\"flask_B\" temp=\"0 C\" active=\"true\" />\n  <Filter volume=\"10 mL\" from_vessel=\"flask_B\" to_vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 92,
+   "mutation": "tag -> clean_vessel",
+   "xml": "<procedure>\n  <clean_vessel volume=\"50 mL\" reagent=\"ethanol\" vessel=\"flask_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 44,
+   "mutation": "tag -> clean_vessel",
+   "xml": "<procedure>\n  <clean_vessel volume=\"25 mL\" reagent=\"ethanol\" vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 72,
+   "mutation": "tag -> add",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <add object=\"box_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 11,
+   "mutation": "tag -> Filter",
+   "xml": "<procedure>\n  <Filter volume=\"10 mL\" reagent=\"water\" vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 75,
+   "mutation": "tag -> Filter",
+   "xml": "<procedure>\n  <Filter volume=\"50 mL\" reagent=\"water\" vessel=\"flask_B\" />\n  <Stir vessel=\"flask_B\" time=\"2 min\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 24,
+   "mutation": "tag -> Sonicate",
+   "xml": "<procedure>\n  <Sonicate volume=\"10 mL\" reagent=\"water\" vessel=\"beaker_B\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 4,
+   "mutation": "tag -> add",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <add object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 8,
+   "mutation": "tag -> Distill",
+   "xml": "<procedure>\n  <Distill volume=\"25 mL\" reagent=\"water\" vessel=\"beaker_B\" />\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 98,
+   "mutation": "tag -> Sonicate",
+   "xml": "<procedure>\n  <Sonicate volume=\"50 mL\" reagent=\"ethanol\" vessel=\"beaker_A\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"0 C\" active=\"true\" />\n  <Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 4,
+   "mutation": "tag -> Distill",
+   "xml": "<procedure>\n  <Distill volume=\"10 mL\" reagent=\"ethanol\" vessel=\"flask_B\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 71,
+   "mutation": "tag -> Distill",
+   "xml": "<procedure>\n  <Distill volume=\"10 mL\" reagent=\"water\" vessel=\"beaker_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 69,
+   "mutation": "tag -> clean_vessel",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"50 mL\" />\n  <clean_vessel vessel=\"flask_B\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 31,
+   "mutation": "tag -> Distill",
+   "xml": "<procedure>\n  <Distill volume=\"10 mL\" reagent=\"ethanol\" vessel=\"flask_B\" />\n  <Stir vessel=\"flask_B\" time=\"30 s\" />\n  <HeatChill vessel=\"flask_B\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 77,
+   "mutation": "tag -> clean_vessel",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <clean_vessel object=\"bottle_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 37,
+   "mutation": "tag -> add",
+   "xml": "<procedure>\n  <add volume=\"50 mL\" reagent=\"ethanol\" vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_tag",
+   "is_actually_valid": false,
+   "source_index": 86,
+   "mutation": "tag -> Shake",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Shake object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 43,
+   "mutation": "added Move.foo",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <CleanVessel vessel=\"flask_B\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" foo=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 64,
+   "mutation": "added Move.speed",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Move object=\"box_A\" place=\"plate_B\" speed=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 32,
+   "mutation": "added Add.mode",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" mode=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 36,
+   "mutation": "added Add.mode",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"25 mL\" mode=\"x\" />\n  <HeatChill vessel=\"flask_A\" temp=\"25 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 29,
+   "mutation": "added Stir.speed",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"beaker_A\" time=\"1 min\" speed=\"x\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 44,
+   "mutation": "added Add.foo",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" foo=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 12,
+   "mutation": "added Add.mode",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" mode=\"x\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 29,
+   "mutation": "added Add.pressure",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" pressure=\"x\" />\n  <Stir vessel=\"beaker_A\" time=\"1 min\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 83,
+   "mutation": "added Add.foo",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" foo=\"x\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 15,
+   "mutation": "added HeatChill.speed",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" speed=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 79,
+   "mutation": "added Add.duration",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" duration=\"x\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 11,
+   "mutation": "added Add.foo",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"10 mL\" foo=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 4,
+   "mutation": "added Add.speed",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" speed=\"x\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 24,
+   "mutation": "added Add.duration",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" duration=\"x\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 27,
+   "mutation": "added Transfer.foo",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"50 mL\" />\n  <Stir vessel=\"flask_A\" time=\"30 s\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" foo=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 88,
+   "mutation": "added Add.pressure",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" pressure=\"x\" />\n  <CleanVessel vessel=\"flask_A\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 56,
+   "mutation": "added Add.rate",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" rate=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 8,
+   "mutation": "added Add.foo",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"25 mL\" foo=\"x\" />\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 84,
+   "mutation": "added Transfer.rate",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" rate=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "undefined_attribute",
+   "is_actually_valid": false,
+   "source_index": 57,
+   "mutation": "added Add.foo",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" foo=\"x\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 66,
+   "mutation": "Add.vessel -> beaker_Z",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_Z\" reagent=\"ethanol\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 78,
+   "mutation": "Add.vessel -> box_Z",
+   "xml": "<procedure>\n  <Add vessel=\"box_Z\" reagent=\"water\" volume=\"25 mL\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 26,
+   "mutation": "Add.vessel -> plate_Z",
+   "xml": "<procedure>\n  <Add vessel=\"plate_Z\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 95,
+   "mutation": "Stir.vessel -> vial_A",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n  <Stir vessel=\"vial_A\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 91,
+   "mutation": "Add.vessel -> beaker_Z",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_Z\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_B\" time=\"2 min\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 88,
+   "mutation": "Add.vessel -> vial_A",
+   "xml": "<procedure>\n  <Add vessel=\"vial_A\" reagent=\"water\" volume=\"10 mL\" />\n  <CleanVessel vessel=\"flask_A\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 45,
+   "mutation": "Stir.vessel -> flask_Q",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_Q\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 78,
+   "mutation": "Move.place -> vial_A",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n  <Move object=\"box_A\" place=\"vial_A\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 1,
+   "mutation": "Add.vessel -> box_Z",
+   "xml": "<procedure>\n  <Add vessel=\"box_Z\" reagent=\"water\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 74,
+   "mutation": "Add.vessel -> plate_Z",
+   "xml": "<procedure>\n  <Add vessel=\"plate_Z\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 51,
+   "mutation": "Move.place -> vial_A",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"50 mL\" />\n  <Move object=\"box_A\" place=\"vial_A\" />\n  <CleanVessel vessel=\"flask_B\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 73,
+   "mutation": "Add.vessel -> carousel_A",
+   "xml": "<procedure>\n  <Add vessel=\"carousel_A\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"beaker_B\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 96,
+   "mutation": "Add.vessel -> plate_Z",
+   "xml": "<procedure>\n  <Add vessel=\"plate_Z\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"60 C\" active=\"true\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 96,
+   "mutation": "Add.vessel -> tube_1",
+   "xml": "<procedure>\n  <Add vessel=\"tube_1\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"60 C\" active=\"true\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 17,
+   "mutation": "Add.vessel -> carousel_A",
+   "xml": "<procedure>\n  <Add vessel=\"carousel_A\" reagent=\"water\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 47,
+   "mutation": "CleanVessel.vessel -> tube_1",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"flask_A\" />\n  <CleanVessel vessel=\"tube_1\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 88,
+   "mutation": "CleanVessel.vessel -> vial_A",
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" />\n  <CleanVessel vessel=\"vial_A\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 93,
+   "mutation": "Add.vessel -> box_Z",
+   "xml": "<procedure>\n  <Add vessel=\"box_Z\" reagent=\"water\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 97,
+   "mutation": "HeatChill.vessel -> flask_Q",
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"50 mL\" />\n  <HeatChill vessel=\"flask_Q\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "nonexistent_object",
+   "is_actually_valid": false,
+   "source_index": 0,
+   "mutation": "Stir.vessel -> plate_Z",
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"plate_Z\" time=\"2 min\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 20,
+   "mutation": "dropped the Add filling flask_A",
+   "xml": "<procedure>\n  <Stir vessel=\"flask_A\" time=\"2 min\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 29,
+   "mutation": "dropped the Add filling beaker_A",
+   "xml": "<procedure>\n  <Stir vessel=\"beaker_A\" time=\"1 min\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 50,
+   "mutation": "dropped the Add filling flask_A",
+   "xml": "<procedure>\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 53,
+   "mutation": "dropped the Add filling flask_A",
+   "xml": "<procedure>\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 8,
+   "mutation": "dropped the Add filling beaker_B",
+   "xml": "<procedure>\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 91,
+   "mutation": "dropped the Add filling flask_B",
+   "xml": "<procedure>\n  <Stir vessel=\"flask_B\" time=\"2 min\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 73,
+   "mutation": "dropped the Add filling beaker_B",
+   "xml": "<procedure>\n  <Stir vessel=\"beaker_B\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 65,
+   "mutation": "dropped the Add filling flask_A",
+   "xml": "<procedure>\n  <HeatChill vessel=\"flask_A\" temp=\"60 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 41,
+   "mutation": "dropped the Add filling beaker_A",
+   "xml": "<procedure>\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n  <Stir vessel=\"beaker_A\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 6,
+   "mutation": "dropped the Add filling flask_B",
+   "xml": "<procedure>\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 25,
+   "mutation": "dropped the Add filling flask_B",
+   "xml": "<procedure>\n  <Stir vessel=\"flask_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 94,
+   "mutation": "dropped the Add filling flask_B",
+   "xml": "<procedure>\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 53,
+   "mutation": "dropped the Add filling flask_A",
+   "xml": "<procedure>\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 0,
+   "mutation": "dropped the Add filling flask_B",
+   "xml": "<procedure>\n  <Stir vessel=\"flask_B\" time=\"2 min\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 98,
+   "mutation": "dropped the Add filling beaker_A",
+   "xml": "<procedure>\n  <HeatChill vessel=\"beaker_A\" temp=\"0 C\" active=\"true\" />\n  <Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 25,
+   "mutation": "dropped the Add filling flask_B",
+   "xml": "<procedure>\n  <Stir vessel=\"flask_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 79,
+   "mutation": "dropped the Add filling flask_B",
+   "xml": "<procedure>\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 40,
+   "mutation": "dropped the Add filling flask_B",
+   "xml": "<procedure>\n  <HeatChill vessel=\"flask_B\" temp=\"0 C\" active=\"true\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 62,
+   "mutation": "dropped the Add filling flask_A",
+   "xml": "<procedure>\n  <Move object=\"box_A\" place=\"plate_B\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "class": "precondition_violation",
+   "is_actually_valid": false,
+   "source_index": 82,
+   "mutation": "dropped the Add filling flask_A",
+   "xml": "<procedure>\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n</procedure>"
+  }
+ ],
+ "discarded_non_invalidating": {}
+}

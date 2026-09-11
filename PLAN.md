@@ -137,10 +137,13 @@ concern을 닫지 못하면 reject (binary review).
       100/100 복원(겹치는 27/27이 학습 정답과 일치해 독립 검증됨). **unseen 73건 완전일치
       94.5% [86.7, 97.8]**, 전체 96.0%; 인자 필드는 100%이고 오류는 전부 연산자·순서.
       학습셋과 **27/100 문자열 겹침**을 측정해 문서화. (R1#5)
-- [ ] **B5 — validator 확장 (선택):** `validator.py`에 capacity·device-placement 체크 추가,
-      벤치마크 6-class로 확장. 생략 시 해당 빨간 span 2개 삭제하고 축소된 주장 유지. (R1#6)
-      - [ ] 먼저 **injected-error 벤치(20 valid/80 invalid)가 코드로 생성되는지 확인**
-            (`exper.py`/`test_data_gen.py`), 없으면 구축.
+- [~] **B5 — validator** (R1#6)
+      - [x] **injected-error 벤치는 코드로 생성되지 않았다** — `test_data_gen.py`의 셋은 손으로 적은
+            12건(4/8)이고 원고가 말하는 20/80은 없었다. `validator_benchmark.py`로 구축했다.
+      - [x] **결함 수정**: 정의되지 않은 *속성*이 통과하고 있었다(클래스 recall 0/20 → 20/20).
+            최종: TP 20 / FN 0 / FP 0 / TN 100, 정확도 100% [96.9, 100]. §4.2.1의 96/100은 불변.
+      - [ ] capacity·device-placement 체크는 **미구현** — 추가할지, 원고 847행의 해당 span을 삭제할지
+            저자 판단 필요.
 - [ ] **B6/B7 — Action Reasoner unseen 레벨 정의 + 3-step ablation** — split(3000/2400/600)에서
       unseen 기준 도출; two-step 루프(`tamp_xdl_parser.py run_xdl`)를 three-step으로 확장. (R1#7)
 - [ ] **B8 — adversarial 명령 스트레스 테스트 (선택):** 70개 명령 / 7 class를 validator에 투입.

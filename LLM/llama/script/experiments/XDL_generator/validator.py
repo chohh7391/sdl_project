@@ -12,6 +12,21 @@ ALLOWED_TAGS = {
     "Add", "Stir", "HeatChill", "Transfer", "CleanVessel", "Move"
 }
 
+# Attributes each operator may carry. Undefined TAGS were already rejected, but
+# an undefined ATTRIBUTE on an otherwise well-formed step passed silently --
+# <Add vessel reagent volume foo='bar' /> and <Move object place speed='fast' />
+# both validated -- so the "undefined tag or attribute" check was only half
+# implemented. None of the 100 generations of Section 4.2.1 carries an
+# out-of-schema attribute, so adding this does not change that measurement.
+ALLOWED_ATTRS = {
+    "Add": {"vessel", "reagent", "volume"},
+    "Stir": {"vessel", "time"},
+    "HeatChill": {"vessel", "temp", "active"},
+    "Transfer": {"from_vessel", "to_vessel", "volume"},
+    "CleanVessel": {"vessel"},
+    "Move": {"object", "place"},
+}
+
 class ProcedureValidationError(Exception):
     pass
 
@@ -43,6 +58,11 @@ class ProcedureValidator:
 
         if tag not in ALLOWED_TAGS:
             raise ProcedureValidationError(f"Invalid tag: {tag}")
+
+        undefined = set(step.attrib) - ALLOWED_ATTRS[tag]
+        if undefined:
+            raise ProcedureValidationError(
+                f"Invalid attribute in {tag}: {sorted(undefined)}")
 
         if tag == "Add":
             self.validate_add(step)
