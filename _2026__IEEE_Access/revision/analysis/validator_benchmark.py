@@ -12,6 +12,8 @@ validator accepts, on a fixed stride so the selection is reproducible. The
 invalid half injects 20 samples of each of the four categories the manuscript
 names, by a documented mutation of a valid protocol:
 
+  capacity_violation     overfill a 100 mL beaker
+  device_placement       put two objects on the same plate
   missing_attribute      drop one required attribute from one step
   undefined_tag          rename a tag out of the schema
   undefined_attribute    add an attribute not in the operator's schema
@@ -109,6 +111,25 @@ def mut_nonexistent_object(steps, rng):
     return out, "%s.%s -> %s" % (out[i]["op"], k, out[i][k])
 
 
+def mut_capacity_violation(steps, rng):
+    """Overfill a beaker: 100 mL capacity against 50 mL of headroom per Add."""
+    v = rng.choice(["beaker_A", "beaker_B"])
+    out = [dict(s) for s in steps]
+    for _ in range(3):
+        out.append({"op": "Add", "vessel": v, "reagent": "water",
+                    "volume": "50 mL"})
+    return out, "appended 3 x 50 mL into %s (100 mL)" % v
+
+
+def mut_device_placement(steps, rng):
+    """Put two different objects on the same plate."""
+    p = rng.choice(["plate_A", "plate_B"])
+    out = [dict(s) for s in steps]
+    out.append({"op": "Move", "object": "box_A", "place": p})
+    out.append({"op": "Move", "object": "bottle_A", "place": p})
+    return out, "box_A and bottle_A both onto %s" % p
+
+
 def mut_precondition_violation(steps, rng):
     """Drop the Add that fills the vessel a later operator depends on."""
     adds = [i for i, s in enumerate(steps) if s["op"] == "Add"]
@@ -129,6 +150,8 @@ MUTATORS = [
     ("undefined_attribute", mut_undefined_attribute),
     ("nonexistent_object", mut_nonexistent_object),
     ("precondition_violation", mut_precondition_violation),
+    ("capacity_violation", mut_capacity_violation),
+    ("device_placement", mut_device_placement),
 ]
 
 
@@ -178,9 +201,10 @@ def build(labels, n_valid, per_class, seed):
                 # a validator gap, recorded but never counted as a positive
                 discarded.setdefault(cls, []).append((src["index"], note))
                 continue
+            _, why = is_valid(xml)
             samples.append({"class": cls, "is_actually_valid": False,
                             "source_index": src["index"], "mutation": note,
-                            "xml": xml})
+                            "xml": xml, "rejected_because": why})
             made += 1
         if made < per_class:
             # A class the validator cannot be made to fail is a GAP, not a
@@ -243,6 +267,17 @@ def main():
         lo, hi = wilson(d["caught"], d["n"])
         print("  %-24s %2d/%-2d = %5.1f%%  [%.1f, %.1f]"
               % (cls, d["caught"], d["n"], 100.0 * d["caught"] / d["n"], lo, hi))
+    # A class is only meaningful if the validator rejects for the intended
+    # reason, so show what it actually said.
+    print("\nreason the validator gave, per injected class:")
+    reasons = {}
+    for s in samples:
+        if s["is_actually_valid"]:
+            continue
+        key = (s["class"], (s.get("rejected_because") or "").split(":")[0][:44])
+        reasons[key] = reasons.get(key, 0) + 1
+    for (cls, why), k in sorted(reasons.items()):
+        print("  %-24s x%-3d %s" % (cls, k, why))
     json.dump({"seed": a.seed, "samples": samples,
                "discarded_non_invalidating": {k: v for k, v in discarded.items()}},
               open(a.out, "w"), indent=1)

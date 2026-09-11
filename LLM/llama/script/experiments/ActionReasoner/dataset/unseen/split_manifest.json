@@ -1,0 +1,45 @@
+{
+ "seed": 0,
+ "held_out_pairs": [
+  "Add>HeatChill",
+  "HeatChill>Transfer",
+  "Stir>CleanVessel",
+  "Stir>Stir"
+ ],
+ "held_out_patterns": [
+  [
+   "bottle@G10"
+  ],
+  [
+   "bottle@G6"
+  ],
+  [
+   "bottle@G9"
+  ],
+  [
+   "box@G11"
+  ],
+  [
+   "box@G6"
+  ],
+  [
+   "box@G7"
+  ],
+  [
+   "box@G8"
+  ],
+  [
+   "flask@G12"
+  ],
+  [
+   "flask@G9"
+  ]
+ ],
+ "sizes": {
+  "train": 830,
+  "L1_unseen_class": 1546,
+  "L3_unseen_pair": 223,
+  "L2_unseen_layout": 101,
+  "control_in_distribution": 300
+ }
+}

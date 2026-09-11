@@ -18,6 +18,17 @@ ALLOWED_TAGS = {
 # both validated -- so the "undefined tag or attribute" check was only half
 # implemented. None of the 100 generations of Section 4.2.1 carries an
 # out-of-schema attribute, so adding this does not change that measurement.
+# Vessel capacities, from the glassware actually purchased for the physical
+# cell (author, 2026-09-11): 100 mL beakers, 300 mL flasks. The manuscript
+# claims the validator covers vessel capacity; it did not, and this is the
+# information that check needs. The 100-instruction test set never exercises it
+# -- the largest fill any of those procedures reaches is 50 mL -- so this check
+# is validated by the injected-error benchmark rather than by that set.
+CAPACITY_ML = {
+    "beaker_A": 100.0, "beaker_B": 100.0,
+    "flask_A": 300.0, "flask_B": 300.0,
+}
+
 ALLOWED_ATTRS = {
     "Add": {"vessel", "reagent", "volume"},
     "Stir": {"vessel", "time"},
@@ -31,9 +42,21 @@ class ProcedureValidationError(Exception):
     pass
 
 
+def _volume_ml(text):
+    """Millilitres from a volume attribute, or None if it is not one."""
+    try:
+        return float(str(text).split()[0])
+    except (ValueError, AttributeError, IndexError):
+        return None
+
+
 class ProcedureValidator:
     def __init__(self):
         self.vessel_state = {v: "empty" for v in VESSELS}
+        # Millilitres currently in each vessel, for the capacity check.
+        self.vessel_volume = {v: 0.0 for v in VESSELS}
+        # Which object occupies each plate, for the device-placement check.
+        self.plate_occupant = {p: None for p in PLATES}
 
     def validate(self, xml_str: str):
         try:
@@ -89,6 +112,16 @@ class ProcedureValidator:
         if volume not in VOLUMES:
             raise ProcedureValidationError(f"Invalid volume: {volume}")
 
+        added = _volume_ml(volume)
+        cap = CAPACITY_ML.get(vessel)
+        if added is not None and cap is not None:
+            if self.vessel_volume[vessel] + added > cap:
+                raise ProcedureValidationError(
+                    f"Add overfills {vessel}: "
+                    f"{self.vessel_volume[vessel] + added:.0f} mL into a "
+                    f"{cap:.0f} mL vessel")
+            self.vessel_volume[vessel] += added
+
         self.vessel_state[vessel] = "filled"
 
     def validate_stir(self, step):
@@ -130,6 +163,23 @@ class ProcedureValidator:
         if self.vessel_state[from_v] != "filled":
             raise ProcedureValidationError(f"Cannot Transfer from empty vessel: {from_v}")
 
+        moved = _volume_ml(volume)
+        cap = CAPACITY_ML.get(to_v)
+        if moved is not None:
+            if moved > self.vessel_volume[from_v] + 1e-9:
+                raise ProcedureValidationError(
+                    f"Cannot Transfer {moved:.0f} mL from {from_v}, which holds "
+                    f"{self.vessel_volume[from_v]:.0f} mL")
+            if cap is not None and self.vessel_volume[to_v] + moved > cap:
+                raise ProcedureValidationError(
+                    f"Transfer overfills {to_v}: "
+                    f"{self.vessel_volume[to_v] + moved:.0f} mL into a "
+                    f"{cap:.0f} mL vessel")
+            self.vessel_volume[from_v] -= moved
+            self.vessel_volume[to_v] += moved
+            if self.vessel_volume[from_v] <= 1e-9:
+                self.vessel_state[from_v] = "empty"
+
         self.vessel_state[to_v] = "filled"
 
     def validate_clean(self, step):
@@ -139,6 +189,7 @@ class ProcedureValidator:
             raise ProcedureValidationError(f"Invalid vessel in CleanVessel: {vessel}")
 
         self.vessel_state[vessel] = "empty"
+        self.vessel_volume[vessel] = 0.0
 
     def validate_move(self, step):
         obj = step.attrib.get("object")
@@ -148,3 +199,15 @@ class ProcedureValidator:
             raise ProcedureValidationError(f"Invalid object in Move: {obj}")
         if place not in PLATES:
             raise ProcedureValidationError(f"Invalid place in Move: {place}")
+
+        # Device placement: a plate holds one object. Moving onto an occupied
+        # plate is a placement conflict; moving an object off its current plate
+        # frees that plate.
+        occupant = self.plate_occupant[place]
+        if occupant is not None and occupant != obj:
+            raise ProcedureValidationError(
+                f"Device placement conflict: {place} already holds {occupant}")
+        for p, who in self.plate_occupant.items():
+            if who == obj:
+                self.plate_occupant[p] = None
+        self.plate_occupant[place] = obj
