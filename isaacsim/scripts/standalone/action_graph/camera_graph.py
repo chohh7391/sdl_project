@@ -2,15 +2,20 @@ import omni.graph.core as og
 import usdrt.Sdf
 from typing import List
 
-def create_ros_camera_graph(camera_paths: List[str], camera_names: List[str]):
+def create_ros_camera_graph(camera_paths: List[str], camera_names: List[str],
+                            width: int = 640, height: int = 480):
     """
     여러 대의 카메라 경로와 이름을 입력받아 동적으로 ROS2 퍼블리셔 그래프를 생성합니다.
+
+    The render-product size was hardcoded at 640x480 here while the camera prim
+    was created at the CameraInfo resolution, so the published images were 640x480
+    whatever the camera was configured for. camera_info stayed consistent with the
+    images (it is derived from the render product), so poses were not wrong -- but
+    the stream did not match the resolution the manuscript reports. The caller now
+    passes the resolution so there is one source of truth.
     """
     assert len(camera_paths) == len(camera_names), "카메라 경로와 이름 리스트의 길이가 같아야 합니다."
-
-    # 고정 해상도 
-    width = 640
-    height = 480
+    width, height = int(width), int(height)
 
     # 노드, 연결, 설정값을 담을 리스트 초기화 (기본 OnTick 노드는 항상 하나)
     nodes_list = [("OnTick", "omni.graph.action.OnTick")]

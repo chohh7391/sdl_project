@@ -97,7 +97,9 @@ class Simulation(Node):
         # action graphs
         camera_paths = ["/World/camera_1", "/World/camera_2"]
         camera_names = ["camera_1", "camera_2"]
-        self.camera_data_graph = self.create_ros_camera_graph(camera_paths=camera_paths, camera_names=camera_names)
+        self.camera_data_graph = self.create_ros_camera_graph(
+            camera_paths=camera_paths, camera_names=camera_names,
+            width=self.task.camera_info.width, height=self.task.camera_info.height)
         self.og.Controller.evaluate_sync(self.camera_data_graph)
         self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
         target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
@@ -823,7 +825,9 @@ class Simulation(Node):
             # action graphs
             camera_paths = ["/World/camera_1", "/World/camera_2"]
             camera_names = ["camera_1", "camera_2"]
-            self.camera_data_graph = self.create_ros_camera_graph(camera_paths=camera_paths, camera_names=camera_names)
+            self.camera_data_graph = self.create_ros_camera_graph(
+            camera_paths=camera_paths, camera_names=camera_names,
+            width=self.task.camera_info.width, height=self.task.camera_info.height)
             self.og.Controller.evaluate_sync(self.camera_data_graph)
             self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
             target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]

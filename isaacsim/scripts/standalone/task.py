@@ -41,9 +41,24 @@ class Task(ABC, BaseTask):
         self._robot_name = robot_name
 
         self.camera_info = CameraInfo()
+        # Two cameras observing the workspace FROM TWO SIDES, which is what the
+        # manuscript describes and what makes the two-camera fusion in
+        # perception_manager mean anything. They previously both looked straight
+        # down from z = 1.5, where an 8 cm AprilTag spans only ~30 px and a tag
+        # can only ever be seen by one camera at a time.
+        #
+        # Oblique views from the +x side at +/-y: about 1.2 m from the workspace
+        # centre, so the same tag spans ~60 px at 1280x720, and both cameras can
+        # see a tag at once (which is what the range-weighted fusion is for).
         self.camera_positions = [
-            np.array([0.45, 0.0, 1.5]),
-            np.array([-0.45, 0.0, 1.5]),
+            np.array([1.00, 0.60, 0.80]),
+            np.array([1.00, -0.60, 0.80]),
+        ]
+        # Aimed at the workspace centre rather than given hand-written
+        # quaternions; set_world_pose_from_view() builds the orientation.
+        self.camera_targets = [
+            np.array([0.25, 0.0, 0.05]),
+            np.array([0.25, 0.0, 0.05]),
         ]
         self.camera_orientations = [
             rot_utils.euler_angles_to_quats(np.array([0, 90, 0]), degrees=True),
@@ -606,6 +621,11 @@ class Task(ABC, BaseTask):
                 resolution=(self.camera_info.width, self.camera_info.height),
                 position=self.camera_positions[i],
                 orientation=self.camera_orientations[i],
+            )
+            # Point it at the workspace; this overrides the placeholder
+            # orientation above with a look-at built from eye and target.
+            set_world_pose_from_view(
+                camera, self.camera_positions[i], self.camera_targets[i]
             )
             
             self.cameras.append(camera)

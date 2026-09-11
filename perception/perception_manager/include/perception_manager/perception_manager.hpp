@@ -69,6 +69,12 @@ private:
 
     std::vector<std::string> target_objects_;
     std::map<std::string, std::string> object_tag_map_;
+    // Translation from each object's TAG frame to the object's own frame, in the
+    // tag frame. Read off the vessel assets: beaker.usd carries apriltag_00 and
+    // flask.usd apriltag_01 at a local (0.15, 0, -0.062) from the vessel's
+    // origin, i.e. a plate on the table 15 cm to the vessel's side and a vessel
+    // half-height below its centre, with no rotation relative to the vessel.
+    std::map<std::string, tf2::Vector3> tag_to_object_;
     std::map<std::string, ObjectData> objects_;
     FTData ft_data_;
     ScaleData scale_data_;

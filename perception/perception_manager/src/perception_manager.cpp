@@ -11,6 +11,15 @@ PerceptionManager::PerceptionManager() : Node("perception_manager")
     object_tag_map_["beaker"] = "beaker_tag";
     object_tag_map_["flask"] = "flask_tag";
 
+    // Tag -> object, in the tag's own frame. The tag is a plate on the table
+    // 0.15 m to the vessel's side (so the vessel is at the tag's -x) and the
+    // vessel's CENTRE is a half-height above the plate. Values are the local
+    // offsets authored in beaker.usd / flask.usd; verified against the
+    // simulator's ground truth, which put the reported tag 0.151 m from the
+    // vessel at the vessel's own yaw.
+    tag_to_object_["beaker"] = tf2::Vector3(-0.15, 0.0, 0.0622);
+    tag_to_object_["flask"] = tf2::Vector3(-0.15, 0.0, 0.0601);
+
     auto update_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     
     // TF 초기화
@@ -169,14 +178,20 @@ void PerceptionManager::process_fusion_tf() {
             tf2::Transform t_tag_fused;
             tf2::fromMsg(final_tf_msg.transform, t_tag_fused);
 
-            // 2-2. Tag에서 Object로 가는 변환 정의 (Tag -> Object)
-            // Marker가 Object 기준 (-0.15, 0, 0)에 있다면,
-            // Object는 Marker 기준 (+0.15, 0, 0)에 있습니다.
-            // (Base -> Tag -> Object)
+            // 2-2. Tag -> Object. Per object, because the plate sits a vessel
+            // half-height below the vessel's centre and the two vessels differ
+            // (see tag_to_object_). The z term was previously 0, which left
+            // every reported object pose a half-height too low.
             tf2::Transform t_tag_to_obj;
             t_tag_to_obj.setIdentity();
-            t_tag_to_obj.setOrigin(tf2::Vector3(-0.15, 0.0, 0.0)); // X축으로 -0.15m 이동
-            // 만약 회전도 다르다면 여기서 setRotation으로 설정
+            auto offset_it = tag_to_object_.find(obj_name);
+            if (offset_it == tag_to_object_.end()) {
+                RCLCPP_WARN_ONCE(this->get_logger(),
+                    "No tag->object offset for '%s'; reporting the TAG pose as the object pose.",
+                    obj_name.c_str());
+            } else {
+                t_tag_to_obj.setOrigin(offset_it->second);
+            }
 
             // 2-3. 최종 Object 위치 계산
             tf2::Transform t_object_final = t_tag_fused * t_tag_to_obj;

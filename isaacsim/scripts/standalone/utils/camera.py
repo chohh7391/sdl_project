@@ -10,18 +10,30 @@ import os
 
 @dataclass
 class CameraInfo:
+    """Intel RealSense D435 colour stream, 1280x720.
+
+    The device the physical platform uses is a D435 (author, 2026-09-11), and the
+    manuscript describes two of them at 1280x720; this class previously described
+    an L515 at 640x480, so the simulated camera did not match either.
+
+    K here is derived from the D435 colour module's datasheet field of view,
+    69.4 x 42.5 degrees at 16:9:
+        fx = (1280/2) / tan(69.4/2) = 923.7      fy = (720/2) / tan(42.5/2) = 925.8
+    and the principal point is taken at the image centre. These are nominal: the
+    manuscript's red spans for the physical cameras must be filled from the
+    device's own factory calibration (rs-enumerate-devices), not from this.
+    Distortion is left at zero -- the render has none to model.
     """
-    RealSense L515 카메라 공통 Base Class
-    """
-    # 기본값은 비워두거나 더미 데이터로 둡니다.
     yaml_data: str = """
-        height: 480
-        width: 640
+        height: 720
+        width: 1280
         D: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        K: [601.46000163, 0.0, 334.89998372, 0.0, 601.5933431, 248.15334066, 0.0, 0.0, 1.0]
+        K: [923.7, 0.0, 640.0, 0.0, 925.8, 360.0, 0.0, 0.0, 1.0]
     """
-    
-    pixel_size: float = 4.2
+
+    # D435 colour sensor (OV2740) pixel pitch [um]. Only the focal-length to
+    # aperture RATIO reaches the projection, so this just has to be consistent.
+    pixel_size: float = 1.4
     f_stop: float = 2.0
     focus_distance: float = 0.8
     
