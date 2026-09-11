@@ -52,10 +52,19 @@ mkdir -p "$LOGDIR" "$(dirname "$CSV")"
 SIM_READY_TIMEOUT="${SIM_READY_TIMEOUT:-360}"
 TAMP_READY_TIMEOUT="${TAMP_READY_TIMEOUT:-120}"
 
+# World State source, passed through to tamp_server. With "perception" the
+# AprilTag stack is brought up alongside each sim and the tagged vessel poses
+# come from its fused TF instead of the simulator; set_tamp_env then FAILS for a
+# vessel the pipeline never localized, which is the honest outcome for a
+# perception-in-the-loop trial and shows up as a planning-stage failure row.
+STATE_SOURCE="${SDL_STATE_SOURCE:-ground_truth}"
+export SDL_STATE_SOURCE="$STATE_SOURCE"
+PERCEPTION_READY_TIMEOUT="${PERCEPTION_READY_TIMEOUT:-45}"
+
 SEEDS=("$@")
 if [[ ${#SEEDS[@]} -eq 0 ]]; then SEEDS=(0 1 2 3 4); fi
 
-echo "=== run_trials.sh: task=$TASK robot=$ROBOT seeds=[${SEEDS[*]}] domain=$ROS_DOMAIN_ID csv=$CSV ==="
+echo "=== run_trials.sh: task=$TASK robot=$ROBOT seeds=[${SEEDS[*]}] domain=$ROS_DOMAIN_ID state=$STATE_SOURCE csv=$CSV ==="
 
 # Wait until $1 (a log file) contains regex $2, up to $3 seconds. Returns 0/1.
 wait_for() {
@@ -89,12 +98,12 @@ kill_group() {
 # fourth seed's). Fail loudly rather than produce a plausible-looking batch.
 reap_strays() {
   local pids
-  pids="$(pgrep -f 'standalone/simulation\.py|tamp_server\.py' || true)"
+  pids="$(pgrep -f 'standalone/simulation\.py|tamp_server\.py|apriltag_node|perception_manager_node' || true)"
   [[ -z "$pids" ]] && return 0
   echo "[pre-flight] STRAY sim/server process(es) still alive: $pids -- killing."
   kill -TERM $pids 2>/dev/null
   sleep 5
-  pids="$(pgrep -f 'standalone/simulation\.py|tamp_server\.py' || true)"
+  pids="$(pgrep -f 'standalone/simulation\.py|tamp_server\.py|apriltag_node|perception_manager_node' || true)"
   [[ -n "$pids" ]] && { kill -KILL $pids 2>/dev/null; sleep 2; }
   return 0
 }
@@ -143,14 +152,29 @@ for seed in "${SEEDS[@]}"; do
   grep -E "SDL_SEED=$seed|randomized layout|home_arm|beaker |flask |magnet |box |stirrer " "$SIM_LOG" | tail -n 10 | sed "s/^/[seed $seed]   /"
   sleep 3
 
+  # --- 1b. perception stack (perception state only) ------------------------
+  PERC_PGID=""
+  if [[ "$STATE_SOURCE" == "perception" ]]; then
+    PERC_LOG="$LOGDIR/perc_seed${seed}_${ts}.log"
+    ROS_DOMAIN_ID="$ROS_DOMAIN_ID" setsid bash -c \
+      'source /opt/ros/humble/setup.bash && source '"$PROJ_DIR"'/../../install/setup.bash && exec ros2 launch perception_manager perception_manager.launch.py' \
+      >"$PERC_LOG" 2>&1 &
+    PERC_PGID=$!
+    echo "[seed $seed] perception pgid=$PERC_PGID; log=$PERC_LOG"
+    # The detector needs a few rendered frames before any tag TF exists; the
+    # tamp_server's first set_tamp_env happens seconds later, so wait here.
+    sleep "$PERCEPTION_READY_TIMEOUT"
+  fi
+
   # --- 2. fresh tamp_server ------------------------------------------------
-  ROS_DOMAIN_ID="$ROS_DOMAIN_ID" SDL_USE_SOURCE=1 \
+  ROS_DOMAIN_ID="$ROS_DOMAIN_ID" SDL_USE_SOURCE=1 SDL_STATE_SOURCE="$STATE_SOURCE" \
     setsid bash "$TAMP_SH" >"$TAMP_LOG" 2>&1 &
   TAMP_PGID=$!
   echo "[seed $seed] tamp pgid=$TAMP_PGID; waiting for server ready (<= ${TAMP_READY_TIMEOUT}s)"
   if ! wait_for "$TAMP_LOG" "Starting TAMP server|Initialize TAMP Module" "$TAMP_READY_TIMEOUT"; then
     echo "[seed $seed] TAMP SERVER NOT READY -- see $TAMP_LOG; tearing down."
-    kill_group "$TAMP_PGID"; kill_group "$SIM_PGID"
+    kill_group "$TAMP_PGID"; [[ -n "$PERC_PGID" ]] && kill_group "$PERC_PGID"
+    kill_group "$SIM_PGID"
     continue
   fi
   sleep 5   # let services + subscriptions settle
@@ -184,6 +208,7 @@ sys.exit(0 if abs(sx - rx) <= 0.02 and abs(sy - ry) <= 0.02 else 1)
   # --- 4. teardown ---------------------------------------------------------
   echo "[seed $seed] tearing down (tamp then sim)."
   kill_group "$TAMP_PGID"
+  [[ -n "$PERC_PGID" ]] && kill_group "$PERC_PGID"
   kill_group "$SIM_PGID"
   sleep 5
 done
