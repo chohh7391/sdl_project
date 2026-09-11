@@ -135,14 +135,21 @@ class TAMP:
         self.last_plan_error = None
 
         # cuTAMP initialises its particles with torch.rand / torch.randint and
-        # nothing seeds them, so the same layout can plan differently on two
-        # runs -- measured: of five transfer seeds that failed on one 30-seed
-        # batch, four succeeded when re-run unchanged. A single unseeded run is
-        # therefore not a stable per-seed outcome, and a paired McNemar built on
-        # one is comparing one draw against another. Seeding here makes a trial
-        # reproducible from SDL_PLANNER_SEED (the harness sets it to the layout
-        # seed); each attempt of the retry loop gets its own derived seed so
-        # retries still explore, deterministically.
+        # nothing seeded them, so the same layout can plan differently on two
+        # runs: of five transfer seeds that failed on one 30-seed batch, four
+        # succeeded when re-run unchanged. A single run is therefore not a
+        # stable per-seed outcome, and a paired McNemar built on one compares
+        # one draw against another.
+        #
+        # Seeding here does NOT fix that, and the attempt was measured rather
+        # than assumed: with SDL_PLANNER_SEED set and the simulator's poses
+        # identical to the recorded precision, two runs of seeds 7 and 14 still
+        # returned different satisfying-particle counts (310 vs 272, 564 vs
+        # 568). The residual nondeterminism is inside the CUDA work, so
+        # reproducibility has to come from REPETITIONS, not from a seed: the
+        # harness varies PLANNER_SEED_OFFSET across batches so repetitions are
+        # deliberate draws over the same layouts rather than accidental ones,
+        # and a per-seed success probability is estimated from them.
         self._plan_base_seed = None
         _seed_env = os.environ.get("SDL_PLANNER_SEED", "").strip()
         if _seed_env:
