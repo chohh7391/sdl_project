@@ -21,7 +21,12 @@ GRASP_INFO = {
 }
 
 TOOL_FRAMES = {
+    # All three FR5 tool URDFs carry a 'grasp_frame' link. Only the ag95 was
+    # listed, so the Move and Stir tasks -- evaluated with the vgc10 and the
+    # dh3 in the Isaac harness -- could not build a grasp generator at all.
     'fr5_ag95': 'grasp_frame',
+    'fr5_vgc10': 'grasp_frame',
+    'fr5_dh3': 'grasp_frame',
 }
 
 DEBUG_FAILURE = False

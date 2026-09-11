@@ -114,9 +114,33 @@ Move 오차는 추종오차가 아니다 — 배치 제약이 "발자국이 영�
             cuTAMP는 예산이 늘수록 개선된다(해결시 median 55.27 s). 즉 **논문이 명시한 60 s 예산에서는
             cuTAMP 우위가 유의하지 않다.** 원고의 66.7 % 및 유의성 주장은 짝지은 검정을 통과하지 못한다.
             RMTS: 60 s에서 cuTAMP 53.19 s vs PDDLStream 24.52 s.
+      - [x] **move·stir까지 확장 완료.** 두 태스크의 목표는 베이스라인 쪽에도 술어 단위로 같은 것이
+            이미 있었다(`move`: `HandEmpty ∧ On(box, tray)`, `stir`: `HandEmpty ∧ On(beaker, stirrer)
+            ∧ On(magnet, beaker)`). 툴도 태스크별로 맞췄다(transfer ag95 / move vgc10 / stir dh3).
+            그 과정에서 베이스라인 쪽 결함 둘을 고쳤다: ①vgc10·dh3 URDF가 PyBullet이 해석 못 하는
+            `package://` 메시 URI를 써서 로드 자체가 실패했다(ag95만 변환돼 있었다) → 상대 경로
+            `*_pb.urdf` 사본, 모든 메시 존재 확인. ②`TOOL_FRAMES`에 `fr5_ag95`만 있어 vgc10·dh3는
+            grasp 생성기를 만들 수 없었다(세 URDF 모두 `grasp_frame` 링크가 있다). 덧붙여
+            **vgc10 URDF가 자기 로봇 이름을 `fr5_ag95`로 선언**하고 있어 이름 기반 조회가 vgc10을
+            ag95로 취급하고 있었다 — 사본에서 바로잡았다.
+            계획이 실재하는지도 확인했다(자명하게 풀리는 게 아님): move는 move_free/pick/
+            move_holding/place-base 4액션, transfer는 pour를 포함한 6액션.
+
+            | 태스크 | cuTAMP | PDDLStream | exact McNemar p | cuTAMP 해결시 median | PDDLStream |
+            |---|---|---|---|---|---|
+            | transfer @60 s | 22/30 = 73.3% | 19/30 = 63.3% | **0.61 (유의 아님)** | 54.47 s | 1.94 s |
+            | transfer @180 s | 30/30 = 100% | 19/30 = 63.3% | 0.00098 | 55.27 s | 1.94 s |
+            | **move** | 30/30 = 100% | **30/30 = 100%** | 1.0 (불일치 0) | 23.73 s | **0.14 s** |
+            | stir | 30/30 = 100% | 22/30 = 73.3% | 0.0078 | 33.66 s | 0.91 s |
+
+            **원고의 66.7 / 83.3 / 60 % 는 실측 63.3 / 100 / 73.3 % 와 맞지 않는다.** 특히
+            **Move에서는 베이스라인이 동률(30/30)이면서 170배 빠르다** — Move 우위 주장은 성립하지 않는다.
+            move·stir는 cuTAMP 런이 전부 60 s 안에 끝나 검열이 없었다.
       - [ ] **미완**: ①PDDLStream은 확률적이라 재실행마다 ±1 시드 흔들린다(60 s 전용 런 18/30 vs
             180 s 런의 60 s 검열 19/30) — 반복 실행으로 per-seed 성공확률을 보고할지 결정 필요.
-            ②move·stir는 아직 페어드 러너에 문제 생성기를 붙이지 않았다.
+            ②**비대칭 하나를 본문에 명시해야 한다**: PDDLStream 쪽은 계획 존재만 확인했고 실행으로
+            검증하지 않았다(cuTAMP 쪽은 Isaac에서 실행까지 30/30 성공). PyBullet의 거친 충돌 모델이
+            받아준 계획이 Isaac에서 실패할 수 있으므로, 베이스라인이 종단까지 동등하다고 주장하면 안 된다.
 - [ ] **B2. AprilTag perception in-the-loop** (렌더 카메라 → 검출 → 융합 → World State) + perception noise 주입
       재실행(표 마지막 열 `\nd{}`) · R1#1 · **R1 최우선 concern**
 
