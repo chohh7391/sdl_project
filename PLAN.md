@@ -15,6 +15,12 @@ concern을 닫지 못하면 reject (binary review).
 
 ## 0. 현재 상태 (기준점, 2026-08-31)
 
+> **최신 현황은 `REVISION_TODO.md`를 볼 것** (2026-09-11 기준). 이 파일은 계속 마스터
+> 카탈로그(concern 맵 + 실험 A/B/C)로 남고, `REVISION_TODO.md`는 그 위에 "무엇이 실측으로
+> 뒷받침되고 무엇이 아직 아닌가"를 얹은 현황 문서다. 두 파일이 어긋나면 이 파일이 우선한다.
+> 요약: 시뮬 TAMP(계열 1)는 transfer/move/stir **각 30/30 실측 완료**, 나머지 4계열 미착수.
+
+
 - **리비전은 이미 초안 상태.** `access_revised.tex`(수정 원고, `\rev{}` 하이라이트 ~89개,
   빨간 `\nd{}` placeholder **~210개**), `revision/response_to_reviewers.tex`(point-by-point
   응답, **~95개**). 문구는 대부분 완성되어 있고, **빨간 부분 = 아직 실제로 만들어내야 하는
