@@ -19,7 +19,13 @@ from validator import ProcedureValidator, ProcedureValidationError
 # 0. 설정 및 모델 로드
 # ==========================================
 MODEL_PATH = "/home/home/sdl_ws/src/sdl_project/LLM/llama/model/checkpoint/xdl_generator/checkpoint"
-DATA_PATH = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/test_data.json"
+# test_data.json lives beside this script; test_data_gen.py's SAVE_PATH points
+# one directory up, where no such file exists, so this path was broken.
+DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data.json")
+# Every generation is also written out, so field-level scoring (score_xdl.py)
+# can run against the recovered labels without re-running inference.
+DUMP_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "xdl_generations.json")
 
 print("⏳ Loading model...")
 model, tokenizer = FastLanguageModel.from_pretrained(
@@ -129,11 +135,15 @@ def run_generation_experiment(test_instructions):
     invalid_count = 0
     total_inf_time = 0.0
     error_stats = defaultdict(lambda: {"count": 0, "example": ""})
-    
+    generations = {}
+    inf_times = []
+
     for i, instruction in enumerate(test_instructions, 1):
         prompt = BASE_PROMPT.format(instruction=instruction)
         generated_xml, inf_time = generate_xdl(prompt)
         total_inf_time += inf_time
+        generations[str(i - 1)] = generated_xml
+        inf_times.append(inf_time)
         
         validator = ProcedureValidator()
         try:
@@ -156,6 +166,11 @@ def run_generation_experiment(test_instructions):
             print('-------------------------------------------------------')
 
     avg_time = total_inf_time / len(test_instructions) if test_instructions else 0
+    with open(DUMP_PATH, "w") as fh:
+        json.dump({"model": MODEL_PATH, "data": DATA_PATH,
+                   "generations": generations, "inference_times_s": inf_times},
+                  fh, indent=1)
+    print("wrote generations to %s" % DUMP_PATH)
     return len(test_instructions), valid_count, invalid_count, error_stats, avg_time
 
 def run_validator_accuracy_experiment(labeled_xdl_data):

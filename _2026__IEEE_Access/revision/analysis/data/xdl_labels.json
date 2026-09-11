@@ -1,0 +1,1853 @@
+{
+ "source": "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/XDL_generator/test_data.json",
+ "labels": [
+  {
+   "index": 0,
+   "instruction": "Place 25 mL of water into flask_B. Agitate flask_B for 2 min. Pour 25 mL from flask_B into beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_B",
+     "time": "2 min"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "flask_B",
+     "to_vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"flask_B\" time=\"2 min\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 1,
+   "instruction": "Add 50 mL of water to beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 2,
+   "instruction": "Pour 10 mL of water into flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 3,
+   "instruction": "Add 50 mL of water to flask_A. Wash flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "index": 4,
+   "instruction": "Add 10 mL of ethanol to flask_B. Place bottle_A on plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 5,
+   "instruction": "Add 10 mL of ethanol to flask_B. Wash flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <CleanVessel vessel=\"flask_B\" />\n</procedure>"
+  },
+  {
+   "index": 6,
+   "instruction": "Introduce 50 mL of ethanol into the flask_B. Send 25 mL from flask_B to beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "flask_B",
+     "to_vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 7,
+   "instruction": "Place 50 mL of ethanol into flask_A. Relocate box_A onto plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 8,
+   "instruction": "Pour 25 mL of water into beaker_B. Send 50 mL from beaker_B to flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "50 mL",
+     "from_vessel": "beaker_B",
+     "to_vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"25 mL\" />\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_B\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 9,
+   "instruction": "Place 50 mL of water into flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 10,
+   "instruction": "Place 25 mL of ethanol into flask_A. Set the temperature of flask_A to 60 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "60 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"60 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 11,
+   "instruction": "Add 10 mL of water to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 12,
+   "instruction": "Place 10 mL of water into beaker_B. Move bottle_A to plate_B. Put bottle_A on top of plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_B"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 13,
+   "instruction": "Pour 10 mL of water into flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 14,
+   "instruction": "Introduce 25 mL of ethanol into the beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"ethanol\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 15,
+   "instruction": "Pour 50 mL of ethanol into flask_B. Transfer 10 mL from flask_B to flask_A. Bring flask_A to 0 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "10 mL",
+     "from_vessel": "flask_B",
+     "to_vessel": "flask_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "0 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 16,
+   "instruction": "Pour 25 mL of ethanol into beaker_A. Place box_A on plate_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Move object=\"box_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "index": 17,
+   "instruction": "Place 10 mL of water into flask_B. Pour 25 mL from flask_B into flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "flask_B",
+     "to_vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 18,
+   "instruction": "Pour 10 mL of water into flask_A. Send 10 mL from flask_A to beaker_B. Perform cleaning on beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Transfer",
+     "volume": "10 mL",
+     "from_vessel": "flask_A",
+     "to_vessel": "beaker_B"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_B\" volume=\"10 mL\" />\n  <CleanVessel vessel=\"beaker_B\" />\n</procedure>"
+  },
+  {
+   "index": 19,
+   "instruction": "Place 50 mL of water into flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 20,
+   "instruction": "Add 10 mL of water to flask_A. Mix the contents of flask_A for 2 min. Bring flask_A to 0 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_A",
+     "time": "2 min"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "0 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_A\" time=\"2 min\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 21,
+   "instruction": "Introduce 10 mL of water into the flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 22,
+   "instruction": "Add 25 mL of ethanol to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 23,
+   "instruction": "Add 50 mL of ethanol to beaker_A. Perform cleaning on beaker_A. Transfer 25 mL from beaker_A to beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "beaker_A",
+     "to_vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"beaker_A\" />\n  <Transfer from_vessel=\"beaker_A\" to_vessel=\"beaker_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 24,
+   "instruction": "Pour 10 mL of water into beaker_B. Relocate bottle_A onto plate_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "index": 25,
+   "instruction": "Introduce 25 mL of water into the flask_B. Stir flask_B for 1 min.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_B",
+     "time": "1 min"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"flask_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "index": 26,
+   "instruction": "Introduce 10 mL of water into the beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 27,
+   "instruction": "Add 50 mL of water to flask_A. Stir the solution in flask_A for 30 s. Transfer 25 mL from flask_A to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_A",
+     "time": "30 s"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "flask_A",
+     "to_vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"50 mL\" />\n  <Stir vessel=\"flask_A\" time=\"30 s\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 28,
+   "instruction": "Add 50 mL of water to beaker_A. Heat beaker_A to 60 C. Adjust beaker_A to 60 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "beaker_A",
+     "temp": "60 C",
+     "active": "true"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "beaker_A",
+     "temp": "60 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"50 mL\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"60 C\" active=\"true\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"60 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 29,
+   "instruction": "Introduce 25 mL of water into the beaker_A. Stir beaker_A for 1 min. Bring beaker_A to 25 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_A",
+     "time": "1 min"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "beaker_A",
+     "temp": "25 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"beaker_A\" time=\"1 min\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 30,
+   "instruction": "Introduce 25 mL of water into the flask_A. Agitate flask_A for 2 min.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_A",
+     "time": "2 min"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"flask_A\" time=\"2 min\" />\n</procedure>"
+  },
+  {
+   "index": 31,
+   "instruction": "Introduce 10 mL of ethanol into the flask_B. Stir flask_B for 30 s. Bring flask_B to 0 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_B",
+     "time": "30 s"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_B",
+     "temp": "0 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_B\" time=\"30 s\" />\n  <HeatChill vessel=\"flask_B\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 32,
+   "instruction": "Place 10 mL of ethanol into flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 33,
+   "instruction": "Introduce 50 mL of water into the beaker_B. Wash beaker_B. Heat beaker_B to 60 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "beaker_B",
+     "temp": "60 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"beaker_B\" />\n  <HeatChill vessel=\"beaker_B\" temp=\"60 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 34,
+   "instruction": "Introduce 50 mL of ethanol into the beaker_A. Perform cleaning on beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "index": 35,
+   "instruction": "Add 25 mL of ethanol to beaker_B. Pour 50 mL from beaker_B into beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "50 mL",
+     "from_vessel": "beaker_B",
+     "to_vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 36,
+   "instruction": "Introduce 25 mL of water into the flask_A. Set the temperature of flask_A to 25 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "25 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"25 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"25 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 37,
+   "instruction": "Introduce 50 mL of ethanol into the beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 38,
+   "instruction": "Pour 10 mL of water into beaker_B. Agitate beaker_B for 2 min. Send 10 mL from beaker_B to flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_B",
+     "time": "2 min"
+    },
+    {
+     "op": "Transfer",
+     "volume": "10 mL",
+     "from_vessel": "beaker_B",
+     "to_vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"beaker_B\" time=\"2 min\" />\n  <Transfer from_vessel=\"beaker_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 39,
+   "instruction": "Introduce 50 mL of water into the flask_A. Stir the solution in flask_A for 1 min. Agitate flask_A for 2 min.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_A",
+     "time": "1 min"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_A",
+     "time": "2 min"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"50 mL\" />\n  <Stir vessel=\"flask_A\" time=\"1 min\" />\n  <Stir vessel=\"flask_A\" time=\"2 min\" />\n</procedure>"
+  },
+  {
+   "index": 40,
+   "instruction": "Place 10 mL of ethanol into flask_B. Set the temperature of flask_B to 0 C. Send 10 mL from flask_B to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_B",
+     "temp": "0 C",
+     "active": "true"
+    },
+    {
+     "op": "Transfer",
+     "volume": "10 mL",
+     "from_vessel": "flask_B",
+     "to_vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <HeatChill vessel=\"flask_B\" temp=\"0 C\" active=\"true\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 41,
+   "instruction": "Add 25 mL of water to beaker_A. Mix the contents of beaker_A for 30 s. Stir beaker_A for 1 min.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_A",
+     "time": "30 s"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_A",
+     "time": "1 min"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n  <Stir vessel=\"beaker_A\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "index": 42,
+   "instruction": "Place 50 mL of ethanol into beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 43,
+   "instruction": "Pour 25 mL of water into flask_B. Wash flask_B. Place bottle_A on plate_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <CleanVessel vessel=\"flask_B\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "index": 44,
+   "instruction": "Pour 25 mL of ethanol into beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 45,
+   "instruction": "Place 10 mL of water into beaker_B. Stir beaker_B for 1 min.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_B",
+     "time": "1 min"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"beaker_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "index": 46,
+   "instruction": "Add 25 mL of ethanol to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 47,
+   "instruction": "Add 50 mL of ethanol to flask_A. Rinse and clean flask_A. Wash flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"flask_A\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "index": 48,
+   "instruction": "Pour 50 mL of water into flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 49,
+   "instruction": "Introduce 25 mL of water into the flask_A. Mix the contents of flask_A for 2 min. Put bottle_A on top of plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_A",
+     "time": "2 min"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Stir vessel=\"flask_A\" time=\"2 min\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 50,
+   "instruction": "Pour 10 mL of ethanol into flask_A. Transfer 10 mL from flask_A to flask_B. Agitate flask_B for 1 min.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Transfer",
+     "volume": "10 mL",
+     "from_vessel": "flask_A",
+     "to_vessel": "flask_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_B",
+     "time": "1 min"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_B\" time=\"1 min\" />\n</procedure>"
+  },
+  {
+   "index": 51,
+   "instruction": "Place 50 mL of water into flask_B. Put box_A on top of plate_A. Perform cleaning on flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"50 mL\" />\n  <Move object=\"box_A\" place=\"plate_A\" />\n  <CleanVessel vessel=\"flask_B\" />\n</procedure>"
+  },
+  {
+   "index": 52,
+   "instruction": "Place 50 mL of ethanol into flask_A. Stir flask_A for 1 min. Bring flask_A to 0 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_A",
+     "time": "1 min"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "0 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Stir vessel=\"flask_A\" time=\"1 min\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 53,
+   "instruction": "Pour 10 mL of ethanol into flask_A. Move bottle_A to plate_A. Set the temperature of flask_A to 0 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "0 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n  <HeatChill vessel=\"flask_A\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 54,
+   "instruction": "Pour 50 mL of ethanol into flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 55,
+   "instruction": "Place 50 mL of ethanol into beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 56,
+   "instruction": "Introduce 10 mL of ethanol into the flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 57,
+   "instruction": "Add 10 mL of water to beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 58,
+   "instruction": "Add 50 mL of ethanol to flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 59,
+   "instruction": "Add 25 mL of ethanol to flask_B. Move bottle_A to plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 60,
+   "instruction": "Add 10 mL of water to beaker_A. Move bottle_A to plate_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "index": 61,
+   "instruction": "Add 25 mL of water to flask_B. Rinse and clean flask_B. Relocate box_A onto plate_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <CleanVessel vessel=\"flask_B\" />\n  <Move object=\"box_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "index": 62,
+   "instruction": "Pour 50 mL of ethanol into flask_A. Put box_A on top of plate_B. Send 10 mL from flask_A to flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "10 mL",
+     "from_vessel": "flask_A",
+     "to_vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 63,
+   "instruction": "Place 10 mL of water into flask_B. Send 10 mL from flask_B to flask_A. Pour 25 mL from flask_A into flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "10 mL",
+     "from_vessel": "flask_B",
+     "to_vessel": "flask_A"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "flask_A",
+     "to_vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"flask_A\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"flask_B\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 64,
+   "instruction": "Pour 50 mL of ethanol into flask_B. Move box_A to plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 65,
+   "instruction": "Pour 10 mL of ethanol into flask_A. Adjust flask_A to 60 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "60 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"10 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"60 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 66,
+   "instruction": "Introduce 10 mL of ethanol into the flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 67,
+   "instruction": "Place 50 mL of water into beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 68,
+   "instruction": "Place 25 mL of ethanol into beaker_A. Stir beaker_A for 1 min. Put bottle_A on top of plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_A",
+     "time": "1 min"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Stir vessel=\"beaker_A\" time=\"1 min\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 69,
+   "instruction": "Introduce 50 mL of water into the flask_B. Rinse and clean flask_B. Relocate box_A onto plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"50 mL\" />\n  <CleanVessel vessel=\"flask_B\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 70,
+   "instruction": "Pour 25 mL of water into beaker_A. Place box_A on plate_A. Stir the solution in beaker_A for 30 s.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_A",
+     "time": "30 s"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Move object=\"box_A\" place=\"plate_A\" />\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "index": 71,
+   "instruction": "Place 10 mL of water into beaker_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 72,
+   "instruction": "Pour 25 mL of ethanol into beaker_B. Put box_A on top of plate_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Move object=\"box_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "index": 73,
+   "instruction": "Add 10 mL of water to beaker_B. Agitate beaker_B for 30 s.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_B",
+     "time": "30 s"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"beaker_B\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "index": 74,
+   "instruction": "Pour 10 mL of water into flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 75,
+   "instruction": "Place 50 mL of water into flask_B. Agitate flask_B for 2 min.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_B",
+     "time": "2 min"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"50 mL\" />\n  <Stir vessel=\"flask_B\" time=\"2 min\" />\n</procedure>"
+  },
+  {
+   "index": 76,
+   "instruction": "Introduce 25 mL of ethanol into the beaker_A. Bring beaker_A to 60 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "beaker_A",
+     "temp": "60 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"60 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 77,
+   "instruction": "Place 10 mL of water into beaker_B. Relocate bottle_A onto plate_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_A\" />\n</procedure>"
+  },
+  {
+   "index": 78,
+   "instruction": "Pour 25 mL of water into beaker_A. Adjust beaker_A to 25 C. Put box_A on top of plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "beaker_A",
+     "temp": "25 C",
+     "active": "true"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"25 C\" active=\"true\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 79,
+   "instruction": "Pour 25 mL of water into flask_B. Send 50 mL from flask_B to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "50 mL",
+     "from_vessel": "flask_B",
+     "to_vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"25 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 80,
+   "instruction": "Add 50 mL of ethanol to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 81,
+   "instruction": "Pour 10 mL of water into beaker_A. Send 25 mL from beaker_A to flask_A. Bring flask_A to 25 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "beaker_A",
+     "to_vessel": "flask_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "25 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"10 mL\" />\n  <Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"25 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"25 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 82,
+   "instruction": "Pour 25 mL of ethanol into flask_A. Send 25 mL from flask_A to beaker_A. Stir the solution in beaker_A for 30 s.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "flask_A",
+     "to_vessel": "beaker_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_A",
+     "time": "30 s"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "index": 83,
+   "instruction": "Introduce 25 mL of water into the beaker_A. Put box_A on top of plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 84,
+   "instruction": "Add 50 mL of ethanol to flask_A. Send 25 mL from flask_A to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Transfer",
+     "volume": "25 mL",
+     "from_vessel": "flask_A",
+     "to_vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Transfer from_vessel=\"flask_A\" to_vessel=\"beaker_A\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 85,
+   "instruction": "Introduce 25 mL of water into the beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 86,
+   "instruction": "Introduce 25 mL of ethanol into the beaker_A. Place box_A on plate_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Move",
+     "object": "box_A",
+     "place": "plate_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <Move object=\"box_A\" place=\"plate_B\" />\n</procedure>"
+  },
+  {
+   "index": 87,
+   "instruction": "Place 25 mL of ethanol into beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 88,
+   "instruction": "Add 10 mL of water to flask_A. Perform cleaning on flask_A. Rinse and clean flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" />\n  <CleanVessel vessel=\"flask_A\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "index": 89,
+   "instruction": "Pour 10 mL of water into flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"10 mL\" />\n</procedure>"
+  },
+  {
+   "index": 90,
+   "instruction": "Pour 25 mL of ethanol into beaker_A. Perform cleaning on beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <CleanVessel vessel=\"beaker_A\" />\n</procedure>"
+  },
+  {
+   "index": 91,
+   "instruction": "Introduce 10 mL of water into the flask_B. Mix the contents of flask_B for 2 min.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "10 mL",
+     "reagent": "water",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_B",
+     "time": "2 min"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"water\" volume=\"10 mL\" />\n  <Stir vessel=\"flask_B\" time=\"2 min\" />\n</procedure>"
+  },
+  {
+   "index": 92,
+   "instruction": "Add 50 mL of ethanol to flask_B.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 93,
+   "instruction": "Add 25 mL of water to flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"25 mL\" />\n</procedure>"
+  },
+  {
+   "index": 94,
+   "instruction": "Introduce 50 mL of ethanol into the flask_B. Send 50 mL from flask_B to beaker_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_B"
+    },
+    {
+     "op": "Transfer",
+     "volume": "50 mL",
+     "from_vessel": "flask_B",
+     "to_vessel": "beaker_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_B\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <Transfer from_vessel=\"flask_B\" to_vessel=\"beaker_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 95,
+   "instruction": "Introduce 25 mL of water into the beaker_A. Put bottle_A on top of plate_B. Stir beaker_A for 30 s.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "Move",
+     "object": "bottle_A",
+     "place": "plate_B"
+    },
+    {
+     "op": "Stir",
+     "vessel": "beaker_A",
+     "time": "30 s"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"water\" volume=\"25 mL\" />\n  <Move object=\"bottle_A\" place=\"plate_B\" />\n  <Stir vessel=\"beaker_A\" time=\"30 s\" />\n</procedure>"
+  },
+  {
+   "index": 96,
+   "instruction": "Add 25 mL of ethanol to flask_A. Adjust flask_A to 60 C. Perform cleaning on flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "ethanol",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "flask_A",
+     "temp": "60 C",
+     "active": "true"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"ethanol\" volume=\"25 mL\" />\n  <HeatChill vessel=\"flask_A\" temp=\"60 C\" active=\"true\" />\n  <CleanVessel vessel=\"flask_A\" />\n</procedure>"
+  },
+  {
+   "index": 97,
+   "instruction": "Introduce 50 mL of water into the beaker_B. Heat beaker_B to 0 C.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "water",
+     "vessel": "beaker_B"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "beaker_B",
+     "temp": "0 C",
+     "active": "true"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_B\" reagent=\"water\" volume=\"50 mL\" />\n  <HeatChill vessel=\"beaker_B\" temp=\"0 C\" active=\"true\" />\n</procedure>"
+  },
+  {
+   "index": 98,
+   "instruction": "Pour 50 mL of ethanol into beaker_A. Adjust beaker_A to 0 C. Send 50 mL from beaker_A to flask_A.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "50 mL",
+     "reagent": "ethanol",
+     "vessel": "beaker_A"
+    },
+    {
+     "op": "HeatChill",
+     "vessel": "beaker_A",
+     "temp": "0 C",
+     "active": "true"
+    },
+    {
+     "op": "Transfer",
+     "volume": "50 mL",
+     "from_vessel": "beaker_A",
+     "to_vessel": "flask_A"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"beaker_A\" reagent=\"ethanol\" volume=\"50 mL\" />\n  <HeatChill vessel=\"beaker_A\" temp=\"0 C\" active=\"true\" />\n  <Transfer from_vessel=\"beaker_A\" to_vessel=\"flask_A\" volume=\"50 mL\" />\n</procedure>"
+  },
+  {
+   "index": 99,
+   "instruction": "Add 25 mL of water to flask_A. Rinse and clean flask_A. Mix the contents of flask_A for 30 s.",
+   "steps": [
+    {
+     "op": "Add",
+     "volume": "25 mL",
+     "reagent": "water",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "CleanVessel",
+     "vessel": "flask_A"
+    },
+    {
+     "op": "Stir",
+     "vessel": "flask_A",
+     "time": "30 s"
+    }
+   ],
+   "xml": "<procedure>\n  <Add vessel=\"flask_A\" reagent=\"water\" volume=\"25 mL\" />\n  <CleanVessel vessel=\"flask_A\" />\n  <Stir vessel=\"flask_A\" time=\"30 s\" />\n</procedure>"
+  }
+ ]
+}
