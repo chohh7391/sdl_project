@@ -507,6 +507,13 @@ class TAMPServer(Node):
     # physical cell. Set with SDL_STATE_SOURCE.
     PERCEPTION_ENTITIES = ("beaker", "flask")
 
+    # A perception pose older than this is not a current observation. Detection
+    # is intermittent for a partly occluded tag, and a TF buffer keeps the last
+    # transform indefinitely, so without an age check a planning trial can be
+    # built on a pose measured a minute earlier and still be reported as
+    # perception-in-the-loop.
+    PERCEPTION_MAX_AGE_S = float(os.environ.get("SDL_PERCEPTION_MAX_AGE_S", "2.0"))
+
     def _perception_pose(self, entity):
         """base_link -> entity from the perception TF, or None.
 
@@ -522,7 +529,19 @@ class TAMPServer(Node):
             self.get_logger().warn(
                 "[state] %s has no perception pose: %s" % (entity, exc))
             return None
+        stamp = t.header.stamp.sec + t.header.stamp.nanosec * 1e-9
+        now = self.get_clock().now().nanoseconds * 1e-9
+        age = now - stamp
+        if age > self.PERCEPTION_MAX_AGE_S:
+            self.get_logger().warn(
+                "[state] %s perception pose is %.1f s old (limit %.1f s); "
+                "treating it as not localized" % (entity, age,
+                                                  self.PERCEPTION_MAX_AGE_S))
+            return None
         p, q = t.transform.translation, t.transform.rotation
+        self.get_logger().info(
+            "[state] %s from perception at (%.4f, %.4f, %.4f), age %.2f s"
+            % (entity, p.x, p.y, p.z, age))
         return [p.x, p.y, p.z, q.w, q.x, q.y, q.z]
 
     async def set_tamp_env_cb(self, request, response):
