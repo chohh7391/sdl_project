@@ -42,7 +42,14 @@ def with_explicit_pour_steps(plan: Any) -> Any:
         result.append(step)
         if step.get("op_name") != "Move_to_Surface":
             continue
-        next_op = plan[index + 1].get("op_name") if index + 1 < len(plan) else None
-        if next_op != "Move_to_Surface":
-            result.append({"type": "pour", "op_name": "pouring"})
+        nxt = plan[index + 1] if index + 1 < len(plan) else None
+        next_op = nxt.get("op_name") if nxt else None
+        if next_op == "Move_to_Surface":
+            continue
+        # The motion solver may already have emitted the pour as an explicit
+        # lip-pivot joint path; injecting a bare pour step as well would pour
+        # twice. Only synthesise one when there is no path.
+        if nxt is not None and nxt.get("type") == "pour_path":
+            continue
+        result.append({"type": "pour", "op_name": "pouring"})
     return result

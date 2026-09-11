@@ -1,10 +1,12 @@
 from typing import Dict, List, Any
+
+import numpy as np
 from curobo.geom.types import Obstacle
 from curobo.types.base import TensorDeviceType
 from cutamp.envs import TAMPEnvironment
 from cutamp.envs.utils import unit_quat
 from cutamp.tamp_domain import HandEmpty, On, Poured
-from envs.constants import PLANNER_Z_LIFT
+from envs.constants import PLANNER_Z_LIFT, region_dims_for
 
 
 def load_transfer_env(
@@ -25,11 +27,42 @@ def load_transfer_env(
     # Previously this was a bare `pose[2] += 0.11` magic constant, which only *coincidentally*
     # lands at rim+clearance for the nominal 0.12 m-tall flask and silently drifts off the rim
     # if the target vessel's height changes (or under position randomization). Derive it instead.
+    from_vessel = movables[0]
     to_vessel = movables[1]
     POUR_CLEARANCE = 0.05  # [m] gap between beaker bottom and flask rim so the tilted beaker clears the rim; tunable
     rim_z = to_vessel.pose[2] + to_vessel.dims[2] / 2.0  # flask top / mouth height
-    entities["pour_region"].pose = to_vessel.pose.copy()  # xy + yaw aligned to the flask mouth
-    entities["pour_region"].pose[2] = rim_z + POUR_CLEARANCE
+
+    # The liquid leaves the source vessel's LIP, not its axis, so centring the
+    # source on the target's axis puts the stream one vessel-radius off the mouth
+    # before the pour even starts -- and tilting then swings the lip much further
+    # (measured: 36-81 mm from the flask axis at peak tilt, against a ~17 mm mouth
+    # radius on the flask that was bought). Offset the placement by the source
+    # vessel's radius so that the LIP, not the centre, sits over the mouth.
+    #
+    # The offset direction is also the direction the vessel will be tilted, and
+    # the executor has to agree with it, so it is carried in the region's YAW
+    # (the region is a square and the vessel is a symmetric cylinder, so its yaw
+    # was otherwise unused). Leaning away from the robot base keeps the arm on
+    # the near side of the target vessel.
+    lean = np.asarray(to_vessel.pose[:2], dtype=float)
+    norm = float(np.linalg.norm(lean))
+    lean = lean / norm if norm > 1e-6 else np.array([1.0, 0.0])
+    lip_radius = from_vessel.dims[0] / 2.0
+    yaw = float(np.arctan2(lean[1], lean[0]))
+
+    # How far off the mouth the vessel's lip may be PLANNED. The region was
+    # authored 0.08 m wide, which allows 10 mm (0.04 - 0.005 sphere radius -
+    # 0.025 vessel half-width) before execution error is added; measured lip
+    # error at peak tilt was then 17-27 mm against a ~17 mm mouth radius.
+    POUR_LIP_ALLOWANCE_M = 0.004
+    pour_span = region_dims_for(from_vessel.dims[0], POUR_LIP_ALLOWANCE_M)
+    entities["pour_region"].dims = [pour_span, pour_span, entities["pour_region"].dims[2]]
+    entities["pour_region"].pose = [
+        float(to_vessel.pose[0] - lip_radius * lean[0]),
+        float(to_vessel.pose[1] - lip_radius * lean[1]),
+        rim_z + POUR_CLEARANCE,
+        float(np.cos(yaw / 2.0)), 0.0, 0.0, float(np.sin(yaw / 2.0)),
+    ]
     # The goal region is a PLANNER-ONLY surface: there is no goal-region prim in
     # the simulator, so the physical support at that xy is the table top. A
     # placement puts the vessel's bottom at (surface top + activation distance +

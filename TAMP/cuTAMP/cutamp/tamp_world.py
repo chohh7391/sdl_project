@@ -75,20 +75,7 @@ class TAMPWorld:
         self.q_init = q_init
 
         # Setup the IK solver, right now it needs WorldCfg and I don't know the behavior, can speed up later
-        if self.robot_name == "panda":
-            self.ik_solver = get_franka_ik_solver(self.world_cfg)
-        elif self.robot_name == "ur5":
-            self.ik_solver = get_ur5_ik_solver(self.world_cfg)
-        elif self.robot_name == "fr5":
-            self.ik_solver = get_fr5_ik_solver(self.world_cfg)
-        elif self.robot_name == "fr5_ag95":
-            self.ik_solver = get_fr5_ag95_ik_solver(self.world_cfg)
-        elif self.robot_name == "fr5_vgc10":
-            self.ik_solver = get_fr5_vgc10_ik_solver(self.world_cfg)
-        elif self.robot_name == "fr5_dh3":
-            self.ik_solver = get_fr5_dh3_ik_solver(self.world_cfg)
-        else:
-            raise ValueError(f"Unsupported robot: {self.robot_name}")
+        self.ik_solver = self.new_ik_solver()
 
         # Sample collision spheres for all movables
         self._obj_to_spheres: Dict[str, Float[torch.Tensor, "n 4"]] = {}
@@ -98,6 +85,30 @@ class TAMPWorld:
 
         # AABB cache
         self._obj_to_aabb = {}
+
+    def new_ik_solver(self):
+        """Build a FRESH IK solver for this world's robot.
+
+        cuRobo compiles a CUDA graph on an IK solver's first `solve_batch`, fixed
+        to that call's batch size AND to whether seeds were supplied; any later
+        call that differs raises "changing goal type, cuda graph reset not
+        available". A caller that needs a different call shape -- planning the
+        pour path, say, which is a short batch seeded with the arm's current
+        configuration -- therefore needs its own solver rather than this world's.
+        """
+        if self.robot_name == "panda":
+            return get_franka_ik_solver(self.world_cfg)
+        if self.robot_name == "ur5":
+            return get_ur5_ik_solver(self.world_cfg)
+        if self.robot_name == "fr5":
+            return get_fr5_ik_solver(self.world_cfg)
+        if self.robot_name == "fr5_ag95":
+            return get_fr5_ag95_ik_solver(self.world_cfg)
+        if self.robot_name == "fr5_vgc10":
+            return get_fr5_vgc10_ik_solver(self.world_cfg)
+        if self.robot_name == "fr5_dh3":
+            return get_fr5_dh3_ik_solver(self.world_cfg)
+        raise ValueError(f"Unsupported robot: {self.robot_name}")
 
     @property
     def movables(self) -> List[Obstacle]:

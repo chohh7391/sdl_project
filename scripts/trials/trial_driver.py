@@ -61,7 +61,7 @@ CSV_HEADER = [
     # axis. RECORDED ONLY -- it is not yet part of task_success, because the
     # threshold should be set from the measured distribution rather than before
     # it (the target vessel's real mouth radius is about 17 mm).
-    "pour_peak_tilt_deg", "pour_lip_err_mm",
+    "pour_peak_tilt_deg", "pour_lip_err_mm", "pour_start_lip_err_mm",
 ]
 
 # Goal region for the transfer task, mirroring the xy that
@@ -157,6 +157,11 @@ class TaskOrchestrator(Node):
         self.carried_lip_xy = None
         self.pour_peak_tilt = -1.0
         self.pour_peak_lip_xy = None
+        # The lip at the START of the pour too: a constant offset there means the
+        # simulator's vessel is not where the planner modelled it, while an error
+        # that only appears at peak tilt is tracking lag along the pour path.
+        self.pour_start_tilt = None
+        self.pour_start_lip_xy = None
         self.saw_pour = False            # did the explicit pour step actually execute?
 
         latched = QoSProfile(
@@ -194,9 +199,13 @@ class TaskOrchestrator(Node):
         if t < 0:
             return  # nothing attached
         self.max_any_tilt = max(self.max_any_tilt, t)
-        if self.current_op == "pouring" and t > self.pour_peak_tilt:
-            self.pour_peak_tilt = t
-            self.pour_peak_lip_xy = self.carried_lip_xy
+        if self.current_op == "pouring":
+            if self.pour_start_tilt is None or t < self.pour_start_tilt:
+                self.pour_start_tilt = t
+                self.pour_start_lip_xy = self.carried_lip_xy
+            if t > self.pour_peak_tilt:
+                self.pour_peak_tilt = t
+                self.pour_peak_lip_xy = self.carried_lip_xy
         # attached (t >= 0) and not in the pour/idle phase => transport carry
         if self.current_op not in NON_TRANSPORT_OPS:
             obj = self.carried_obj
@@ -309,6 +318,11 @@ class TaskOrchestrator(Node):
                 row["pour_lip_err_mm"] = (
                     f"{math.hypot(lx - tgt[0], ly - tgt[1]) * 1000:.1f}"
                 )
+                if self.pour_start_lip_xy is not None:
+                    sx, sy = self.pour_start_lip_xy
+                    row["pour_start_lip_err_mm"] = (
+                        f"{math.hypot(sx - tgt[0], sy - tgt[1]) * 1000:.1f}"
+                    )
 
         poured_ok = self.saw_pour if spec["require_pour"] else True
 
@@ -353,7 +367,7 @@ class TaskOrchestrator(Node):
             "poured": False, "final_tilt_deg": "", "final_xy": "",
             "placed_upright": False, "placed_in_goal": False, "task_success": False,
             "target_obj": "", "goal_err_mm": "", "aux_check": "",
-            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "",
+            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "", "pour_start_lip_err_mm": "",
         }
 
         # Canonical sequence: (tool -> cfg) -> env -> plan -> execute.
@@ -504,7 +518,7 @@ def main():
             "failure_reason": f"driver_exception:{type(e).__name__}:{e}",
             "beaker_xy": "", "flask_xy": "",
             "target_obj": "", "goal_err_mm": "", "aux_check": "",
-            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "",
+            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "", "pour_start_lip_err_mm": "",
         }
         node.get_logger().error(f"trial exception: {e}")
     append_csv(args.csv, row)

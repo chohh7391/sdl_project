@@ -701,6 +701,12 @@ class TAMPServer(Node):
             elif plan_step["type"] == "gripper":
                 value.type = 1 
                 value.action = plan_step["action"]
+            elif plan_step["type"] == "pour_path":
+                # Published as a POUR step: clients only need to know that a pour
+                # happens here; the joint path is executed in this process.
+                value.type = 2  # POUR
+                value.action = "pour_path"
+
             elif plan_step["type"] == "pour":
                 value.type = 2
             else:
@@ -771,6 +777,11 @@ class TAMPServer(Node):
                 self.pouring()
                 self.get_logger().info("Explicit pouring step completed.")
 
+            elif plan_type == "pour_path":
+                self.saved_state_after_operator = self.joint_states.position[:6]
+                self.pouring_along_path(plan_part)
+                self.get_logger().info("Lip-pivot pouring step completed.")
+
             else:
                 self.get_logger().error(f"Unknown plan type: {plan_type}")
                 response.execute_success = False
@@ -785,6 +796,119 @@ class TAMPServer(Node):
         msg = String()
         msg.data = str(op_name)
         self.current_op_pub.publish(msg)
+
+    def _pour_shaping_kernel(self, dt, kernel_horizon=2.5,
+                             shaping_freq=0.8, shaping_decay=1.2, alpha=0.15):
+        """Convolution kernel that smooths the PD output into a wrist command."""
+        n_kernel = int(kernel_horizon / dt)
+        t_kernel = np.arange(n_kernel) * dt
+        raw = np.exp(-shaping_decay * t_kernel) * np.sin(2.0 * np.pi * shaping_freq * t_kernel)
+        kernel = raw
+        if np.sum(np.abs(raw)) > 1e-6:
+            kernel = (1 - alpha) * (raw / np.sum(np.abs(raw))) \
+                     + alpha * (raw / (np.max(np.abs(raw)) + 1e-6))
+        return kernel, n_kernel
+
+    def pouring_along_path(self, plan_part):
+        """Pour by moving ALONG a planned lip-pivot path.
+
+        `pouring()` rotates the wrist joint, whose axis passes through the grasp
+        point, so the vessel's lip swings away from the target as it tilts
+        (measured 36-81 mm from the flask axis at peak tilt, against a ~17 mm
+        mouth radius). This instead walks a joint path that rotates the vessel
+        about a horizontal axis through its own lip, so the lip stays where the
+        placement put it -- over the mouth -- at every angle.
+
+        The weight controller is unchanged in character: the same PD output and
+        convolution shaping, the same rate limit, and the same stopping rule. It
+        just advances a position along the path instead of an angle of one joint,
+        so the pour is still adaptive. The path's end IS the tilt cap, which also
+        removes the runaway the old loop allowed (measured pour angles ranged
+        from 30.6 to 84.4 degrees).
+        """
+        positions = plan_part["positions"]
+        path = np.asarray(
+            positions.detach().cpu().numpy() if hasattr(positions, "detach") else positions,
+            dtype=float,
+        )
+        n_way = path.shape[0] - 1
+        step_rad = float(plan_part.get("step_rad", 0.0))
+        if n_way < 1 or step_rad <= 0.0:
+            self.get_logger().warn("Empty lip-pivot pour path; falling back to the wrist pour.")
+            self.pouring()
+            return
+
+        Kp, Kd = 0.008, 0.002
+        weight_target = 50.0
+        dt = 0.04
+        max_steps = 800
+        MAX_TILT_RATE = 0.5      # [rad/s] same saturation as the wrist pour
+
+        kernel, n_kernel = self._pour_shaping_kernel(dt)
+        self.get_logger().info(
+            "Starting lip-pivot pouring: %d waypoints, %.3f rad per waypoint "
+            "(max tilt %.1f deg)." % (n_way, step_rad, np.degrees(n_way * step_rad))
+        )
+
+        def q_at(u):
+            u = float(np.clip(u, 0.0, n_way))
+            lo = int(np.floor(u))
+            hi = min(lo + 1, n_way)
+            frac = u - lo
+            return (1.0 - frac) * path[lo] + frac * path[hi]
+
+        def publish(u):
+            self.arm_commands.header.stamp = self.get_clock().now().to_msg()
+            self.arm_commands.name = self.tamp.cmd_js_names
+            self.arm_commands.position = q_at(u).tolist()
+            self.arm_commands_publisher.publish(self.arm_commands)
+
+        u = 0.0
+        prev_error = 0.0
+        pd_history = []
+        for step in range(max_steps):
+            error = weight_target - self.scale
+            d_error = (error - prev_error) / dt
+            prev_error = error
+            pd_output = Kp * error + Kd * d_error
+
+            pd_history.append(pd_output)
+            if len(pd_history) > n_kernel:
+                pd_history.pop(0)
+            valid = min(len(pd_history), n_kernel)
+            v_cmd = float(np.dot(np.array(pd_history[-valid:]), kernel[:valid][::-1]))
+            v_cmd = max(-MAX_TILT_RATE, min(MAX_TILT_RATE, v_cmd))
+
+            u = float(np.clip(u + (v_cmd * dt) / step_rad, 0.0, n_way))
+            publish(u)
+
+            self.get_logger().info(
+                "[Pouring] step=%d, weight=%.2f, err=%.2f, pd=%.3f, v_cmd=%.4f, "
+                "tilt=%.1fdeg (u=%.2f/%d)"
+                % (step, self.scale, error, pd_output, v_cmd,
+                   np.degrees(u * step_rad), u, n_way)
+            )
+
+            if abs(error) < 0.5:
+                self.get_logger().info("Target weight reached. Stopping pouring.")
+                break
+            if u >= n_way and v_cmd > 0:
+                self.get_logger().warn(
+                    "Reached the end of the planned pour path (%.1f deg) without "
+                    "reaching the target weight." % np.degrees(n_way * step_rad)
+                )
+                break
+            time.sleep(dt)
+
+        # Un-tilt by reversing along the SAME path, at the same rate limit, so the
+        # vessel ends exactly where the placement left it and the remaining plan
+        # steps carry it upright.
+        back_du = (MAX_TILT_RATE * dt) / step_rad
+        while u > 0.0:
+            u = max(0.0, u - back_du)
+            publish(u)
+            time.sleep(dt)
+        self.get_logger().info("Lip-pivot pour returned to the upright placement.")
 
     def pouring(self):
 

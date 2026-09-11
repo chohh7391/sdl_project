@@ -12,6 +12,7 @@
 import logging
 from typing import List
 
+import math
 import torch
 from curobo.geom.sphere_fit import SphereFitType
 from curobo.geom.types import Sphere
@@ -115,6 +116,117 @@ def _carried_obj_max_tilt_deg(world_from_obj: torch.Tensor) -> float:
     cos_tilt = world_from_obj[:, 2, 2].clamp(-1.0, 1.0)
     tilt_deg = torch.rad2deg(torch.arccos(cos_tilt))
     return float(tilt_deg.max().item())
+
+
+# Pour geometry. The pour used to be a single rotation of the wrist joint, whose
+# axis passes through the GRASP point, so the vessel's lip swung away from the
+# target as it tilted -- measured 36-81 mm from the flask axis at peak tilt,
+# against a ~17 mm mouth radius. Rotating about a horizontal axis through the LIP
+# instead leaves the lip where the placement put it, for every tilt angle, and is
+# what a person does when pouring.
+POUR_MAX_TILT_RAD = float(_os.environ.get("SDL_POUR_MAX_TILT_RAD", "1.05"))  # ~60 deg
+POUR_PATH_STEPS = int(_os.environ.get("SDL_POUR_PATH_STEPS", "25"))
+# Largest joint jump accepted between consecutive waypoints; batched IK solves
+# each pose independently and can hop to another branch.
+POUR_PATH_MAX_DQ = 0.25  # [rad]
+# A path that cannot reach at least this much tilt is not a usable pour.
+POUR_PATH_MIN_TILT_RAD = 0.70  # ~40 deg
+
+
+def _rot_about_axis(axis, angle):
+    """Rotation matrices for a single axis and a batch of angles. [n, 3, 3]"""
+    axis = axis / torch.linalg.norm(axis)
+    x, y, z = axis[0], axis[1], axis[2]
+    K = torch.zeros((3, 3), device=axis.device, dtype=axis.dtype)
+    K[0, 1], K[0, 2] = -z, y
+    K[1, 0], K[1, 2] = z, -x
+    K[2, 0], K[2, 1] = -y, x
+    eye = torch.eye(3, device=axis.device, dtype=axis.dtype)
+    s = torch.sin(angle)[:, None, None]
+    c = torch.cos(angle)[:, None, None]
+    return eye + s * K + (1.0 - c) * (K @ K)
+
+
+def _make_lip_pivot_pour_path(world, start_js, obj, surface, world_from_obj, ik_batch=None):
+    """Joint path that tilts the held vessel about a horizontal axis through its
+    pouring lip, so the lip stays over the target vessel's mouth throughout.
+
+    The lean direction is carried in the pour surface's yaw (see
+    envs/transfer.py, which offsets the placement by the vessel's radius along
+    the same direction so the LIP, not the vessel's axis, ends up over the
+    mouth). Returns the joint positions, or None if the rotation is not
+    reachable far enough to be a pour.
+    """
+    device = world.device
+    surface_obj = world.get_object(surface)
+    qw, qx, qy, qz = [float(v) for v in surface_obj.pose[3:7]]
+    yaw = math.atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz))
+    lean = torch.tensor([math.cos(yaw), math.sin(yaw), 0.0], device=device)
+
+    vessel = world.get_object(obj)
+    height, radius = float(vessel.dims[2]), float(vessel.dims[0]) / 2.0
+    up = torch.tensor([0.0, 0.0, 1.0], device=device)
+    centre = world_from_obj[:3, 3]
+    lip = centre + (height / 2.0) * up + radius * lean
+
+    # Horizontal axis perpendicular to the lean: rotating about it by +theta
+    # tips the vessel's axis towards `lean`.
+    axis = torch.linalg.cross(up, lean)
+
+    world_from_ee = world.kin_model.get_state(start_js.position).ee_pose.get_matrix()[0]
+    angles = torch.linspace(0.0, POUR_MAX_TILT_RAD, POUR_PATH_STEPS, device=device)
+    rots = _rot_about_axis(axis, angles)                       # [n, 3, 3]
+
+    poses = torch.eye(4, device=device).repeat(POUR_PATH_STEPS, 1, 1)
+    poses[:, :3, :3] = rots @ world_from_ee[:3, :3]
+    poses[:, :3, 3] = (rots @ (world_from_ee[:3, 3] - lip).unsqueeze(-1)).squeeze(-1) + lip
+
+    # Its own IK solver: the world's is locked to the particle-batch call shape
+    # that particle_initialization compiled its CUDA graph with (see
+    # TAMPWorld.new_ik_solver). Built once and cached on the world.
+    n_pose = poses.shape[0]
+    query = poses
+    # Seed and regularise towards the CURRENT configuration. A 6-DOF arm has
+    # several IK branches for the same pose, and unseeded batch IK happily
+    # returns a different branch for each waypoint -- at theta = 0 it returned a
+    # branch the arm was not even in, so the path was rejected at its first step.
+    start_q = start_js.position[0]
+    n_seeds = 12
+    seed = start_q.view(1, 1, -1).expand(n_seeds, query.shape[0], -1).contiguous()
+    retract = start_q.view(1, -1).expand(query.shape[0], -1).contiguous()
+    solver = getattr(world, "_pour_ik_solver", None)
+    if solver is None:
+        solver = world.new_ik_solver()
+        world._pour_ik_solver = solver
+    ik = solver.solve_batch(
+        Pose.from_matrix(query), retract_config=retract, seed_config=seed
+    )
+    success = ik.success.view(-1)[:n_pose]
+    solutions = ik.solution[:, 0][:n_pose]
+
+    # Walk forward while the IK stays on the same branch; a jump means the arm
+    # would have to flip, which is not a pour.
+    path = [start_js.position[0]]
+    reached = 0.0
+    for k in range(POUR_PATH_STEPS):
+        if not bool(success[k]):
+            break
+        if torch.max(torch.abs(solutions[k] - path[-1])) > POUR_PATH_MAX_DQ:
+            break
+        path.append(solutions[k])
+        reached = float(angles[k])
+    if reached < POUR_PATH_MIN_TILT_RAD:
+        _log.warning(
+            "Lip-pivot pour path only reachable to %.1f deg (needs %.1f); "
+            "falling back to the wrist-joint pour.",
+            math.degrees(reached), math.degrees(POUR_PATH_MIN_TILT_RAD),
+        )
+        return None
+    _log.info(
+        "Lip-pivot pour path: %d waypoints to %.1f deg, lip held at (%.4f, %.4f).",
+        len(path) - 1, math.degrees(reached), float(lip[0]), float(lip[1]),
+    )
+    return torch.stack(path)
 
 
 def _plan_end_js(result, start_js: JointState) -> JointState:
@@ -757,6 +869,26 @@ def solve_curobo(
 
                 # Updated pose is the last pose
                 obj_to_current_pose[obj] = world_from_obj[-1]
+
+            # The pour itself: a joint path that tilts the vessel about a
+            # horizontal axis through its lip, so the lip stays over the target
+            # vessel's mouth at every angle. Emitted as its own step so the
+            # executor's weight controller can run ALONG it (and reverse along it
+            # to un-tilt) instead of driving the wrist joint, whose axis runs
+            # through the grasp point and therefore swings the lip away.
+            pour_path = _make_lip_pivot_pour_path(
+                world, last_js, obj, surface, obj_to_current_pose[obj],
+                ik_batch=config.num_particles,
+            )
+            if pour_path is not None:
+                accum_plans.append({
+                    "type": "pour_path",
+                    "positions": pour_path,
+                    "op_name": "pouring",
+                    # tilt added per waypoint, so the executor's rate limit and
+                    # stopping rule stay expressed in rad/s of vessel tilt
+                    "step_rad": POUR_MAX_TILT_RAD / max(POUR_PATH_STEPS - 1, 1),
+                })
 
         # Unsupported
         else:
