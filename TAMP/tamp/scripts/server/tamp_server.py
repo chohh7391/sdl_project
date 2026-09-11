@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import JointState
+from sensor_msgs.msg import CameraInfo, JointState
 from trajectory_msgs.msg import JointTrajectoryPoint
 from rclpy.duration import Duration as RclpyDuration
 
@@ -366,6 +366,13 @@ class TAMPServer(Node):
         # TF
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+        # Newest stamp seen from the cameras, i.e. "now" in the sensor clock.
+        # Used only to age-check a perception pose; camera_info is chosen over
+        # the image topic because it is tiny and shares the same clock.
+        self._sensor_now = None
+        for _cam in ("camera_1", "camera_2"):
+            self.create_subscription(
+                CameraInfo, "/%s/camera_info" % _cam, self._on_camera_info, 10)
 
         # subscription
         self.joint_states_subscription = self.create_subscription(JointState, "isaac_joint_states", self.joint_states_cb, 10)
@@ -514,6 +521,11 @@ class TAMPServer(Node):
     # perception-in-the-loop.
     PERCEPTION_MAX_AGE_S = float(os.environ.get("SDL_PERCEPTION_MAX_AGE_S", "2.0"))
 
+    def _on_camera_info(self, msg):
+        t = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        if self._sensor_now is None or t > self._sensor_now:
+            self._sensor_now = t
+
     def _perception_pose(self, entity):
         """base_link -> entity from the perception TF, or None.
 
@@ -530,8 +542,16 @@ class TAMPServer(Node):
                 "[state] %s has no perception pose: %s" % (entity, exc))
             return None
         stamp = t.header.stamp.sec + t.header.stamp.nanosec * 1e-9
-        now = self.get_clock().now().nanoseconds * 1e-9
-        age = now - stamp
+        # Compare in the SENSOR clock, not the wall clock. Isaac Sim stamps its
+        # rendered images from a simulation clock that starts at zero, so the
+        # fused transform's stamp and self.get_clock() are ~1.8e9 s apart and a
+        # wall-clock age rejects every pose.
+        if self._sensor_now is None:
+            self.get_logger().warn(
+                "[state] no camera_info seen yet, so a perception pose's age "
+                "cannot be checked; treating %s as not localized" % entity)
+            return None
+        age = self._sensor_now - stamp
         if age > self.PERCEPTION_MAX_AGE_S:
             self.get_logger().warn(
                 "[state] %s perception pose is %.1f s old (limit %.1f s); "
