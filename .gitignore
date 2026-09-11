@@ -60,16 +60,33 @@ LLM/llama/script/experiments/ActionReasoner.zip
 
 # --- PDDLStream baseline (vendored third party) ------------------------------
 # experiments/pddlstream is an upstream checkout: Fast Downward (575 MB, whose
-# builds/release/bin/downward is itself over GitHub's 100 MB limit) plus 460 MB
-# of PyBullet example models. Only OUR baseline implementation is tracked --
-# examples/pybullet/fr5_obstacle, the FR5 problem the paper compares against.
+# builds/release/bin/downward is over GitHub's 100 MB limit) plus 458 MB of
+# PyBullet example robot/object models. Re-obtain both from upstream pddlstream.
+#
+# Tracked, because it is OUR baseline and R1#3 asks for the comparison to be
+# reproducible: the four FR5 problem directories the trial runners use
+# (run_transfer_trials.py imports examples.pybullet.fr5.transfer), and
+# pybullet_tools, which carries fr5_utils.py and the FR5 constants added to
+# utils.py. The vendored robot meshes under utils/models are NOT tracked; the
+# same FR5 description also exists at TAMP/tamp/content/assets/robot/.
 experiments/pddlstream/downward/
 experiments/pddlstream/temp/
 experiments/pddlstream/examples/**
 !experiments/pddlstream/examples/
 !experiments/pddlstream/examples/pybullet/
+!experiments/pddlstream/examples/pybullet/fr5/
+!experiments/pddlstream/examples/pybullet/fr5/**
+!experiments/pddlstream/examples/pybullet/fr5_Move/
+!experiments/pddlstream/examples/pybullet/fr5_Move/**
+!experiments/pddlstream/examples/pybullet/fr5_Stir/
+!experiments/pddlstream/examples/pybullet/fr5_Stir/**
 !experiments/pddlstream/examples/pybullet/fr5_obstacle/
 !experiments/pddlstream/examples/pybullet/fr5_obstacle/**
+!experiments/pddlstream/examples/pybullet/utils/
+!experiments/pddlstream/examples/pybullet/utils/pybullet_tools/
+!experiments/pddlstream/examples/pybullet/utils/pybullet_tools/**
+experiments/pddlstream/examples/pybullet/utils/models/
+experiments/pddlstream/examples/pybullet/utils/pybullet_tools/ikfast/
 
 # --- vendored simulation assets ---------------------------------------------
 # LabUtopia (111 MB) is a third-party asset pack the scene USDs reference by
