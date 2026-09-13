@@ -95,12 +95,22 @@ class Simulation(Node):
         self.world.initialize_physics()
 
         # action graphs
+        # SDL_CAMERAS=0 skips the rendered-camera graph entirely. The two
+        # 1280x720 cameras render continuously on the same GPU that cuTAMP
+        # optimises on, so they are part of the measured planning latency; a
+        # ground-truth-state run does not need them, and this makes the cost
+        # measurable instead of assumed.
         camera_paths = ["/World/camera_1", "/World/camera_2"]
         camera_names = ["camera_1", "camera_2"]
-        self.camera_data_graph = self.create_ros_camera_graph(
-            camera_paths=camera_paths, camera_names=camera_names,
-            width=self.task.camera_info.width, height=self.task.camera_info.height)
-        self.og.Controller.evaluate_sync(self.camera_data_graph)
+        self.camera_data_graph = None
+        if os.environ.get("SDL_CAMERAS", "1").strip() != "0":
+            self.camera_data_graph = self.create_ros_camera_graph(
+                camera_paths=camera_paths, camera_names=camera_names,
+                width=self.task.camera_info.width,
+                height=self.task.camera_info.height)
+            self.og.Controller.evaluate_sync(self.camera_data_graph)
+        else:
+            print("[Sim] SDL_CAMERAS=0: rendered cameras disabled")
         self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
         target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
         self.tf_graph = self.create_tf_graph(
