@@ -13,6 +13,7 @@ invalid half injects 20 samples of each of the four categories the manuscript
 names, by a documented mutation of a valid protocol:
 
   capacity_violation     overfill a 100 mL beaker
+  cross_contamination    add a second reagent to a vessel holding another
   device_placement       put two objects on the same plate
   missing_attribute      drop one required attribute from one step
   undefined_tag          rename a tag out of the schema
@@ -112,13 +113,38 @@ def mut_nonexistent_object(steps, rng):
 
 
 def mut_capacity_violation(steps, rng):
-    """Overfill a beaker: 100 mL capacity against 50 mL of headroom per Add."""
+    """Overfill a beaker: 100 mL capacity against 50 mL of headroom per Add.
+
+    The added reagent has to match whatever the vessel already holds, or the
+    contamination check fires first and the sample lands in the wrong class --
+    which is what the per-class reason report caught on two samples.
+    """
     v = rng.choice(["beaker_A", "beaker_B"])
+    held = None
+    for s in steps:
+        if s["op"] == "Add" and s.get("vessel") == v:
+            held = s["reagent"]
+        elif s["op"] == "CleanVessel" and s.get("vessel") == v:
+            held = None
+    reagent = held or "water"
     out = [dict(s) for s in steps]
     for _ in range(3):
-        out.append({"op": "Add", "vessel": v, "reagent": "water",
+        out.append({"op": "Add", "vessel": v, "reagent": reagent,
                     "volume": "50 mL"})
-    return out, "appended 3 x 50 mL into %s (100 mL)" % v
+    return out, "appended 3 x 50 mL of %s into %s (100 mL)" % (reagent, v)
+
+
+def mut_cross_contamination(steps, rng):
+    """Put a second reagent into a vessel that already holds a different one."""
+    filled = [s for s in steps if s["op"] == "Add"]
+    if not filled:
+        return None
+    src = rng.choice(filled)
+    other = "ethanol" if src["reagent"] == "water" else "water"
+    out = [dict(s) for s in steps]
+    out.append({"op": "Add", "vessel": src["vessel"], "reagent": other,
+                "volume": "10 mL"})
+    return out, "%s into %s, which holds %s" % (other, src["vessel"], src["reagent"])
 
 
 def mut_device_placement(steps, rng):
@@ -144,14 +170,19 @@ def mut_precondition_violation(steps, rng):
     return out, "dropped the Add filling %s" % steps[i]["vessel"]
 
 
+# (class, mutator, the message fragment the validator must answer with).
+# A sample rejected for a DIFFERENT reason than its class intends is discarded:
+# without that, a capacity injection that happens to add the wrong reagent is
+# caught by the contamination check and silently counted as capacity recall.
 MUTATORS = [
-    ("missing_attribute", mut_missing_attribute),
-    ("undefined_tag", mut_undefined_tag),
-    ("undefined_attribute", mut_undefined_attribute),
-    ("nonexistent_object", mut_nonexistent_object),
-    ("precondition_violation", mut_precondition_violation),
-    ("capacity_violation", mut_capacity_violation),
-    ("device_placement", mut_device_placement),
+    ("missing_attribute", mut_missing_attribute, None),
+    ("undefined_tag", mut_undefined_tag, "Invalid tag"),
+    ("undefined_attribute", mut_undefined_attribute, "Invalid attribute"),
+    ("nonexistent_object", mut_nonexistent_object, None),
+    ("precondition_violation", mut_precondition_violation, "Cannot "),
+    ("capacity_violation", mut_capacity_violation, "overfills"),
+    ("device_placement", mut_device_placement, "Device placement"),
+    ("cross_contamination", mut_cross_contamination, "Contamination"),
 ]
 
 
@@ -185,7 +216,8 @@ def build(labels, n_valid, per_class, seed):
                 "xml": v["xml"]} for v in valid]
 
     discarded = {}
-    for cls, fn in MUTATORS:
+    off_class = {}
+    for cls, fn, expect in MUTATORS:
         made, tries = 0, 0
         while made < per_class and tries < per_class * 200:
             tries += 1
@@ -195,7 +227,11 @@ def build(labels, n_valid, per_class, seed):
                 continue
             steps, note = res
             xml = to_xml(steps)
-            ok, _ = is_valid(xml)
+            ok, why = is_valid(xml)
+            if not ok and expect is not None and expect not in why:
+                # invalid, but for another class's reason
+                off_class.setdefault(cls, []).append((src["index"], why[:50]))
+                continue
             if ok:
                 # the mutation did not actually invalidate the protocol; it is
                 # a validator gap, recorded but never counted as a positive
@@ -212,7 +248,7 @@ def build(labels, n_valid, per_class, seed):
             # the samples that were built.
             print("  %s: only %d/%d samples could be made invalid -- the "
                   "validator accepts the rest" % (cls, made, per_class))
-    return samples, discarded, len(pool)
+    return samples, discarded, off_class, len(pool)
 
 
 def main():
@@ -226,10 +262,13 @@ def main():
     a = ap.parse_args()
 
     labels = json.load(open(a.labels))["labels"]
-    samples, discarded, pool_n = build(labels, a.valid, a.per_class, a.seed)
+    samples, discarded, off_class, pool_n = build(labels, a.valid, a.per_class, a.seed)
     print("gold protocols the validator accepts: %d/%d" % (pool_n, len(labels)))
     print("benchmark: %d valid + %d invalid = %d samples (seed %d)"
           % (a.valid, len(samples) - a.valid, len(samples), a.seed))
+    for cls, items in sorted(off_class.items()):
+        print("  %s: %d mutations fired another class's check and were discarded"
+              % (cls, len(items)))
     for cls, items in sorted(discarded.items()):
         print("  %s: %d mutations did NOT invalidate and were discarded"
               % (cls, len(items)))

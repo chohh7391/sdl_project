@@ -57,6 +57,9 @@ class ProcedureValidator:
         self.vessel_volume = {v: 0.0 for v in VESSELS}
         # Which object occupies each plate, for the device-placement check.
         self.plate_occupant = {p: None for p in PLATES}
+        # The reagent each vessel currently holds, for the contamination check.
+        # None means empty or cleaned.
+        self.vessel_content = {v: None for v in VESSELS}
 
     def validate(self, xml_str: str):
         try:
@@ -112,6 +115,17 @@ class ProcedureValidator:
         if volume not in VOLUMES:
             raise ProcedureValidationError(f"Invalid volume: {volume}")
 
+        # Contamination: a vessel already holding a different reagent has to be
+        # cleaned first. This uses only state the validator already tracks, and
+        # is the same class of physical precondition as pouring from an empty
+        # vessel -- not chemical knowledge, which stays out of scope.
+        held = self.vessel_content.get(vessel)
+        if held is not None and held != reagent:
+            raise ProcedureValidationError(
+                f"Contamination: {reagent} into {vessel}, which holds {held}, "
+                f"without an intervening CleanVessel")
+        self.vessel_content[vessel] = reagent
+
         added = _volume_ml(volume)
         cap = CAPACITY_ML.get(vessel)
         if added is not None and cap is not None:
@@ -163,6 +177,16 @@ class ProcedureValidator:
         if self.vessel_state[from_v] != "filled":
             raise ProcedureValidationError(f"Cannot Transfer from empty vessel: {from_v}")
 
+        src_content = self.vessel_content.get(from_v)
+        dst_content = self.vessel_content.get(to_v)
+        if (src_content is not None and dst_content is not None
+                and src_content != dst_content):
+            raise ProcedureValidationError(
+                f"Contamination: transferring {src_content} into {to_v}, which "
+                f"holds {dst_content}, without an intervening CleanVessel")
+        if src_content is not None:
+            self.vessel_content[to_v] = src_content
+
         moved = _volume_ml(volume)
         cap = CAPACITY_ML.get(to_v)
         if moved is not None:
@@ -190,6 +214,7 @@ class ProcedureValidator:
 
         self.vessel_state[vessel] = "empty"
         self.vessel_volume[vessel] = 0.0
+        self.vessel_content[vessel] = None
 
     def validate_move(self, step):
         obj = step.attrib.get("object")
