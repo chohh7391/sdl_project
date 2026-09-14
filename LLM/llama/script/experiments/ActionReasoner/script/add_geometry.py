@@ -13,16 +13,30 @@ IDENT = re.compile(r"\b(beaker|flask|tube|bottle|box|plate|tray)(_[A-Z])?\b")
 
 
 def widths_for(inst):
+    """Widths of every object the step mentions.
+
+    A size-curriculum item carries _width_overrides, giving the width of the
+    variant it introduced; that variant's class word is one already in the
+    table, so without the override it would report the class's nominal width
+    and the lesson would be lost.
+    """
     text = " ".join(str(inst.get(k) or "") for k in
                     ("current_xdl", "next_xdl", "obstacle_info", "candidate_grids"))
+    overrides = inst.get("_width_overrides") or {}
     seen, out = set(), []
     for m in IDENT.finditer(text):
         name = m.group(0)
         cls = m.group(1)
-        if name in seen or cls not in OBJECT_WIDTH_MM:
+        if name in seen:
+            continue
+        if name in overrides:
+            width = overrides[name]
+        elif cls in OBJECT_WIDTH_MM:
+            width = OBJECT_WIDTH_MM[cls]
+        else:
             continue
         seen.add(name)
-        out.append("%s: %d mm" % (name, OBJECT_WIDTH_MM[cls]))
+        out.append("%s: %d mm" % (name, width))
     return "\n".join(out) if out else "none"
 
 
@@ -41,6 +55,7 @@ def main():
             if w == "none":
                 miss += 1
             r["instruction"]["object_widths"] = w
+            r["instruction"].pop("_width_overrides", None)
             out.write(json.dumps(r, ensure_ascii=False) + "\n")
             n += 1
     print("%s -> %s : %d records, %d with no recognised object" % (a.src, a.dst, n, miss))
