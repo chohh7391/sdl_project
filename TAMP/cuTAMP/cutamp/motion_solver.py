@@ -153,6 +153,10 @@ POUR_DESCENT_GATE_RAD = 0.52   # ~30 deg
 # tilts far enough, so a layout gets as much of the drop removed as it can take
 # and never ends up worse than the level-lip path.
 POUR_DESCENT_FRACTIONS = (1.0, 0.6, 0.3, 0.0)
+# Rounds of re-seeding allowed while walking one descent's waypoints. Each round
+# costs one batch IK call and only happens when the walk has stalled, so a pour
+# that tracks on the first solve pays nothing.
+POUR_PATH_MAX_CONTINUATIONS = int(_os.environ.get("SDL_POUR_CONTINUATIONS", "5"))
 
 
 def _rot_about_axis(axis, angle):
@@ -231,24 +235,46 @@ def _make_lip_pivot_pour_path(world, start_js, obj, surface, world_from_obj, ik_
     for fraction in POUR_DESCENT_FRACTIONS:
         query = base.clone()
         query[:, 2, 3] = query[:, 2, 3] - descent_total * fraction * ramp
+        query_pose = Pose.from_matrix(query)
 
-        ik = solver.solve_batch(
-            Pose.from_matrix(query), retract_config=retract, seed_config=seed
-        )
-        success = ik.success.view(-1)[:n_pose]
-        solutions = ik.solution[:, 0][:n_pose]
-
-        # Walk forward while the IK stays on the same branch; a jump means the
-        # arm would have to flip, which is not a pour.
+        # Continuation. Seeding every waypoint from the UPRIGHT configuration
+        # leaves the seed stale once the tilt is large: the solver returns a
+        # different IK branch, the walk rejects the jump, and the path stops.
+        # Measured over 86 pours, 9 stopped this way and fell back to the wrist
+        # pour, which drops the stream from 157.8 mm instead of 74.9 mm and
+        # lands the lip 40.1 mm from the mouth instead of 14.3 mm. The descent
+        # was not what limited them -- each failure stopped at the SAME angle at
+        # 100%, 60%, 30% and 0% descent -- so the fix is to re-seed from the
+        # last waypoint the walk accepted and carry on from there.
+        # The batch shape stays constant, which the solver's CUDA graph needs.
         path = [start_js.position[0]]
         reached = 0.0
-        for k in range(POUR_PATH_STEPS):
-            if not bool(success[k]):
+        k = 0
+        cur_seed, cur_retract = seed, retract
+        for _round in range(POUR_PATH_MAX_CONTINUATIONS):
+            ik = solver.solve_batch(
+                query_pose, retract_config=cur_retract, seed_config=cur_seed
+            )
+            success = ik.success.view(-1)[:n_pose]
+            solutions = ik.solution[:, 0][:n_pose]
+
+            advanced = False
+            while k < POUR_PATH_STEPS:
+                if not bool(success[k]):
+                    break
+                if torch.max(torch.abs(solutions[k] - path[-1])) > POUR_PATH_MAX_DQ:
+                    break
+                path.append(solutions[k])
+                reached = float(angles[k])
+                k += 1
+                advanced = True
+            if k >= POUR_PATH_STEPS or reached >= POUR_MAX_TILT_RAD:
                 break
-            if torch.max(torch.abs(solutions[k] - path[-1])) > POUR_PATH_MAX_DQ:
+            if not advanced:
                 break
-            path.append(solutions[k])
-            reached = float(angles[k])
+            last = path[-1]
+            cur_seed = last.view(1, 1, -1).expand(n_seeds, n_pose, -1).contiguous()
+            cur_retract = last.view(1, -1).expand(n_pose, -1).contiguous()
         if reached >= POUR_PATH_MIN_TILT_RAD:
             best = (fraction, reached, path)
             break
