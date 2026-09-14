@@ -750,7 +750,7 @@ class TAMPServer(Node):
         # Planning runs in this process and does not require pausing Isaac Sim.
         # Keeping the timeline playing preserves /isaac_joint_states, so q_init
         # is the actual live state rather than an empty value/q_home fallback.
-        q_init = list(self.joint_states.position[:6])  # num_dof = 6
+        q_init = list(self._arm_q())  # num_dof = 6
         if len(q_init) < 6:
             # isaac_joint_states not received yet (e.g. the sim is paused, so the
             # Isaac ActionGraph joint-state publisher isn't ticking). An empty
@@ -847,81 +847,148 @@ class TAMPServer(Node):
 
         return processed_plan
     
-    def execute_plan_cb(self, request, response):
+    # ---- plant hooks --------------------------------------------------
+    #
+    # Everything below this line is the same plan, executed against a
+    # different plant. A subclass that drives real hardware
+    # (scripts/server/tamp_real_server.py) overrides these hooks and inherits
+    # the plan loop, the pour laws and the planner unchanged -- which is the
+    # point: the control law the paper reports must be ONE implementation, not
+    # a simulated one and a physical one that drifted apart.
 
+    def _start_execution(self):
+        """Ready the plant for a plan. False aborts the request.
+
+        In simulation that is starting the Isaac timeline. There is no timeline
+        on real hardware, so the subclass replaces this -- and note it now
+        returns a bool: the bare `return` this used to do handed rclpy None for
+        a service response, which raises instead of answering.
+        """
         start_req = SetSimulationState.Request()
-        start_req.state.state = 1 # play
+        start_req.state.state = 1  # play
 
         if not self.set_simulation_state_cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().error("Simulation Pause Failed")
-            return
+            return False
 
         self.set_simulation_state_cli.call(start_req)
+        return True
+
+    def _finish_execution(self, success):
+        """Release the plant after a plan, however it ended."""
+        return
+
+    def _publish_arm_command(self, positions, joint_names=None):
+        """Send one arm configuration to the plant.
+
+        The single emit point for every motion in this file -- replayed
+        trajectories, both pour loops, the un-tilt, move_to_target. The
+        simulated arm is position controlled and chases whatever is published
+        here; a real arm takes the same stream through its trajectory
+        controller.
+        """
+        self.arm_commands.header.stamp = self.get_clock().now().to_msg()
+        self.arm_commands.name = joint_names or self.tamp.cmd_js_names
+        self.arm_commands.position = positions
+        self.arm_commands_publisher.publish(self.arm_commands)
+
+    def _arm_q(self):
+        """The measured arm configuration, as a list of the 6 joint values.
+
+        A slice here because the simulator publishes exactly the arm. On a
+        build with a gripper the same message carries the finger joint too, so
+        the real subclass indexes by name instead.
+        """
+        return list(self.joint_states.position[:6])
+
+    def _execute_trajectory_step(self, plan_part):
+        """Replay one planned trajectory segment on the plant."""
+        plan_trajectory = plan_part["plan"]
+        # Replay period per planned waypoint. This deliberately overrides
+        # cuRobo's interpolation_dt (~0.02 s): the simulated arm is position
+        # controlled and chases each published target, so replaying slower
+        # reduces tracking error. That matters much more for a side grasp
+        # than a top grasp -- a side grasp maps wrist-roll tracking error
+        # onto the held vessel's tilt 1:1 (which is exactly why it can pour
+        # at all), whereas under a top grasp the same error becomes yaw.
+        # Configurable so the executed-tilt/execution-time trade-off can be
+        # measured and reported rather than hidden in a literal.
+        dt = float(_os.environ.get("SDL_EXEC_DT", "0.04"))
+        num_waypoints = plan_trajectory.position.shape[0]
+
+        for i in range(num_waypoints):
+            self._publish_arm_command(
+                plan_trajectory.position[i].tolist(), plan_trajectory.joint_names)
+            time.sleep(dt)
+
+        time.sleep(dt)
+
+    # ---- the plan loop, shared by every plant ---------------------------
+
+    #: Plan step types this loop dispatches. A subclass that drives a
+    #: different plant overrides the hooks above, never this dispatch, so a
+    #: step type added here cannot be silently unhandled on hardware.
+    PLAN_STEP_TYPES = ("trajectory", "gripper", "pour", "pour_path")
+
+    def execute_plan_cb(self, request, response):
+
+        if not self._start_execution():
+            response.execute_success = False
+            return response
 
         if not self.plan_to_execute or len(self.plan_to_execute) == 0:
             self.get_logger().warn("No plan to execute.")
+            self._finish_execution(False)
             response.execute_success = False
             return response
 
         self.get_logger().info("Starting plan execution...")
 
-        for plan_index, plan_part in enumerate(self.plan_to_execute):
+        success = False
+        try:
+            for plan_index, plan_part in enumerate(self.plan_to_execute):
 
-            current_op = plan_part.get("op_name", "")
-            # Broadcast the op currently executing so an external harness can
-            # isolate transport (MoveHolding) tilt from the pour (R3#2).
-            self._publish_current_op(current_op)
+                current_op = plan_part.get("op_name", "")
+                # Broadcast the op currently executing so an external harness can
+                # isolate transport (MoveHolding) tilt from the pour (R3#2).
+                self._publish_current_op(current_op)
 
-            # trajectory or gripper execution logic
-            plan_type = plan_part.get("type")
+                # trajectory or gripper execution logic
+                plan_type = plan_part.get("type")
 
-            if plan_type == "trajectory":
-                plan_trajectory = plan_part["plan"]
-                # Replay period per planned waypoint. This deliberately overrides
-                # cuRobo's interpolation_dt (~0.02 s): the simulated arm is position
-                # controlled and chases each published target, so replaying slower
-                # reduces tracking error. That matters much more for a side grasp
-                # than a top grasp -- a side grasp maps wrist-roll tracking error
-                # onto the held vessel's tilt 1:1 (which is exactly why it can pour
-                # at all), whereas under a top grasp the same error becomes yaw.
-                # Configurable so the executed-tilt/execution-time trade-off can be
-                # measured and reported rather than hidden in a literal.
-                dt = float(_os.environ.get("SDL_EXEC_DT", "0.04"))
-                num_waypoints = plan_trajectory.position.shape[0]
+                if plan_type == "trajectory":
+                    self._execute_trajectory_step(plan_part)
 
-                for i in range(num_waypoints):
-                    self.arm_commands.header.stamp = self.get_clock().now().to_msg()
-                    self.arm_commands.name = plan_trajectory.joint_names
-                    self.arm_commands.position = plan_trajectory.position[i].tolist()
-                    self.arm_commands_publisher.publish(self.arm_commands)
-                    time.sleep(dt)
+                elif plan_type == "gripper":
+                    self.get_logger().info(f"Executing gripper: {plan_part['action']}")
+                    self.execute_gripper_action(plan_part)
+                    time.sleep(1.0)
 
-                time.sleep(dt)
+                elif plan_type == "pour":
+                    self.saved_state_after_operator = self._arm_q()
+                    self.pouring()
+                    self.get_logger().info("Explicit pouring step completed.")
 
-            elif plan_type == "gripper":
-                self.get_logger().info(f"Executing gripper: {plan_part['action']}")
-                self.execute_gripper_action(plan_part)
-                time.sleep(1.0)
+                elif plan_type == "pour_path":
+                    self.saved_state_after_operator = self._arm_q()
+                    self.pouring_along_path(plan_part)
+                    self.get_logger().info("Lip-pivot pouring step completed.")
 
-            elif plan_type == "pour":
-                self.saved_state_after_operator = self.joint_states.position[:6]
-                self.pouring()
-                self.get_logger().info("Explicit pouring step completed.")
+                else:
+                    self.get_logger().error(f"Unknown plan type: {plan_type}")
+                    response.execute_success = False
+                    return response
 
-            elif plan_type == "pour_path":
-                self.saved_state_after_operator = self.joint_states.position[:6]
-                self.pouring_along_path(plan_part)
-                self.get_logger().info("Lip-pivot pouring step completed.")
-
-            else:
-                self.get_logger().error(f"Unknown plan type: {plan_type}")
-                response.execute_success = False
-                return response
-
-        self.get_logger().info("Plan execution completed.")
-        self._publish_current_op("idle")
-        response.execute_success = True
-        return response
+            self.get_logger().info("Plan execution completed.")
+            success = True
+            response.execute_success = True
+            return response
+        finally:
+            # In a finally because a supervisor outside this process cannot tell
+            # a failed execution from a slow one except by timing out: the idle
+            # announcement has to survive the failure that caused it.
+            self._publish_current_op("idle")
+            self._finish_execution(success)
 
     def _publish_current_op(self, op_name: str):
         msg = String()
@@ -989,10 +1056,7 @@ class TAMPServer(Node):
             return (1.0 - frac) * path[lo] + frac * path[hi]
 
         def publish(u):
-            self.arm_commands.header.stamp = self.get_clock().now().to_msg()
-            self.arm_commands.name = self.tamp.cmd_js_names
-            self.arm_commands.position = q_at(u).tolist()
-            self.arm_commands_publisher.publish(self.arm_commands)
+            self._publish_arm_command(q_at(u).tolist())
 
         u = 0.0
         prev_error = 0.0
@@ -1065,7 +1129,7 @@ class TAMPServer(Node):
         # pour (which stops on |error|<0.5), so it never fires on a healthy pour.
         MAX_POUR_TILT = 2.0     # [rad] max cumulative wrist tilt from pour start
 
-        current_q = list(self.joint_states.position[:6])
+        current_q = list(self._arm_q())
         last_idx = 5
         theta_start = current_q[last_idx]   # wrist angle at pour start (for the absolute-tilt cap)
         prev_error = 0.0
@@ -1125,17 +1189,11 @@ class TAMPServer(Node):
                     f"Pour tilt cap reached (|Δθ|>={MAX_POUR_TILT:.2f} rad). Stopping pouring."
                 )
                 # publish the clamped pose once, then stop
-                self.arm_commands.header.stamp = self.get_clock().now().to_msg()
-                self.arm_commands.name = self.tamp.cmd_js_names
-                self.arm_commands.position = current_q.copy()
-                self.arm_commands_publisher.publish(self.arm_commands)
+                self._publish_arm_command(current_q.copy())
                 break
 
             # (6) 명령 publish
-            self.arm_commands.header.stamp = self.get_clock().now().to_msg()
-            self.arm_commands.name = self.tamp.cmd_js_names
-            self.arm_commands.position = current_q.copy()
-            self.arm_commands_publisher.publish(self.arm_commands)
+            self._publish_arm_command(current_q.copy())
 
             # (7) 로그
             self.get_logger().info(
@@ -1173,10 +1231,7 @@ class TAMPServer(Node):
         steps = max(1, int(np.ceil(abs(delta) / max(max_rate * dt, 1e-9))))
         for step in range(1, steps + 1):
             current_q[joint_idx] = start + delta * (step / steps)
-            self.arm_commands.header.stamp = self.get_clock().now().to_msg()
-            self.arm_commands.name = self.tamp.cmd_js_names
-            self.arm_commands.position = current_q.copy()
-            self.arm_commands_publisher.publish(self.arm_commands)
+            self._publish_arm_command(current_q.copy())
             time.sleep(dt)
         self.get_logger().info(
             "Pour joint returned to its pre-pour attitude (%.3f rad) over %d rate-bounded steps."
@@ -1222,7 +1277,7 @@ class TAMPServer(Node):
     def move_to_target_cb(self, request, response):
 
         self.cmd_plan = self.tamp.motion_plan(
-            q_init=self.joint_states.position[:6].tolist(),
+            q_init=list(self._arm_q()),
             ee_translation_goal=np.array(request.target_position),
             ee_orientation_goal=np.array(request.target_orientation),
         )
@@ -1238,7 +1293,7 @@ class TAMPServer(Node):
     def move_to_target_js_cb(self, request, response):
 
         self.cmd_plan = self.tamp.motion_plan_js(
-            q_init=self.joint_states.position[:6].tolist(),
+            q_init=list(self._arm_q()),
             q_des=request.q_des,
         )
 
@@ -1258,19 +1313,21 @@ class TAMPServer(Node):
                 self.move_to_target_timer = None
             return
 
-        self.arm_commands.header.stamp = self.get_clock().now().to_msg()
-        self.arm_commands.name = self.tamp.cmd_js_names
-        self.arm_commands.position = self.cmd_plan[self.current_plan_step].position.tolist()
-        self.arm_commands_publisher.publish(self.arm_commands)
+        self._publish_arm_command(
+            self.cmd_plan[self.current_plan_step].position.tolist())
 
         self.current_plan_step += 1
         
 
-if __name__ == "__main__":
+def default_config():
+    """The planner settings every run of this server uses.
 
-    rclpy.init()
-
-    config = TAMPConfiguration(
+    A function rather than a literal inside __main__ so that another entry
+    point -- the real-hardware server -- runs the SAME configuration. These
+    numbers (particles, optimisation steps) are reported in the paper, and a
+    second copy of them is a second set of results waiting to disagree.
+    """
+    return TAMPConfiguration(
         num_particles=1024,
         robot="fr5",
         grasp_dof=6,
@@ -1290,21 +1347,31 @@ if __name__ == "__main__":
         time_dilation_factor=0.5,
     )
 
+
+def main(server_factory=None, config=None):
+    """Spin a TAMP server. *server_factory* selects which plant it drives."""
+    rclpy.init()
+
     tamp = TAMP(
-        config=config,
+        config=config or default_config(),
         use_tetris_tuned_weights=None
     )
 
-    tamp_server = TAMPServer(tamp)
+    tamp_server = (server_factory or TAMPServer)(tamp)
 
     executor = MultiThreadedExecutor(num_threads=4)
 
     executor.add_node(tamp_server)
 
     try:
-        tamp_server.get_logger().info("Starting TAMP server with MultiThreadedExecutor.")
+        tamp_server.get_logger().info(
+            "Starting %s with MultiThreadedExecutor." % type(tamp_server).__name__)
         executor.spin()
     finally:
         executor.shutdown()
         tamp_server.destroy_node()
         rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

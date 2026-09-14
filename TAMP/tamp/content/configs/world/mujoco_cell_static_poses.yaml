@@ -1,0 +1,13 @@
+# Poses for the entities that carry no tag, read by tamp_real_server.
+#
+# The simulated server asks Isaac for every entity's pose. There is no
+# simulator to ask on this path, and the bench furniture carries no tag in
+# either the simulated or the physical cell, so its layout is declared instead.
+# A missing entry is an error rather than a zero pose: planning around an
+# assumed table is how a trajectory ends up inside one.
+#
+# [x, y, z, qw, qx, qy, qz] in base_link. These are the MuJoCo cell's numbers
+# (cho_description_fr5/xml/scene_ag95_sdl.xml), which are in turn the Isaac
+# cell's (isaacsim/scripts/standalone/task.py).
+poses:
+  table: [0.0, 0.0, -0.01, 1.0, 0.0, 0.0, 0.0]

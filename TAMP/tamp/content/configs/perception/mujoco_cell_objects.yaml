@@ -1,0 +1,44 @@
+# Object table for the MuJoCo lab cell, consumed by cho_object_pose.
+#
+# This is task knowledge, not sensor knowledge: which tag marks which vessel,
+# and where the vessel sits relative to its tag. The generic pipeline that
+# reads it lives in cho_robot_project; the cell it describes is
+# cho_description_fr5/xml/scene_ag95_sdl.xml, and the numbers below are that
+# scene's, so the two have to be changed together.
+#
+# The tag PLATES sit 0.15 m along +x from their vessel and 2 mm above the table
+# top, which is the same offset the Isaac vessels carry their tag at. So the
+# offset here is tag -> vessel: back along -x, and up to the vessel's centre
+# height.
+#
+#   beaker  centre z 0.0675, tag face z 0.002  ->  dz = +0.0655
+#   flask   centre z 0.06,   tag face z 0.002  ->  dz = +0.058
+#
+# `grasp_offset.position` is applied in the TAG's frame (cho_object_pose
+# geometry.compose: p_base_obj = p_base_tag + R_tag * offset), so these values
+# are only the base-frame deltas above while the tag's axes agree with the
+# base's. TAMP/tamp/scripts/perception/check_object_pose.py measures exactly that and
+# prints the offset that would zero the error, which is how these were set --
+# do not hand-edit them without re-running it.
+#
+# top_down_yaw is FALSE here, unlike the grasping task that shipped with
+# cho_object_pose. That flag exists to turn an ambiguous tag orientation into a
+# usable top-down grasp; what this pipeline wants instead is the object's pose
+# for the planner's World State, and flattening the orientation would also
+# rotate the frame the offset above is applied in.
+objects:
+  - name: beaker
+    tag_id: 0
+    topic: /perception/object_pose/beaker
+    grasp_offset:
+      position: [-0.15, 0.0, 0.0655]
+      orientation: [0.0, 0.0, 0.0, 1.0]
+    top_down_yaw: false
+
+  - name: flask
+    tag_id: 1
+    topic: /perception/object_pose/flask
+    grasp_offset:
+      position: [-0.15, 0.0, 0.058]
+      orientation: [0.0, 0.0, 0.0, 1.0]
+    top_down_yaw: false

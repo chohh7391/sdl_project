@@ -6,6 +6,7 @@ find_package(rclpy REQUIRED)
 
 install(DIRECTORY
   scripts
+  launch
   DESTINATION share/${PROJECT_NAME})
 
 install(DIRECTORY
@@ -16,6 +17,7 @@ install(DIRECTORY
 # Install Python executables
 install(PROGRAMS
   scripts/server/tamp_server.py
+  scripts/server/tamp_real_server.py
   scripts/client/tamp_client.py
   scripts/xdl/tamp_xdl_parser.py
   scripts/bridge/cho_bridge_node.py
