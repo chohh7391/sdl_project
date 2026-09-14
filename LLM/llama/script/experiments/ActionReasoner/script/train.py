@@ -66,48 +66,18 @@ model.print_trainable_parameters()
 # =========================
 dataset = load_dataset("json", data_files=DATA_PATH, split="train")
 
-PROMPT_TEMPLATE = """You are a tool and rearrangement planner for laboratory automation.
-
-Tool Rules:
-- dh3 (3-finger): Move, Stir for cylindrical vessels (beaker, flask, tube)
-- ag95 (2-finger): All Transfer operations
-- vgc10 (suction): Objects exceeding gripper span (box, plate, bottle)
-
-Given the current and next XDL steps, the obstacle status, and candidate grids,
-output exactly four tokens separated by commas:
-main_tool, need_rearrange, aux_tool, target_grid
-
-Allowed values:
-- main_tool: dh3, ag95, vgc10
-- aux_tool: dh3, ag95, vgc10, None
-- need_rearrange: True, False
-- target_grid: grid ID (e.g., G5) or None
-
-Current XDL:
-{current_xdl}
-
-Next XDL:
-{next_xdl}
-
-Obstacle:
-{obstacle_info}
-
-Candidate Grids:
-{candidate_grids}
-
-Output:
-"""
+# The prompt lives in ar_prompt so training and evaluation cannot drift apart,
+# and so AR_GEOMETRY=1 adds the object widths to both at once.
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from ar_prompt import build_prompt, geometry_enabled
+print("[train] geometry grounding: %s" % ("ON" if geometry_enabled() else "off"))
 
 EOS = tokenizer.eos_token
 
 def format_example(example):
     inst = example["instruction"]
-    prompt = PROMPT_TEMPLATE.format(
-        current_xdl=inst["current_xdl"],
-        next_xdl=inst["next_xdl"],
-        obstacle_info=inst["obstacle_info"],
-        candidate_grids=inst["candidate_grids"],
-    )
+    prompt = build_prompt(inst)
     target = example["output"]
     example["text"] = prompt + target + EOS
     return example

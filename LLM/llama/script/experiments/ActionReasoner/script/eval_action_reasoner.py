@@ -9,6 +9,11 @@ from unsloth import FastLanguageModel
 # Config
 # =========================
 # LLAMA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "llama")
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ar_prompt import build_prompt, geometry_enabled
+print("[eval] geometry grounding: %s" % ("ON" if geometry_enabled() else "off"))
+
 _AR = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner"
 # Overridable so the same evaluation can be pointed at a checkpoint trained on
 # the 2400-sample split, which the shipped one was not (see train.py).
@@ -22,37 +27,6 @@ print("[eval] test =%s" % TEST_PATH)
 
 MAX_SEQ_LEN = 512
 
-PROMPT_TEMPLATE = """You are a tool and rearrangement planner for laboratory automation.
-
-Tool Rules:
-- dh3 (3-finger): Move, Stir for cylindrical vessels (beaker, flask, tube)
-- ag95 (2-finger): All Transfer operations
-- vgc10 (suction): Objects exceeding gripper span (box, plate, bottle)
-
-Given the current and next XDL steps, the obstacle status, and candidate grids,
-output exactly four tokens separated by commas:
-main_tool, need_rearrange, aux_tool, target_grid
-
-Allowed values:
-- main_tool: dh3, ag95, vgc10
-- aux_tool: dh3, ag95, vgc10, None
-- need_rearrange: True, False
-- target_grid: grid ID (e.g., G5) or None
-
-Current XDL:
-{current_xdl}
-
-Next XDL:
-{next_xdl}
-
-Obstacle:
-{obstacle_info}
-
-Candidate Grids:
-{candidate_grids}
-
-Output:
-"""
 
 # =========================
 # Grid category matching
@@ -114,12 +88,7 @@ print(f"Test samples: {len(test_data)}\n")
 # =========================
 def predict(example):
     inst = example["instruction"]
-    prompt = PROMPT_TEMPLATE.format(
-        current_xdl=inst["current_xdl"],
-        next_xdl=inst["next_xdl"],
-        obstacle_info=inst["obstacle_info"],
-        candidate_grids=inst["candidate_grids"],
-    )
+    prompt = build_prompt(inst)
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     with torch.no_grad():
         outputs = model.generate(
