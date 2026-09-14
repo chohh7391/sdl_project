@@ -61,7 +61,8 @@ CSV_HEADER = [
     # axis. RECORDED ONLY -- it is not yet part of task_success, because the
     # threshold should be set from the measured distribution rather than before
     # it (the target vessel's real mouth radius is about 17 mm).
-    "pour_peak_tilt_deg", "pour_lip_err_mm", "pour_start_lip_err_mm",
+    "pour_peak_tilt_deg", "pour_lip_err_mm", "pour_lip_err_along_mm",
+    "pour_lip_err_perp_mm", "pour_start_lip_err_mm",
     # How far the stream falls: the lip's height above the target vessel's mouth
     # at peak tilt. The horizontal miss and the fall height are separate defects.
     "pour_lip_height_mm",
@@ -323,6 +324,21 @@ class TaskOrchestrator(Node):
                 row["pour_lip_err_mm"] = (
                     f"{math.hypot(lx - tgt[0], ly - tgt[1]) * 1000:.1f}"
                 )
+                # The scalar distance cannot separate a systematic offset from
+                # scatter, and the residual at peak tilt moves with none of the
+                # recorded variables, so decompose it in the frame the pour uses.
+                # envs/transfer.py leans the vessel along normalize(flask_xy),
+                # the target's bearing from the robot base, and sets the lip a
+                # lip-radius back along it. In that frame a NEGATIVE "along"
+                # means the lip stopped short on the near side, a positive one
+                # that it went past, and "perp" is lateral drift. A consistent
+                # sign is a correctable offset; a spread is tracking error.
+                tn = math.hypot(tgt[0], tgt[1])
+                if tn > 1e-6:
+                    ux, uy = tgt[0] / tn, tgt[1] / tn
+                    dx, dy = lx - tgt[0], ly - tgt[1]
+                    row["pour_lip_err_along_mm"] = f"{(dx * ux + dy * uy) * 1000:.1f}"
+                    row["pour_lip_err_perp_mm"] = f"{(dx * -uy + dy * ux) * 1000:.1f}"
                 if self.pour_start_lip_xy is not None:
                     sx, sy = self.pour_start_lip_xy[:2]
                     row["pour_start_lip_err_mm"] = (
@@ -372,7 +388,9 @@ class TaskOrchestrator(Node):
             "poured": False, "final_tilt_deg": "", "final_xy": "",
             "placed_upright": False, "placed_in_goal": False, "task_success": False,
             "target_obj": "", "goal_err_mm": "", "aux_check": "",
-            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "", "pour_start_lip_err_mm": "",
+            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "",
+            "pour_lip_err_along_mm": "", "pour_lip_err_perp_mm": "",
+            "pour_start_lip_err_mm": "",
             "pour_lip_height_mm": "",
         }
 
@@ -524,7 +542,9 @@ def main():
             "failure_reason": f"driver_exception:{type(e).__name__}:{e}",
             "beaker_xy": "", "flask_xy": "",
             "target_obj": "", "goal_err_mm": "", "aux_check": "",
-            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "", "pour_start_lip_err_mm": "",
+            "pour_peak_tilt_deg": "", "pour_lip_err_mm": "",
+            "pour_lip_err_along_mm": "", "pour_lip_err_perp_mm": "",
+            "pour_start_lip_err_mm": "",
             "pour_lip_height_mm": "",
         }
         node.get_logger().error(f"trial exception: {e}")
