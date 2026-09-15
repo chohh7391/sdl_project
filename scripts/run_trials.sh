@@ -65,6 +65,13 @@ PERCEPTION_READY_TIMEOUT="${PERCEPTION_READY_TIMEOUT:-45}"
 # whole batch explores a different planner stream over the SAME layouts.
 PLANNER_SEED_OFFSET="${PLANNER_SEED_OFFSET:-0}"
 
+# How long the driver waits for the Plan service. The default matches three
+# planning attempts with headroom on an otherwise idle GPU; raise it when the
+# GPU is shared, where the optimisation loop slows several-fold (measured: the
+# same seed took 64 s alone and 245 s beside another job). Timing measured
+# under a shared GPU is not a latency result.
+PLAN_TIMEOUT="${PLAN_TIMEOUT:-240}"
+
 SEEDS=("$@")
 if [[ ${#SEEDS[@]} -eq 0 ]]; then SEEDS=(0 1 2 3 4); fi
 
@@ -189,7 +196,8 @@ for seed in "${SEEDS[@]}"; do
   # --- 3. drive the trial (appends the CSV row itself) ---------------------
   echo "[seed $seed] running canonical task orchestrator..."
   ROS_DOMAIN_ID="$ROS_DOMAIN_ID" bash "$ORCHESTRATOR" \
-      --seed "$seed" --csv "$CSV" --task "$TASK" --robot "$ROBOT" >"$DRV_LOG" 2>&1
+      --seed "$seed" --csv "$CSV" --task "$TASK" --robot "$ROBOT" \
+      --plan-timeout "$PLAN_TIMEOUT" >"$DRV_LOG" 2>&1
   echo "[seed $seed] driver done. CSV tail:"
   tail -n 2 "$CSV" | sed "s/^/[seed $seed]   /"
 

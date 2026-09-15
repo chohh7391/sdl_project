@@ -16,10 +16,25 @@
 #
 # `grasp_offset.position` is applied in the TAG's frame (cho_object_pose
 # geometry.compose: p_base_obj = p_base_tag + R_tag * offset), so these values
-# are only the base-frame deltas above while the tag's axes agree with the
-# base's. TAMP/tamp/scripts/perception/check_object_pose.py measures exactly that and
-# prints the offset that would zero the error, which is how these were set --
-# do not hand-edit them without re-running it.
+# are the base-frame deltas above only while the tag's axes agree with the
+# base's. Measured: they do, to within 0.8 degrees (check_object_pose.py prints
+# the tag's axes in the base frame).
+#
+# These numbers are GEOMETRIC - they are the scene's own offsets, not a fit.
+# check_object_pose.py also prints "the offset that would be exact", and that
+# one is deliberately NOT pasted here: the difference between the two is the
+# detector's error, and folding it into the offset would hide a real error
+# behind ground truth the physical bench will not have. Measured 2026-09-14 in
+# the MuJoCo cell, camera 1.95 m out:
+#
+#   detector   beaker 16.1 mm, flask 13.9 mm from the plate's true pose
+#   end to end beaker 13.8 mm, flask 12.3 mm from the vessel's true pose
+#
+# The error is almost entirely along the camera's view ray (the tag is reported
+# ~0.9% too far), which is the signature of a tag-size or focal-length scale
+# error rather than a pose-estimation one. On the bench the same 1% shows up as
+# a mis-measured printed tag, which is why the detector config tells you to
+# reach for callipers.
 #
 # top_down_yaw is FALSE here, unlike the grasping task that shipped with
 # cho_object_pose. That flag exists to turn an ambiguous tag orientation into a

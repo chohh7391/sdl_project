@@ -104,6 +104,11 @@ class ChoExecutor:
             callback_group=self._group)
 
         self._goal_handle = None
+        # Last point handed to the streaming topic. A stream is validated
+        # against this rather than against the measured arm: a position
+        # controller always lags a moving command, and that lag is the
+        # thing it is busy closing, not a jump in the command.
+        self._last_stream_point = None
 
     # -- state ------------------------------------------------------------
 
@@ -238,6 +243,8 @@ class ChoExecutor:
             raise ChoCommandFailed('the trajectory goal was rejected')
 
         self._goal_handle = handle
+        # The goal drives the arm away from wherever the stream left it.
+        self._last_stream_point = None
         try:
             result = self._wait(
                 handle.get_result_async(), timeout_sec, 'follow_joint_trajectory result')
@@ -261,17 +268,21 @@ class ChoExecutor:
         traj = single_point_trajectory(
             position, joint_names=self.joints, horizon_sec=horizon_sec, velocity=velocity)
         if validate:
-            # For a single point the only rate that exists is the one from
-            # where the arm is NOW to where this asks it to be, so the start
-            # check is the velocity check: at most one horizon's worth of
-            # travel at the ceiling.
+            # The rate that matters is the one this point asks for relative to
+            # the point before it: at most one horizon's worth of travel at the
+            # ceiling. The FIRST point of a stream has no predecessor, so it is
+            # checked against the measured arm -- which is right exactly there,
+            # because that is the one moment the command has not moved yet.
+            reference = self._last_stream_point or self.joint_positions()
             validate_trajectory(
                 traj,
                 joint_names=self.joints,
-                start_position=self.joint_positions(),
+                start_position=reference,
                 max_start_jump=max_velocity_step(horizon_sec),
             )
         self._stream_pub.publish(traj)
+        self._last_stream_point = {
+            name: float(value) for name, value in zip(self.joints, traj.points[0].positions)}
         return traj
 
     def cancel(self, timeout_sec=5.0, quiet=False):
@@ -364,7 +375,14 @@ class ChoExecutor:
                 raise ChoCommandFailed('the pour goal was rejected')
             result = self._wait(handle.get_result_async(), timeout_sec, 'pour result')
             if result.status != GoalStatus.STATUS_SUCCEEDED:
-                raise ChoCommandFailed('the pour did not complete')
+                # The controller says WHICH bound stopped it -- tilt cap, quiet
+                # scale, timeout. Dropping that here would turn the one useful
+                # thing about a refused pour into "it failed".
+                reason = getattr(result.result, 'message', '') or 'no reason reported'
+                raise ChoCommandFailed(
+                    'the pour did not complete: %s (poured %.2f g, peak tilt %.3f rad)'
+                    % (reason, getattr(result.result, 'final_grams', float('nan')),
+                       getattr(result.result, 'peak_tilt', float('nan'))))
             return result.result
         finally:
             # Always hand the arm back, including after a failed pour: leaving

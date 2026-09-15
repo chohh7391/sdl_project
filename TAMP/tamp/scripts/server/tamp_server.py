@@ -17,6 +17,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from typing import Optional, List, Dict
 import copy
 import time
+import traceback
 
 from cutamp.algorithm import run_cutamp, setup_cutamp
 from cutamp.config import TAMPConfiguration, validate_tamp_config
@@ -982,6 +983,17 @@ class TAMPServer(Node):
             self.get_logger().info("Plan execution completed.")
             success = True
             response.execute_success = True
+            return response
+        except Exception:
+            # A refused or failed command is a failed plan, not a dead server.
+            # Without this the exception escapes the service callback, rclpy
+            # tears the executor down, and the operator loses the node in the
+            # middle of a plan -- with the arm still holding whatever it picked
+            # up. The traceback is logged in full because the reason a command
+            # was refused is the whole value of refusing it.
+            self.get_logger().error(
+                "Plan execution failed:\n%s" % traceback.format_exc())
+            response.execute_success = False
             return response
         finally:
             # In a finally because a supervisor outside this process cannot tell

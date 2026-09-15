@@ -149,3 +149,54 @@ def test_the_start_check_passes_when_the_arm_is_there():
     traj = build_trajectory(_ramp(3), dt=0.1)
     measured = {name: HOME[i] for i, name in enumerate(ARM_JOINTS)}
     assert validate_trajectory(traj, start_position=measured) is not None
+
+
+# --- time scaling ----------------------------------------------------------
+
+def test_a_compliant_trajectory_is_not_stretched():
+    from cho_bridge.trajectory import required_time_scale
+    assert required_time_scale(_ramp(10, step=0.002), dt=0.04) == 1.0
+
+
+def test_a_too_fast_trajectory_reports_the_stretch_it_needs():
+    from cho_bridge.trajectory import required_time_scale
+    # 0.05 rad per 0.04 s = 1.25 rad/s, twice the 0.625 ceiling.
+    scale = required_time_scale(_ramp(5, step=0.05), dt=0.04)
+    # A hair over the exact 2.0: stretching to exactly the ceiling lands on the
+    # wrong side of it once point times are quantised to nanoseconds.
+    assert scale == pytest.approx(2.0, rel=1e-3)
+    assert scale > 2.0
+    # ... and stretching by it produces something the validator accepts.
+    traj = build_trajectory(_ramp(5, step=0.05), dt=0.04, time_scale=scale)
+    assert validate_trajectory(traj) is not None
+
+
+def test_a_single_point_needs_no_stretch():
+    from cho_bridge.trajectory import required_time_scale
+    assert required_time_scale([HOME], dt=0.04) == 1.0
+
+
+def test_a_streamed_point_is_bounded_by_one_horizon_of_travel():
+    from cho_bridge.contract import MAX_JOINT_VELOCITY
+    from cho_bridge.trajectory import single_point_trajectory
+    horizon = 0.1
+    reference = {name: HOME[i] for i, name in enumerate(ARM_JOINTS)}
+
+    # Exactly at the ceiling: allowed.
+    ok = list(HOME)
+    ok[0] += MAX_JOINT_VELOCITY * horizon
+    validate_trajectory(
+        single_point_trajectory(ok, horizon_sec=horizon),
+        start_position=reference,
+        max_start_jump=MAX_JOINT_VELOCITY * horizon)
+
+    # Past it: refused. This is the stream's only rate limit -- the trajectory
+    # controller does not clamp, so a point further than one horizon away would
+    # be a command to move faster than the envelope.
+    too_far = list(HOME)
+    too_far[0] += MAX_JOINT_VELOCITY * horizon * 1.5
+    with pytest.raises(TrajectoryRejected):
+        validate_trajectory(
+            single_point_trajectory(too_far, horizon_sec=horizon),
+            start_position=reference,
+            max_start_jump=MAX_JOINT_VELOCITY * horizon)

@@ -146,6 +146,32 @@ def single_point_trajectory(
     )
 
 
+def required_time_scale(positions, dt, max_velocity=MAX_JOINT_VELOCITY):
+    """How much to stretch a trajectory so no joint exceeds *max_velocity*.
+
+    1.0 when it already complies. A planner times its output for the arm it
+    modelled, which is not always the envelope the real arm is held to, and the
+    choice then is to refuse the trajectory or to drive it slower. Slower is
+    the useful answer for a shape that is otherwise fine -- but only if the
+    caller says so in the log, because a silently stretched motion is a planner
+    problem that stops being visible.
+    """
+    positions = _rows(positions)
+    if len(positions) < 2 or max_velocity <= 0.0 or dt <= 0.0:
+        return 1.0
+    peak = 0.0
+    for before, after in zip(positions, positions[1:]):
+        for a, b in zip(before, after):
+            peak = max(peak, abs(b - a) / dt)
+    scale = peak / max_velocity
+    if scale <= 1.0:
+        return 1.0
+    # A hair more than the exact factor, so the scaled trajectory lands inside
+    # the ceiling rather than on it: point times are quantised to nanoseconds,
+    # and a trajectory timed to exactly the limit reads as just over it.
+    return scale * (1.0 + 1e-4)
+
+
 def _duration_seconds(duration) -> float:
     return duration.sec + duration.nanosec * 1e-9
 
@@ -212,7 +238,12 @@ def validate_trajectory(
             if previous_position is not None:
                 span = now - previous_time
                 rate = abs(value - previous_position[joint_index]) / span
-                if rate > max_velocity + 1e-9:
+                # Relative, not absolute: point times are stored as integer
+                # nanoseconds, so a trajectory timed to land exactly on the
+                # ceiling comes back a few parts in 10^8 over it. An absolute
+                # 1e-9 slack is smaller than that quantisation and would refuse
+                # a trajectory for being correctly scaled.
+                if rate > max_velocity * (1.0 + 1e-6):
                     raise TrajectoryRejected(
                         f'point {index} implies {name} at {rate:.3f} rad/s, '
                         f'over the {max_velocity:.3f} rad/s ceiling. Nothing '

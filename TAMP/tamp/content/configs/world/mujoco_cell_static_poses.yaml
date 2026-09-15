@@ -9,5 +9,18 @@
 # [x, y, z, qw, qx, qy, qz] in base_link. These are the MuJoCo cell's numbers
 # (cho_description_fr5/xml/scene_ag95_sdl.xml), which are in turn the Isaac
 # cell's (isaacsim/scripts/standalone/task.py).
+# Bench top height in the robot frame. A vessel standing on it has a known
+# centre height, which is what SDL_GROUND_ON_TABLE uses: a single camera
+# constrains a tag poorly along its own view ray, and for a camera looking down
+# at the bench that ray is mostly vertical. Measured in this cell the beaker's
+# perceived z was 12.1 mm low, which put its base 7 mm inside the table and made
+# the planner refuse its own initial state.
+table_top_z: 0.0
+
 poses:
   table: [0.0, 0.0, -0.01, 1.0, 0.0, 0.0, 0.0]
+  # Stir bar, 10 x 10 x 35 mm, resting on the table top. Requested by the
+  # transfer environment (entities beaker, flask, magnet) even though only the
+  # two vessels are manipulated, so it needs an entry or the request fails.
+  magnet: [-0.3, 0.416, 0.0175, 1.0, 0.0, 0.0, 0.0]
+  stirrer: [-0.15, 0.6, 0.045, 1.0, 0.0, 0.0, 0.0]

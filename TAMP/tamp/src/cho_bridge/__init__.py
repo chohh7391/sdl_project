@@ -9,6 +9,7 @@ from cho_bridge.executor import ChoCommandFailed, ChoExecutor
 from cho_bridge.trajectory import (
     TrajectoryRejected,
     build_trajectory,
+    required_time_scale,
     single_point_trajectory,
     validate_trajectory,
 )
@@ -18,6 +19,7 @@ __all__ = [
     'ChoExecutor',
     'TrajectoryRejected',
     'build_trajectory',
+    'required_time_scale',
     'single_point_trajectory',
     'validate_trajectory',
 ]

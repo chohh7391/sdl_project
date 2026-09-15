@@ -40,6 +40,7 @@ Environment:
     SDL_STATIC_POSES=<path>       poses for the untagged entities
     SDL_REAL_SWITCH=verify|switch whether this process may switch controllers
     SDL_STREAM_HORIZON=0.10       lookahead of one streamed point [s]
+    SDL_GROUND_ON_TABLE=1         stand perceived vessels on the bench (see below)
 """
 
 import os
@@ -52,7 +53,7 @@ from std_srvs.srv import Trigger
 
 from cho_bridge.contract import ARM_JOINTS, TRAJECTORY_CONTROLLER
 from cho_bridge.executor import ChoCommandFailed, ChoExecutor
-from cho_bridge.trajectory import build_trajectory
+from cho_bridge.trajectory import build_trajectory, required_time_scale
 from tamp_server import TAMPServer, main as tamp_main
 
 
@@ -65,6 +66,23 @@ class RealTAMPServer(TAMPServer):
 
     #: cho_object_pose publishes one topic per object in its table.
     OBJECT_POSE_TOPIC = '/perception/object_pose/%s'
+
+    #: Stand a perceived vessel on the bench instead of believing the camera's
+    #: estimate of its height.
+    #:
+    #: This is not a fudge and it is not optional book-keeping: a single camera
+    #: constrains a tag's position across the image well and along its own view
+    #: ray poorly, and the ray of a camera looking down at the bench is mostly
+    #: vertical. Measured in the MuJoCo cell, the beaker's perceived z was 12.1
+    #: mm low - enough that the planner refused the scene outright, because a
+    #: 0.135 m vessel centred 12 mm low has its base 7 mm inside the table.
+    #:
+    #: A vessel standing on a bench of known height has a known height. So x, y
+    #: and yaw come from perception, and z comes from the bench. The simulated
+    #: path did the same thing (the TF branch of the original set_tamp_env_cb
+    #: forced the vessels' z), and this states it instead of hiding it: what is
+    #: perception-in-the-loop here is the horizontal placement.
+    GROUND_PERCEIVED_ON_TABLE = os.environ.get('SDL_GROUND_ON_TABLE', '1') == '1'
 
     #: The frame cho_object_pose resolves into for this robot
     #: (cho_robot_config fr5.yaml model.arm_base_link). Nothing here transforms
@@ -102,6 +120,7 @@ class RealTAMPServer(TAMPServer):
             self.get_logger().info('[state] %s <- %s' % (entity, topic))
 
         self._static_poses = self._load_static_poses()
+        self._table_top_z = self._load_table_top()
 
         self.estop_srv = self.create_service(
             Trigger, 'tamp_estop', self._estop_cb,
@@ -136,6 +155,47 @@ class RealTAMPServer(TAMPServer):
         self.get_logger().info(
             '[state] static poses for %s from %s' % (sorted(poses), path))
         return poses
+
+    def _load_table_top(self):
+        """Bench height [m] in the robot frame, or None if the cell did not say.
+
+        Read from the same file as the static poses so the number that grounds a
+        vessel is the cell's, not a constant compiled in here.
+        """
+        path = os.environ.get('SDL_STATIC_POSES', '').strip()
+        if not path or not self.GROUND_PERCEIVED_ON_TABLE:
+            return None
+        with open(path, encoding='utf-8') as stream:
+            loaded = yaml.safe_load(stream) or {}
+        top = loaded.get('table_top_z')
+        if top is None:
+            self.get_logger().warn(
+                '[state] SDL_GROUND_ON_TABLE is set but %s declares no '
+                'table_top_z, so perceived vessels keep the camera\'s height '
+                'estimate' % path)
+            return None
+        self.get_logger().info('[state] bench top at z = %.4f m' % float(top))
+        return float(top)
+
+    def _grounded_z(self, entity):
+        """Centre height of *entity* standing on the bench, or None.
+
+        The dimensions are the planner's own (cutamp envs.utils.ENTITIES), so a
+        vessel is grounded to exactly the height the collision model expects it
+        at - which is the whole point, since the alternative is the planner
+        rejecting its own initial state.
+        """
+        if self._table_top_z is None:
+            return None
+        try:
+            from envs.utils import ENTITIES
+        except ImportError:
+            return None
+        entry = ENTITIES.get(entity)
+        dims = getattr(entry, 'dims', None)
+        if not dims:
+            return None
+        return self._table_top_z + float(dims[2]) / 2.0
 
     def _on_object_pose(self, entity, msg):
         self._object_poses[entity] = msg
@@ -181,10 +241,19 @@ class RealTAMPServer(TAMPServer):
             return None
 
         p, q = msg.pose.position, msg.pose.orientation
-        self.get_logger().info(
-            '[state] %s from perception at (%.4f, %.4f, %.4f), age %.2f s'
-            % (entity, p.x, p.y, p.z, age))
-        return [p.x, p.y, p.z, q.w, q.x, q.y, q.z]
+        z = float(p.z)
+        grounded = self._grounded_z(entity)
+        if grounded is not None:
+            self.get_logger().info(
+                '[state] %s from perception at (%.4f, %.4f), standing on the '
+                'bench at z %.4f (camera said %.4f, %.1f mm out)'
+                % (entity, p.x, p.y, grounded, z, (z - grounded) * 1e3))
+            z = grounded
+        else:
+            self.get_logger().info(
+                '[state] %s from perception at (%.4f, %.4f, %.4f), age %.2f s'
+                % (entity, p.x, p.y, z, age))
+        return [p.x, p.y, z, q.w, q.x, q.y, q.z]
 
     async def set_tamp_env_cb(self, request, response):
         """World State from perception plus the static table, never a simulator.
@@ -310,13 +379,26 @@ class RealTAMPServer(TAMPServer):
         self._check_estop()
         plan_trajectory = plan_part['plan']
         dt = float(os.environ.get('SDL_EXEC_DT', '0.04'))
+        positions = plan_trajectory.position.tolist()
+
+        # The planner's own velocities are deliberately NOT forwarded. They
+        # belong to cuRobo's interpolation step, and the waypoints are re-timed
+        # here at SDL_EXEC_DT, so handing them over would describe a different
+        # motion than the point times do. The controller derives them from the
+        # path it is given instead.
+        scale = required_time_scale(positions, dt)
+        if scale > 1.0:
+            self.get_logger().warn(
+                'stretching this segment by %.2fx: at %.3f s per waypoint it '
+                'implies joint speeds above the arm envelope. The shape is '
+                'unchanged; the planner is asking for a faster arm than this '
+                'one is held to.' % (scale, dt))
 
         traj = build_trajectory(
-            plan_trajectory.position.tolist(),
+            positions,
             joint_names=list(plan_trajectory.joint_names),
             dt=dt,
-            velocities=(plan_trajectory.velocity.tolist()
-                        if getattr(plan_trajectory, 'velocity', None) is not None else None),
+            time_scale=scale,
         )
         self.arm.execute_trajectory(traj)
 

@@ -34,7 +34,11 @@ from cho_bridge.contract import (
     TRAJECTORY_CONTROLLER,
 )
 from cho_bridge.executor import ChoCommandFailed, ChoExecutor
-from cho_bridge.trajectory import TrajectoryRejected, build_trajectory
+from cho_bridge.trajectory import (
+    TrajectoryRejected,
+    build_trajectory,
+    required_time_scale,
+)
 
 
 def _spun_node(name='cho_bridge'):
@@ -100,6 +104,35 @@ def cmd_nudge(arm, args):
     return 0
 
 
+def cmd_goto(arm, args):
+    """Drive every joint to a given configuration, in one trajectory.
+
+    `nudge` moves one joint because that is the safest first motion; getting to
+    a named configuration -- the planner's own start pose, say -- needs all six
+    to move together, and one trajectory is how the arm gets there without
+    passing through whatever pose a sequence of single-joint moves implies.
+    """
+    if len(args.target) != len(ARM_JOINTS):
+        print('need %d joint values, got %d' % (len(ARM_JOINTS), len(args.target)),
+              file=sys.stderr)
+        return 2
+
+    start = arm.joint_positions()
+    rows = [[start[j] for j in ARM_JOINTS], list(args.target)]
+    scale = required_time_scale(rows, args.duration)
+    duration = args.duration * scale
+    if scale > 1.0:
+        print('stretching to %.1fs: %.1fs would exceed %.3f rad/s'
+              % (duration, args.duration, MAX_JOINT_VELOCITY))
+    for index, joint in enumerate(ARM_JOINTS):
+        print('  %s: %+.5f -> %+.5f rad' % (joint, rows[0][index], rows[1][index]))
+
+    traj = build_trajectory(rows, joint_names=ARM_JOINTS, times=[0.0, duration])
+    arm.execute_trajectory(traj)
+    print('done')
+    return 0
+
+
 def cmd_gripper(arm, args):
     arm.set_gripper(grasp=(args.action == 'close'), width=args.width)
     print(f'gripper {args.action}')
@@ -137,6 +170,12 @@ def build_parser():
     nudge.add_argument('delta', type=float, help='radians, signed')
     nudge.add_argument('--duration', type=float, default=4.0)
     nudge.set_defaults(run=cmd_nudge, needs_arm=True)
+
+    goto = sub.add_parser('goto', help='drive every joint to a configuration')
+    goto.add_argument('target', type=float, nargs='+',
+                      help='%d joint values in radians, in order' % len(ARM_JOINTS))
+    goto.add_argument('--duration', type=float, default=8.0)
+    goto.set_defaults(run=cmd_goto, needs_arm=True)
 
     gripper = sub.add_parser('gripper', help='open or close the AG-95')
     gripper.add_argument('action', choices=('open', 'close'))

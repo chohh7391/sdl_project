@@ -46,7 +46,9 @@ NEW_METHODS = {
     '__init__',
     '_check_estop',
     '_estop_cb',
+    '_grounded_z',
     '_load_static_poses',
+    '_load_table_top',
     '_on_object_pose',
 }
 
