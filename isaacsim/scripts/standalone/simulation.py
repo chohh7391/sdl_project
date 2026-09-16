@@ -209,42 +209,59 @@ class Simulation(Node):
 
         self.step = 0
 
-        # Aim the wrist camera now, not when the scene was built. At build time
-        # the arm has not been driven to its configuration yet -- the wrist sits
-        # behind the base, 50 mm off the bench -- so a mount fixed there points
-        # the camera at nothing: measured, the depth image came back entirely
-        # infinite from both a +Z and a -Z mount. By this point world.reset()
-        # has applied the arm's configuration, so aiming at the workspace here
-        # writes a LOCAL transform on a prim parented to wrist3_link, and the
-        # camera keeps that relationship as the arm moves.
-        self._aim_wrist_camera()
+        # The wrist camera is NOT aimed here. It used to be: a look-at from
+        # wherever the arm happened to be at reset, baked into the local
+        # transform of a prim parented to wrist3_link. That points the camera at
+        # the workspace in exactly one configuration and somewhere arbitrary in
+        # every other, which defeats the recovery scan -- whose viewpoints are
+        # solved assuming the optical axis IS the wrist's +Z tool axis. The
+        # mount is a fixed local rotation instead (Task.WRIST_CAMERA_QUAT).
+        self._report_wrist_camera()
 
         self.get_logger().info("Simulation Start")
 
-    def _aim_wrist_camera(self):
-        """Point the wrist camera at the workspace from wherever the arm is."""
+    def _report_wrist_camera(self):
+        """Log where the wrist camera actually looks once the arm is posed.
+
+        The mount is a fixed local rotation, so the only way to be wrong about
+        it is to be wrong about a convention. This prints the measured optical
+        axis in world coordinates and the bench point it meets, which settles
+        that without reading a rendered frame -- an all-black image is equally
+        consistent with a camera pointing into the wrist and with a camera
+        pointing at an unlit part of the cell.
+        """
         cams = getattr(self.task, "camera_names", [])
         if "camera_3" not in cams:
             return
         try:
-            from isaacsim.core.prims import SingleXFormPrim
-            from camera import set_world_pose_from_view
             import numpy as _np
+            from isaacsim.core.prims import SingleXFormPrim
+
             cam_path = self.task.camera_prim_paths[cams.index("camera_3")]
-            eye = SingleXFormPrim(prim_path=cam_path, name="wrist_cam_view")
-            pos, _ = eye.get_world_pose()
-            target = _np.array([0.20, 0.0, 0.05])   # the workspace centre the
-            # fixed cameras also aim at (task.camera_targets)
-            set_world_pose_from_view(
-                self.task.cameras[cams.index("camera_3")],
-                _np.array([float(pos[0]), float(pos[1]), float(pos[2])]), target)
-            self.get_logger().info(
-                "wrist camera aimed from (%.3f, %.3f, %.3f) at the workspace centre"
-                % (pos[0], pos[1], pos[2]))
+            pos, quat = SingleXFormPrim(
+                prim_path=cam_path, name="wrist_cam_probe").get_world_pose()
+            w, x, y, z = [float(v) for v in quat]
+            R = _np.array([
+                [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+                [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+                [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)],
+            ])
+            axis = -R[:, 2]          # a USD camera images along its own -Z
+            p = _np.array([float(v) for v in pos])
+            msg = ("wrist camera at (%.3f, %.3f, %.3f), optical axis "
+                   "(%.3f, %.3f, %.3f), %.1f deg below horizontal"
+                   % (p[0], p[1], p[2], axis[0], axis[1], axis[2],
+                      _np.degrees(_np.arcsin(max(-1.0, min(1.0, -axis[2]))))))
+            if axis[2] < -1e-6:
+                hit = p + (-p[2] / axis[2]) * axis
+                msg += "; meets the bench at (%.3f, %.3f)" % (hit[0], hit[1])
+            else:
+                msg += "; does not meet the bench"
+            self.get_logger().info(msg)
         except Exception:
             import traceback
             self.get_logger().warning(
-                "could not aim the wrist camera:\n%s" % traceback.format_exc())
+                "could not probe the wrist camera:\n%s" % traceback.format_exc())
 
     def grasp_target_cb(self, msg):
         """Store the planner's intended grasp-target object name (MAJOR-1)."""
