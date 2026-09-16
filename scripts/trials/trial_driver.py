@@ -92,6 +92,18 @@ SETTLE_AFTER_EXECUTE_S = 2.0
 # records the raw distance, so the manuscript's tighter Move criterion (final
 # placement within a stated tolerance of the target) can be applied to the
 # recorded numbers without another batch.
+def _flask_dims():
+    """Flask outer dims from the shared table (envs.constants, SDL_GLASSWARE)."""
+    import sys as _sys, os as _os
+    _src = _os.path.abspath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "..", "..", "TAMP", "tamp", "src"))
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from envs.constants import vessel_dims
+    return vessel_dims("flask")
+
+
 TASK_OUTCOMES = {
     "transfer": {
         "target": "beaker",
@@ -264,9 +276,11 @@ class TaskOrchestrator(Node):
         if mag is None or ves is None:
             return None, "pose_unavailable"
         dxy = math.hypot(mag[0] - ves[0], mag[1] - ves[1])
-        # ENTITIES: flask dims [0.07, 0.07, 0.12] -> mouth is centre_z + 0.06.
+        # The mouth sits a half-height above the flask's centre; the height
+        # comes from the same table the planner and simulator use, so changing
+        # the glassware does not leave the scoring measuring the old vessel.
         # A bar that really went in sits on the inner floor, well below this.
-        mouth_z = ves[2] + 0.06
+        mouth_z = ves[2] + _flask_dims()[2] / 2.0
         inside = dxy <= MAGNET_IN_VESSEL_RADIUS_M and mag[2] <= mouth_z
         return inside, f"dxy={dxy * 1000:.0f}mm,z={mag[2]:.4f},mouth={mouth_z:.4f}"
 
@@ -319,8 +333,8 @@ class TaskOrchestrator(Node):
             tgt = self._get_pose(pour_target)
             if tgt is not None:
                 lx, ly, lz = self.pour_peak_lip_xy
-                # ENTITIES: flask dims [0.07, 0.07, 0.12] -> mouth at centre + 0.06
-                row["pour_lip_height_mm"] = f"{(lz - (tgt[2] + 0.06)) * 1000:.1f}"
+                row["pour_lip_height_mm"] = (
+                    f"{(lz - (tgt[2] + _flask_dims()[2] / 2.0)) * 1000:.1f}")
                 row["pour_lip_err_mm"] = (
                     f"{math.hypot(lx - tgt[0], ly - tgt[1]) * 1000:.1f}"
                 )

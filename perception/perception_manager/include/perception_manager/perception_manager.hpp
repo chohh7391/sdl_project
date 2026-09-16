@@ -18,15 +18,22 @@
 #include <tf2/LinearMath/Transform.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+//! One camera's view of one tag, expressed in base_link.
+struct CameraObservation
+{
+    std::string camera;                                   //!< the camera frame
+    geometry_msgs::msg::TransformStamped pose_in_base;    //!< base_link -> tag
+    double distance = 0.0;                                //!< camera to tag [m]
+};
+
 struct ObjectData
 {
-    geometry_msgs::msg::TransformStamped cam1_raw_base; 
-    geometry_msgs::msg::TransformStamped cam2_raw_base; 
-    double dist_to_cam1; 
-    double dist_to_cam2; 
-    bool cam1_valid = false;
-    bool cam2_valid = false;
-    
+    //! Rebuilt every fusion cycle: one entry per camera that saw the tag. This
+    //! was a fixed pair of cam1/cam2 fields, which meant a third camera -- a
+    //! wrist camera, say -- could not be added without touching the fusion
+    //! itself. With two cameras the arithmetic below is unchanged.
+    std::vector<CameraObservation> observations;
+
     // 최종 가공된 데이터 (Offset 적용 후)
     geometry_msgs::msg::TransformStamped processed_data; 
 };
@@ -67,6 +74,9 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Wrench>::SharedPtr ft_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr scale_sub_;
 
+    //! Camera frames to fuse, in no particular order. Declared as a ROS
+    //! parameter so a camera can be added from configuration rather than code.
+    std::vector<std::string> camera_frames_;
     std::vector<std::string> target_objects_;
     std::map<std::string, std::string> object_tag_map_;
     // Translation from each object's TAG frame to the object's own frame, in the

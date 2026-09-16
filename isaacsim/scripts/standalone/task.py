@@ -29,6 +29,18 @@ from camera import CameraInfo, set_world_pose_from_view
 ASSET_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets")
 
 
+def _FOOTPRINT_SRC(name):
+    """Vessel dims for the class-body footprint table (see Task._vessel_dims)."""
+    import sys as _sys, os as _os
+    _src = _os.path.abspath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "..", "..", "..", "TAMP", "tamp", "src"))
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from envs.constants import vessel_dims
+    return vessel_dims(name)
+
+
 class Task(ABC, BaseTask):
 
     def __init__(self, name: str, robot_prim_path: str, robot_name: str) -> None:
@@ -84,6 +96,10 @@ class Task(ABC, BaseTask):
         self.current_orientations = None
         self.desired_tool = None
         self.current_tool = None
+        # compute_scale_data only assigns this on the branch where the beaker
+        # has not moved, so the first call down the other branch used to read an
+        # attribute that did not exist yet and take the ROS spin down with it.
+        self.max_pour_angle = None
 
         # # G1, G2, G3, G4, G5, G6, G7, G8, G9, G10, G11, G12
         # random_grid = np.random.choice("G1 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12".split())
@@ -99,9 +115,14 @@ class Task(ABC, BaseTask):
             # rests on the table top (z = 0). x,y layout unchanged. (REFACTOR II-2)
             "stirrer": np.array([-0.15, 0.6, 0.045]),      # 0.09 / 2
             # "beaker": np.array([random_x, random_y, 0.067]),
-            "beaker": np.array([0.49, 0.17475, 0.0675]),   # 0.135 / 2
+            # z is the cuboid's half-height, so the collider rests on the table
+            # top. It followed the vessel's dims and must keep following them:
+            # left at the old 0.0675 while the beaker became 72 mm tall, the
+            # vessel spawned 31.5 mm in the air, fell, and the drop read as
+            # "the beaker moved" in compute_scale_data.
+            "beaker": np.array([0.49, 0.17475, _FOOTPRINT_SRC("beaker")[2] / 2.0]),
             # "flask": np.array([flask_x + noise[0], flask_y + noise[1], 0.07]),
-            "flask": np.array([0.48383, 0.33166, 0.06]),   # 0.12 / 2
+            "flask": np.array([0.48383, 0.33166, _FOOTPRINT_SRC("flask")[2] / 2.0]),
             "magnet": np.array([-0.3, 0.416, self.STIR_BAR_DIMS[2] / 2.0]),
             # "box" : np.array([box_x, box_y, 0.06]),
             "box" : np.array([-0.12621, -0.57484, 0.04]),  # 0.08 / 2
@@ -174,9 +195,30 @@ class Task(ABC, BaseTask):
     # and 30-40 mm long; at 10 mm the worst-yaw need is 14 mm, with wide margin.
     STIR_BAR_DIMS = [0.010, 0.010, 0.035]
 
+    # Vessel geometry comes from the planner's own constants module rather than
+    # being repeated here. It was repeated here, and the copies drifted: the
+    # simulated glassware kept its authored sizes while the real vessels were
+    # bought to different ones, which is what broke replaying a recorded
+    # trajectory on the robot. envs.constants has no heavy dependencies, so the
+    # simulator can read the same table the planner does.
+    @staticmethod
+    def _vessel_dims(name):
+        import sys as _sys, os as _os
+        _src = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                             "..", "..", "..", "TAMP", "tamp", "src")
+        _src = _os.path.abspath(_src)
+        if _src not in _sys.path:
+            _sys.path.insert(0, _src)
+        from envs.constants import vessel_dims
+        return vessel_dims(name)
+
     _MOVABLE_FOOTPRINT = {
-        "beaker":  (0.05, 0.05),
-        "flask":   (0.07, 0.07),
+        # Follow the selected glassware: a footprint smaller than the vessel
+        # would let the randomiser place two vessels overlapping. Changing the
+        # glassware therefore CHANGES the seeded layouts -- runs under different
+        # glassware are not comparable seed for seed.
+        "beaker":  tuple(_FOOTPRINT_SRC("beaker")[:2]),
+        "flask":   tuple(_FOOTPRINT_SRC("flask")[:2]),
         # Deliberately still the pre-stir-bar 45 mm footprint, NOT STIR_BAR_DIMS.
         # This table only drives the non-overlap rejection during layout
         # sampling, so reserving more space than the object occupies is
@@ -551,7 +593,7 @@ class Task(ABC, BaseTask):
             usd_path=beaker_usd_path, prim_path="/World/beaker", name="beaker",
             position=current_positions["beaker"],
             orientation=current_orientations["beaker"],
-            dims=[0.05, 0.05, 0.135],
+            dims=self._vessel_dims("beaker"),
         )
         self.scene.add(self.beaker)
 
@@ -568,7 +610,7 @@ class Task(ABC, BaseTask):
             usd_path=flask_usd_path, prim_path="/World/flask", name="flask",
             position=current_positions["flask"],
             orientation=current_orientations["flask"],
-            dims=[0.07, 0.07, 0.12], wall=self.FLASK_WALL_M,
+            dims=self._vessel_dims("flask"), wall=self.FLASK_WALL_M,
         )
         self.scene.add(self.flask)
 

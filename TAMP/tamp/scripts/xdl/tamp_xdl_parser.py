@@ -24,7 +24,14 @@ TAMP_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "
 sys.path.insert(0, TAMP_SRC)
 from orchestration.registry import get_environment_spec, get_planner_spec
 
-PROJECT_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src", "sdl_project")
+# Derived from this file rather than assembled from a fixed suffix. The old
+# form appended "src/sdl_project" after four levels up, which resolved when the
+# tree sat beside sdl_project and broke once it moved inside it -- the parser
+# then looked for xdl.xml under sdl_project/src/sdl_project/. Four levels up
+# from TAMP/tamp/scripts/xdl IS the project root, wherever the tree lives.
+PROJECT_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                 "..", "..", "..", ".."))
 sys.path.append(os.path.join(PROJECT_PATH, "LLM"))
 # Llama import
 from llama.script.action_reasoner.model import ActionReasoner

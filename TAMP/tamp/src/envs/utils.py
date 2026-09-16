@@ -4,7 +4,7 @@ from cutamp.envs import TAMPEnvironment
 from cutamp.envs.utils import unit_quat
 from cutamp.envs import TAMPEnvironment
 
-from envs.constants import PLANNER_Z_LIFT
+from envs.constants import PLANNER_Z_LIFT, vessel_dims
 from envs.transfer import load_transfer_env
 from envs.stir import load_stir_env
 from envs.default import load_default_env
@@ -18,8 +18,10 @@ ENTITIES = {
     "stirrer": Cuboid(name="stirrer", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.18, 0.18, 0.09], color=[255, 0, 0]),
 
     # objects
-    "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.05, 0.05, 0.135], color=[255, 0, 0]),
-    "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.07, 0.07, 0.12], color=[255, 0, 0]),
+    # Dims come from envs.constants so the planner, the simulator's colliders
+    # and the trial scoring cannot drift apart; SDL_GLASSWARE selects the set.
+    "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=vessel_dims("beaker"), color=[255, 0, 0]),
+    "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=vessel_dims("flask"), color=[255, 0, 0]),
     # Magnetic stir bar. Must match isaacsim Task.STIR_BAR_DIMS. It was a 45 mm
     # cube, whose worst-yaw diagonal (63.6 mm) does not clear the flask's 64 mm
     # opening, so the Stir terminal condition ("stir bar inside the vessel") was
