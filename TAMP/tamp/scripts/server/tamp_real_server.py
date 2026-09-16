@@ -13,6 +13,11 @@ plant changes, through the hooks `TAMPServer` exposes for it:
     execute_gripper_action                 open/close
     _perception_pose / set_tamp_env_cb     where the World State comes from
 
+The perception RECOVERY ladder is not in that list on purpose: it is inherited
+whole from the base (`_localize_with_recovery`), which reaches this plant
+through the hooks above. Re-implementing it here would give the physical cell a
+different recovery policy from the one the paper's numbers were measured under.
+
 That matters beyond tidiness: the adaptive pour the paper reports has to be one
 implementation. A forked file would let the simulated law and the physical law
 drift while both were still called "the same controller".
@@ -41,6 +46,7 @@ Environment:
     SDL_REAL_SWITCH=verify|switch whether this process may switch controllers
     SDL_STREAM_HORIZON=0.10       lookahead of one streamed point [s]
     SDL_GROUND_ON_TABLE=1         stand perceived vessels on the bench (see below)
+    SDL_RECOVERY*                 perception recovery ladder; see tamp_server.py
 """
 
 import os
@@ -277,7 +283,12 @@ class RealTAMPServer(TAMPServer):
         sources = {}
         for entity in request.entities:
             if entity in self.PERCEPTION_ENTITIES:
-                pose = self._perception_pose(entity)
+                # The base's recovery ladder, NOT _perception_pose directly.
+                # It resolves self._perception_pose, so it polls this class's
+                # cho_object_pose source, and its motion rungs go through the
+                # plant hooks below -- which is why the ladder lives on the
+                # base and both set_tamp_env_cb implementations call into it.
+                pose = self._localize_with_recovery(entity)
                 if pose is None:
                     self.get_logger().error(
                         '[state] no perception pose for %s; the trial is a '
@@ -411,7 +422,17 @@ class RealTAMPServer(TAMPServer):
         """
         self._check_estop()
         closing = plan_part['action'] == 'close'
+        # Same conservative rule as the base: a close counts from the moment it
+        # is commanded, and only a command that returned clears it, so a
+        # set_gripper that raises mid-open leaves the arm "holding". The
+        # recovery ladder reads this before it moves anything, and it has to be
+        # maintained on BOTH plants -- maintaining it only on the base would
+        # mean the physical arm is the one that sweeps with a vessel in it.
+        if closing:
+            self._holding = True
         self.arm.set_gripper(grasp=closing)
+        if not closing:
+            self._holding = False
 
     # -- e-stop -----------------------------------------------------------
 

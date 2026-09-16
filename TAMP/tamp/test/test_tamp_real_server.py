@@ -104,6 +104,67 @@ def test_the_dispatched_step_types_match_the_declared_ones():
     assert dispatched == set(BASE.PLAN_STEP_TYPES)
 
 
+def _calls_on_self(func):
+    """Names of `self.<name>(...)` calls made in *func*'s own body."""
+    tree = ast.parse(textwrap.dedent(inspect.getsource(func)))
+    return {
+        node.func.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == 'self'
+    }
+
+
+def test_both_world_state_paths_localize_through_the_recovery_ladder():
+    # THE drift this file exists for, in its sharpest form. The real server
+    # overrides BOTH _perception_pose and set_tamp_env_cb, so a recovery ladder
+    # written into the base's set_tamp_env_cb would never run on hardware --
+    # and nothing would say so, because the base's copy still works in
+    # simulation. Both implementations must go through the shared entry point.
+    for cls in (BASE, REAL):
+        calls = _calls_on_self(cls.set_tamp_env_cb)
+        assert '_localize_with_recovery' in calls, (
+            '%s.set_tamp_env_cb does not localize through the recovery ladder'
+            % cls.__name__)
+        assert '_perception_pose' not in calls, (
+            '%s.set_tamp_env_cb calls _perception_pose directly, which skips '
+            'the recovery ladder' % cls.__name__)
+
+
+def test_the_recovery_ladder_itself_is_shared():
+    # One ladder, reached through the plant hooks -- so the physical cell
+    # recovers under the policy the reported numbers were measured under.
+    for name in ('_localize_with_recovery', '_poll_perception_pose',
+                 '_recovery_retreat', '_recovery_scan', '_log_recovery'):
+        assert getattr(REAL, name) is getattr(BASE, name), name
+
+
+def test_both_plants_track_whether_the_gripper_is_holding():
+    # The ladder refuses to move an arm that is holding a vessel. That check is
+    # only as good as _holding, which each plant's gripper hook has to set:
+    # setting it on the base alone would leave the REAL arm sweeping with a
+    # full vessel in the gripper.
+    for cls in (BASE, REAL):
+        tree = ast.parse(textwrap.dedent(
+            inspect.getsource(cls.execute_gripper_action)))
+        assigns_holding = any(
+            isinstance(node, ast.Attribute) and node.attr == '_holding'
+            and isinstance(node.ctx, ast.Store)
+            for node in ast.walk(tree))
+        assert assigns_holding, (
+            '%s.execute_gripper_action never sets self._holding' % cls.__name__)
+
+
+def test_the_scan_rung_is_off_until_there_is_a_camera_on_the_arm():
+    # This cell has two fixed cameras and no wrist camera, so sweeping the arm
+    # observes the same two viewpoints it started from. Defaulting the rung on
+    # would spend tens of seconds of motion per failed localization and recover
+    # nothing.
+    assert BASE.RECOVERY_SCAN is False
+
+
 def test_the_real_server_has_no_planner_config_of_its_own():
     source = inspect.getsource(tamp_real_server)
     assert 'TAMPConfiguration' not in source, (

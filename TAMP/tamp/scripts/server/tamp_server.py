@@ -456,6 +456,14 @@ class TAMPServer(Node):
         self.last_operator = None
         self.saved_state_after_operator = None 
 
+        # Whether the gripper is closed on something. The perception recovery
+        # ladder refuses to move an arm that is holding a vessel, so this has
+        # to be maintained on EVERY plant -- the real server sets it in its own
+        # execute_gripper_action for the same reason.
+        self._holding = False
+        #: _perception_pose calls made for the entity currently being localized.
+        self._recovery_attempts = 0
+
         self.scale = 0.0
         self.scale_sub = self.create_subscription(
             Float32, "raw_scale_data",
@@ -560,6 +568,53 @@ class TAMPServer(Node):
     # perception-in-the-loop.
     PERCEPTION_MAX_AGE_S = float(os.environ.get("SDL_PERCEPTION_MAX_AGE_S", "2.0"))
 
+    # ---- perception recovery -------------------------------------------
+    #
+    # What happens when a tagged vessel is NOT localized. Before this the
+    # answer was "fail the request on the first look", which is not what the
+    # manuscript describes: III-C2 and V-B both say the executor waits up to
+    # 5 s for a re-detection before it halts and reports the affected object.
+    # That wait did not exist in the code. L0 below is it.
+    #
+    # Every rung either produces a REAL observation or gives up. None of them
+    # substitutes a pose from anywhere else: a request that falls off the end
+    # is a perception failure and is recorded as one, for the reason
+    # set_tamp_env_cb states.
+    #
+    #   L0 wait     re-poll the same viewpoint (the manuscript's 5 s)
+    #   L1 retreat  park the arm at home, in case the arm is the occluder,
+    #               then re-poll
+    #   L2 scan     sweep the arm to carry a wrist camera somewhere else,
+    #               polling as it goes
+    RECOVERY_ENABLED = os.environ.get("SDL_RECOVERY", "1") == "1"
+    RECOVERY_WAIT_S = float(os.environ.get("SDL_RECOVERY_WAIT_S", "5.0"))
+    RECOVERY_POLL_S = float(os.environ.get("SDL_RECOVERY_POLL_S", "0.25"))
+    RECOVERY_RETREAT = os.environ.get("SDL_RECOVERY_RETREAT", "1") == "1"
+
+    #: L2 is OFF by default, and that is not timidity. This cell has two FIXED
+    #: cameras (/World/camera_1 and /World/camera_2 in
+    #: isaacsim/scripts/standalone/simulation.py) and no wrist camera, so
+    #: sweeping the arm moves nothing that is looking: the scan would spend
+    #: tens of seconds of motion to observe the same two viewpoints it started
+    #: from. It is written and left here as the switch to throw once a wrist
+    #: camera exists -- not before.
+    RECOVERY_SCAN = os.environ.get("SDL_RECOVERY_SCAN", "0") == "1"
+    RECOVERY_SCAN_S = float(os.environ.get("SDL_RECOVERY_SCAN_S", "30.0"))
+
+    #: Where L1 parks the arm: the configuration tamp_client.py do_home()
+    #: sends, so "retreated" is a pose an operator already recognises.
+    RECOVERY_HOME = [
+        float(v) for v in os.environ.get(
+            "SDL_RECOVERY_HOME", "0.0,-1.05,-2.18,-1.57,1.57,0.0").split(",")
+    ]
+
+    #: L2 sweeps j1 over +/- this, once per j2 offset, around RECOVERY_HOME.
+    SCAN_J1_RANGE = float(os.environ.get("SDL_RECOVERY_SCAN_J1", "1.57"))
+    SCAN_J2_OFFSETS = [
+        float(v) for v in os.environ.get(
+            "SDL_RECOVERY_SCAN_J2", "0.0,0.2").split(",")
+    ]
+
     def _on_camera_info(self, msg):
         t = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
         if self._sensor_now is None or t > self._sensor_now:
@@ -603,6 +658,274 @@ class TAMPServer(Node):
             % (entity, p.x, p.y, p.z, age))
         return [p.x, p.y, p.z, q.w, q.x, q.y, q.z]
 
+    def _log_recovery(self, entity, outcome, stage, started, reason=None):
+        """One fixed-format line per localization attempt.
+
+        Fixed format because it is the raw material for a reported number: how
+        often recovery rescued a trial and how long it took is exactly the
+        "influence on planning success" R1 asked about, and a grep over the run
+        logs has to be able to produce it without parsing prose.
+
+            [recovery] entity=beaker outcome=recovered stage=retreat elapsed_s=7.31 attempts=29
+
+        outcome is one of immediate | recovered | failed | skipped, stage one
+        of wait | retreat | scan.
+        """
+        line = ("[recovery] entity=%s outcome=%s stage=%s elapsed_s=%.2f "
+                "attempts=%d" % (entity, outcome, stage,
+                                 time.monotonic() - started,
+                                 self._recovery_attempts))
+        if reason:
+            line += " reason=%s" % reason
+        self.get_logger().info(line)
+
+    def _poll_perception_pose(self, entity, timeout_s):
+        """Re-try `_perception_pose` for up to *timeout_s*; first hit wins.
+
+        Blocking on purpose. `set_tamp_env_cb` is declared async, but an rclpy
+        coroutine is not driven by an asyncio loop -- `await asyncio.sleep`
+        never resumes there -- which is why the motion path in this file also
+        sleeps with `time.sleep`. Sleeping this callback does not stop a pose
+        from arriving: the executor is a MultiThreadedExecutor over a
+        ReentrantCallbackGroup, so the TF, camera_info and object-pose
+        callbacks that would produce one keep running on the other threads.
+
+        Calls `self._perception_pose`, so a subclass that reads its poses from
+        somewhere else (the real server reads cho_object_pose topics rather
+        than TF) is polled through its own implementation.
+        """
+        deadline = time.monotonic() + max(0.0, float(timeout_s))
+        while time.monotonic() < deadline:
+            time.sleep(self.RECOVERY_POLL_S)
+            self._recovery_attempts += 1
+            pose = self._perception_pose(entity)
+            if pose is not None:
+                return pose
+        return None
+
+    def _recovery_motion_world(self):
+        """The world model a recovery motion is collision-checked against.
+
+        Recovery runs BEFORE `update_env` for the current request -- there is
+        no World State yet, that is the problem being recovered from -- so the
+        only collision model available is the one the PREVIOUS request built.
+        Returned explicitly (rather than reached for silently) so that the two
+        cases it fails in are visible: no request has been served in this
+        process yet, in which case there is no model at all.
+        """
+        return getattr(self.tamp, "env", None)
+
+    def _recovery_retreat(self):
+        """L1: park the arm at RECOVERY_HOME. True only if it got there.
+
+        Planned, never interpolated. A blind joint-space ramp from wherever the
+        previous plan left the arm to home crosses the bench, and the whole
+        reason this runs is that the scene is not fully known -- driving an
+        unplanned path through it to fix a perception problem would trade a
+        failed trial for a collision.
+        """
+        q = self._arm_q()
+        if not q:
+            self.get_logger().warn(
+                "[recovery] no measured arm configuration; not retreating")
+            return False
+
+        if self._recovery_motion_world() is None:
+            self.get_logger().warn(
+                "[recovery] no world model yet (update_env has not run in this "
+                "process), so a retreat cannot be collision-checked; not "
+                "retreating")
+            return False
+
+        try:
+            plan = self.tamp.motion_plan_js(list(q), list(self.RECOVERY_HOME))
+        except Exception:
+            self.get_logger().error(
+                "[recovery] retreat planning raised:\n%s" % traceback.format_exc())
+            return False
+
+        if plan is None:
+            self.get_logger().warn(
+                "[recovery] no collision-free path to the retreat pose; giving "
+                "up on this rung rather than interpolating there blindly")
+            return False
+
+        # The last request's world, not this one's -- said out loud because it
+        # is the one assumption this motion rests on.
+        self.get_logger().info(
+            "[recovery] retreating to %s, planned against the world state of "
+            "the previous request" % (
+                " ".join("%.3f" % v for v in self.RECOVERY_HOME),))
+
+        if not self._start_execution():
+            self.get_logger().warn(
+                "[recovery] the plant refused the arm; not retreating")
+            return False
+
+        dt = float(_os.environ.get("SDL_EXEC_DT", "0.04"))
+        reached = False
+        try:
+            for i in range(plan.position.shape[0]):
+                self._publish_arm_command(
+                    plan.position[i].tolist(), plan.joint_names)
+                time.sleep(dt)
+            reached = True
+        except Exception:
+            # Broad on purpose: the real plant raises EStopRequested and
+            # ChoCommandFailed, neither of which this module can import
+            # without depending on the hardware package. A recovery motion
+            # that was refused is a failed rung, and the reason is logged
+            # rather than swallowed.
+            self.get_logger().error(
+                "[recovery] retreat aborted:\n%s" % traceback.format_exc())
+        finally:
+            self._finish_execution(reached)
+        return reached
+
+    def _recovery_scan(self, entity, deadline):
+        """L2: sweep the arm looking for a viewpoint that sees *entity*.
+
+        Only meaningful with a camera ON the arm -- see RECOVERY_SCAN, which is
+        why this is off by default. Each leg is planned with `motion_plan_js`
+        and only collision-checked paths are replayed; an unplannable leg is
+        skipped, not forced.
+        """
+        if self._recovery_motion_world() is None:
+            self.get_logger().warn(
+                "[recovery] no world model yet; not scanning")
+            return None
+
+        legs = []
+        for j2 in self.SCAN_J2_OFFSETS:
+            for j1 in (-self.SCAN_J1_RANGE, self.SCAN_J1_RANGE, 0.0):
+                q = list(self.RECOVERY_HOME)
+                q[0] = self.RECOVERY_HOME[0] + j1
+                q[1] = self.RECOVERY_HOME[1] + j2
+                legs.append(q)
+
+        if not self._start_execution():
+            self.get_logger().warn("[recovery] the plant refused the arm; not scanning")
+            return None
+
+        dt = float(_os.environ.get("SDL_EXEC_DT", "0.04"))
+        # Probe at the configured poll period rather than at every waypoint:
+        # a waypoint is 0.04 s of arm motion and a miss logs a line, so
+        # probing each one would bury the run log and inflate the attempt
+        # count without adding a viewpoint worth the name.
+        probe_every = max(1, int(round(self.RECOVERY_POLL_S / max(dt, 1e-6))))
+
+        pose = None
+        try:
+            for leg in legs:
+                if pose is not None or time.monotonic() >= deadline:
+                    break
+                q = self._arm_q()
+                if not q:
+                    self.get_logger().warn(
+                        "[recovery] no measured arm configuration; stopping the scan")
+                    break
+                try:
+                    plan = self.tamp.motion_plan_js(list(q), list(leg))
+                except Exception:
+                    self.get_logger().error(
+                        "[recovery] scan leg planning raised:\n%s"
+                        % traceback.format_exc())
+                    break
+                if plan is None:
+                    self.get_logger().info(
+                        "[recovery] scan leg %s is not reachable collision-free; "
+                        "skipping it" % (" ".join("%.2f" % v for v in leg),))
+                    continue
+                for i in range(plan.position.shape[0]):
+                    self._publish_arm_command(
+                        plan.position[i].tolist(), plan.joint_names)
+                    time.sleep(dt)
+                    if i % probe_every:
+                        continue
+                    self._recovery_attempts += 1
+                    pose = self._perception_pose(entity)
+                    if pose is not None:
+                        break
+                    if time.monotonic() >= deadline:
+                        break
+        except Exception:
+            self.get_logger().error(
+                "[recovery] scan aborted:\n%s" % traceback.format_exc())
+        finally:
+            self._finish_execution(pose is not None)
+        return pose
+
+    def _localize_with_recovery(self, entity):
+        """A perception pose for *entity*, with the recovery ladder behind it.
+
+        The single entry point both `set_tamp_env_cb` implementations use, so
+        the simulated and the physical path recover identically and a rung
+        added here reaches both. It resolves `self._perception_pose`, which the
+        real server overrides, so each plant is polled through its own source.
+
+        Returns None when every rung failed, and the caller then does what it
+        did before: fail the request. Nothing here falls back to ground truth.
+        """
+        started = time.monotonic()
+        self._recovery_attempts = 1
+        pose = self._perception_pose(entity)
+        if pose is not None:
+            self._log_recovery(entity, "immediate", "wait", started)
+            return pose
+
+        if not self.RECOVERY_ENABLED:
+            self._log_recovery(entity, "failed", "wait", started,
+                               reason="disabled")
+            return None
+
+        # L0 -- the wait the manuscript already describes.
+        self.get_logger().warn(
+            "[recovery] %s not localized; waiting up to %.1f s for a "
+            "re-detection" % (entity, self.RECOVERY_WAIT_S))
+        pose = self._poll_perception_pose(entity, self.RECOVERY_WAIT_S)
+        if pose is not None:
+            self._log_recovery(entity, "recovered", "wait", started)
+            return pose
+
+        stage = ("retreat" if self.RECOVERY_RETREAT
+                 else ("scan" if self.RECOVERY_SCAN else None))
+        if stage is None:
+            self._log_recovery(entity, "failed", "wait", started)
+            return None
+
+        if self._holding:
+            # Not a conservatism that can be traded away. The gripper is
+            # holding a vessel, the planner's upright constraint holds only
+            # along the path it planned, and on hardware the vessel has liquid
+            # in it. Losing the trial is the cheaper outcome.
+            self.get_logger().warn(
+                "[recovery] the gripper is holding something; a recovery "
+                "motion would carry it, so this fails closed instead")
+            self._log_recovery(entity, "skipped", stage, started,
+                               reason="holding")
+            return None
+
+        # L1 -- the arm itself may be what is in the way.
+        if self.RECOVERY_RETREAT:
+            if self._recovery_retreat():
+                pose = self._poll_perception_pose(entity, self.RECOVERY_WAIT_S)
+                if pose is not None:
+                    self._log_recovery(entity, "recovered", "retreat", started)
+                    return pose
+            stage = "retreat"
+
+        # L2 -- move the viewpoint (needs a camera on the arm; off by default).
+        if self.RECOVERY_SCAN:
+            stage = "scan"
+            pose = self._recovery_scan(
+                entity, time.monotonic() + self.RECOVERY_SCAN_S)
+            if pose is not None:
+                self._log_recovery(entity, "recovered", "scan", started)
+                return pose
+
+        self._log_recovery(entity, "failed", stage, started)
+        return None
+
     async def set_tamp_env_cb(self, request, response):
 
         while not self.get_entity_state_cli.wait_for_service(timeout_sec=1.0):
@@ -635,10 +958,11 @@ class TAMPServer(Node):
         for entity in entities:
             if (state_source == "perception"
                     and entity in self.PERCEPTION_ENTITIES):
-                entity_pose = self._perception_pose(entity)
+                entity_pose = self._localize_with_recovery(entity)
                 if entity_pose is None:
-                    # A tagged vessel the pipeline never localized. Falling back
-                    # to ground truth here would silently report a
+                    # A tagged vessel the pipeline never localized, and the
+                    # recovery ladder did not change that. Falling back to
+                    # ground truth here would silently report a
                     # perception-in-the-loop result that was not one.
                     self.get_logger().error(
                         "[state] no perception pose for %s; the trial is a "
@@ -1262,7 +1586,15 @@ class TAMPServer(Node):
 
         request = SetBool.Request()
 
-        if plan_part["action"] == "close":
+        closing = plan_part["action"] == "close"
+
+        if closing:
+            # Track the grasp for the perception recovery ladder,
+            # conservatively: a close counts from the moment it is commanded,
+            # and only a command that came back successful clears it. A false
+            # "holding" costs a recovery attempt; a false "not holding" moves
+            # the arm with a vessel in it.
+            self._holding = True
             request.data = True
             # MAJOR-1: publish the planner's intended grasp target (if the plan
             # step carries one) and give the latched topic a moment to be
@@ -1284,6 +1616,8 @@ class TAMPServer(Node):
 
         if not response.success:
             self.get_logger().warn(f"Gripper action failed: {response.message}")
+        elif not closing:
+            self._holding = False
 
 
     def move_to_target_cb(self, request, response):
