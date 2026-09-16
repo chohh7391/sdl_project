@@ -186,6 +186,12 @@ class TaskOrchestrator(Node):
             history=QoSHistoryPolicy.KEEP_LAST, depth=1,
         )
         self.create_subscription(String, "tamp_current_op", self._op_cb, latched)
+        # The planner's own reason for a failed plan. Without it every failure
+        # -- including a CUDA OOM caused by unrelated jobs on the GPU -- lands
+        # in the CSV as "plan_no_satisfying" and is scored against the planner.
+        self._plan_failure_reason = ""
+        self.create_subscription(
+            String, "tamp_plan_failure_reason", self._plan_failure_cb, latched)
         self.create_subscription(Float32, "carried_tilt_deg", self._tilt_cb, 10)
         self.create_subscription(String, "carried_obj", self._carried_obj_cb, 10)
         self.create_subscription(Float32MultiArray, "carried_lip_xy", self._lip_cb, 10)
@@ -198,6 +204,9 @@ class TaskOrchestrator(Node):
         self.ges_cli = self.create_client(GetEntityState, "get_entity_state")
 
     # --- topic callbacks ------------------------------------------------------
+    def _plan_failure_cb(self, msg):
+        self._plan_failure_reason = (msg.data or "").strip()
+
     def _op_cb(self, msg):
         self.current_op = msg.data
         if msg.data == "pouring":
@@ -462,6 +471,7 @@ class TaskOrchestrator(Node):
         self.get_logger().info(f"set_tamp_env {spec.name} OK")
 
         # 4. plan
+        self._plan_failure_reason = ""   # do not inherit the previous task's
         preq = Plan.Request(); preq.env_name = task
         t0 = time.time()
         res = self._call(self.plan_cli, preq, timeout=plan_timeout)
@@ -477,7 +487,13 @@ class TaskOrchestrator(Node):
             f"#satisfying={row['num_satisfying']} time={dt:.2f}s"
         )
         if not row["plan_success"]:
-            row["failure_reason"] = "plan_no_satisfying"
+            # Prefer the planner's own reason; "plan_no_satisfying" is only
+            # correct when the planner really did run and find nothing.
+            reason = (self._plan_failure_reason or "").strip()
+            row["failure_reason"] = (
+                "plan_" + reason if reason and reason != "no_satisfying_particles"
+                else "plan_no_satisfying"
+            )
             return row
 
         # 5. execute (spin so /carried_tilt_deg + /tamp_current_op keep updating)

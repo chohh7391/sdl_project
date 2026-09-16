@@ -805,8 +805,52 @@ class Task(ABC, BaseTask):
         self.create_gripper_stand()
 
 
+    #: A camera carried on the arm. Off by default: the recovery ladder's scan
+    #: rung (tamp_server RECOVERY_SCAN) sweeps the arm to move a viewpoint, and
+    #: with only the two FIXED cell cameras that sweep observes exactly what it
+    #: started with. This is the camera that makes the sweep mean something.
+    WRIST_CAMERA = os.environ.get("SDL_WRIST_CAMERA", "0") == "1"
+    #: Where the camera sits in wrist3_link's own frame, and which way it looks.
+    #: Measured from the asset rather than guessed: in fr5_ag95.usd the wrist's
+    #: children sit at local (0, 0, +0.100) for the flange and (0, 0, +0.300)
+    #: for grasp_frame, so the tool axis is the wrist's +Z -- which points at
+    #: the bench whenever the arm is posed to grasp. A USD camera looks along
+    #: its own -Z, so turning it 180 deg about X aims it down the tool axis.
+    #: The mount is offset sideways so it looks past the gripper rather than
+    #: through it.
+    WRIST_CAMERA_XYZ = [
+        float(v) for v in os.environ.get(
+            "SDL_WRIST_CAMERA_XYZ", "0.06,0.0,0.05").split(",")
+    ]
+    #: Local orientation (w, x, y, z) = 180 deg about X.
+    #:
+    #: `Camera.__init__` forwards `orientation` to `set_local_pose`, i.e. it is
+    #: the RAW USD prim rotation with no camera-axes conversion (the axes
+    #: arguments only exist on the get/set_world_pose methods). A USD camera
+    #: images along its own -Z, so the local rotation has to map -Z_cam onto
+    #: +Z_wrist: Rx(180 deg) = diag(1, -1, -1) sends (0,0,-1) to (0,0,+1).
+    #: Identity would point the camera at -Z_wrist -- backwards, up into the
+    #: wrist -- which is what produced the first all-black frame.
+    #:
+    #: An earlier note here claimed the 180 deg mount had been measured and gave
+    #: an all-infinity depth image. That test aimed the camera at scene-setup
+    #: time, before `world.reset()` poses the arm, with the wrist parked at
+    #: (-0.82, -0.10, 0.05) behind the base: it moved two variables at once and
+    #: says nothing about the mount. Use SDL_WRIST_CAMERA_PROBE=1 to print the
+    #: optical axis in world coordinates at the home pose instead of inferring
+    #: the mount from a picture.
+    WRIST_CAMERA_QUAT = [
+        float(v) for v in os.environ.get(
+            "SDL_WRIST_CAMERA_QUAT", "0.0,1.0,0.0,0.0").split(",")
+    ]
+    #: Print the wrist camera's measured world-frame optical axis after the arm
+    #: reaches its home pose, instead of guessing from a rendered frame.
+    WRIST_CAMERA_PROBE = os.environ.get("SDL_WRIST_CAMERA_PROBE", "0") == "1"
+
     def set_camera(self):
         self.cameras = []
+        self.camera_prim_paths = ["/World/camera_1", "/World/camera_2"]
+        self.camera_names = ["camera_1", "camera_2"]
         for i in range(2):
             camera = Camera(
                 prim_path=f"/World/camera_{i+1}",
@@ -823,6 +867,37 @@ class Task(ABC, BaseTask):
             
             self.cameras.append(camera)
 
+        if self.WRIST_CAMERA:
+            self._add_wrist_camera()
+
+    def _add_wrist_camera(self):
+        """Mount a camera on the wrist so sweeping the arm moves a viewpoint.
+
+        The prim is a CHILD of wrist3_link, so it inherits the link's transform
+        and rides the arm. The mount is given as a LOCAL offset and rotation
+        rather than aimed with a world look-at: at scene-setup time the arm has
+        not been driven to its home configuration yet -- the wrist sits at
+        (-0.82, -0.10, 0.05), behind the base and 50 mm off the bench -- so a
+        look-at there would freeze a local transform derived from a pose the
+        arm is never in while it works.
+        """
+        wrist_path = self._robot_prim_path + "/wrist3_link"
+        if not is_prim_path_valid(wrist_path):
+            print("[Task] wrist camera: %s does not exist; skipping" % wrist_path)
+            return
+        cam_path = wrist_path + "/wrist_camera"
+        camera = Camera(
+            prim_path=cam_path,
+            frequency=30,
+            resolution=(self.camera_info.width, self.camera_info.height),
+            translation=np.array(self.WRIST_CAMERA_XYZ, dtype=float),
+            orientation=np.array(self.WRIST_CAMERA_QUAT, dtype=float),
+        )
+        self.cameras.append(camera)
+        self.camera_prim_paths.append(cam_path)
+        self.camera_names.append("camera_3")
+        print("[Task] wrist camera at %s, local xyz=%s looking down the tool "
+              "axis (+Z of the wrist)" % (cam_path, self.WRIST_CAMERA_XYZ))
 
     def create_gripper_stand(self):
         asset_path = os.path.join(ASSET_PATH, "lab", "texture", "propile.jpg")

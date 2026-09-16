@@ -103,8 +103,29 @@ void PerceptionManager::process_fusion_tf() {
                     !tf_buffer_->canTransform(cam, tag_id, tf2::TimePointZero)) {
                     continue;
                 }
-                auto base_to_cam = tf_buffer_->lookupTransform("base_link", cam, tf2::TimePointZero);
                 auto cam_to_tag = tf_buffer_->lookupTransform(cam, tag_id, tf2::TimePointZero);
+
+                // base_link->camera AT THE INSTANT THE TAG WAS SEEN, not the
+                // latest one. For the two fixed cell cameras the transform is
+                // constant and the two are the same lookup. For a camera on
+                // the wrist they are not: the recovery scan (L2) detects tags
+                // while the arm is sweeping, so composing an older detection
+                // with the arm's newest pose displaces the object by roughly
+                // (wrist speed) x (detection latency) -- tens of millimetres
+                // at scan speed, against a fused error budget whose median is
+                // 2.4 mm. Falls back to the latest transform when the buffer
+                // cannot answer at that stamp (a static publisher outside the
+                // cache window), which restores the previous behaviour rather
+                // than dropping the observation.
+                geometry_msgs::msg::TransformStamped base_to_cam;
+                try {
+                    base_to_cam = tf_buffer_->lookupTransform(
+                        "base_link", cam, rclcpp::Time(cam_to_tag.header.stamp),
+                        rclcpp::Duration::from_seconds(0.0));
+                } catch (const tf2::TransformException &) {
+                    base_to_cam = tf_buffer_->lookupTransform(
+                        "base_link", cam, tf2::TimePointZero);
+                }
 
                 tf2::Transform t_base_cam, t_cam_tag;
                 tf2::fromMsg(base_to_cam.transform, t_base_cam);

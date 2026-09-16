@@ -1,31 +1,40 @@
+"""Bring up AprilTag detection and the fusion node over a configurable camera set.
+
+The camera list was hardcoded here as 'camera_1,camera_2' and was passed only to
+the detector -- `perception_manager` was never told which frames to fuse, so it
+silently fell back to its own two-camera default. Adding a third camera then
+meant editing two files in agreement. One list now feeds both, and it is
+overridable without editing anything:
+
+    ros2 launch perception_manager perception_manager.launch.py cameras:=camera_1,camera_2,camera_3
+    SDL_PERCEPTION_CAMERAS=camera_1,camera_2,camera_3 ros2 launch ...
+
+The frame names must be the TF frames the detector publishes tags relative to,
+i.e. the `frame_id` each camera_info carries.
+"""
 import os
+
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
-from launch_ros.actions import Node
-from launch.substitutions import PathJoinSubstitution
-from launch_ros.substitutions import FindPackageShare
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
-def generate_launch_description():
-    # 패키지 경로 찾기
+
+def _setup(context, *args, **kwargs):
+    cameras = LaunchConfiguration('cameras').perform(context)
+    camera_list = [c.strip() for c in cameras.split(',') if c.strip()]
+
     pkg_dir = get_package_share_directory('perception_manager')
     config_file_path = os.path.join(pkg_dir, 'config', 'object_configs.yaml')
 
-    # [핵심] 여기에 사용할 카메라들을 쉼표로 구분해서 적어줍니다.
-    # 나중에 카메라를 추가하거나 뺄 때 여기서만 문자열을 수정하면 됩니다.
-    target_cameras = 'camera_1,camera_2'
-
-    apriltag_launch_file = PathJoinSubstitution([
-        FindPackageShare('apriltag_ros'),
-        'launch',
-        'apriltag.launch.py'
-    ])
-    
-    # IncludeLaunchDescription에 인자 전달
     apriltag_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(apriltag_launch_file),
-        launch_arguments={'camera_names': target_cameras}.items()
+        PythonLaunchDescriptionSource(PathJoinSubstitution([
+            FindPackageShare('apriltag_ros'), 'launch', 'apriltag.launch.py'
+        ])),
+        launch_arguments={'camera_names': ','.join(camera_list)}.items(),
     )
 
     perception_manager_node = Node(
@@ -35,13 +44,19 @@ def generate_launch_description():
         output='screen',
         parameters=[
             config_file_path,
-            {"publish_tf": False}
-        ]
+            {"publish_tf": False},
+            {"camera_frames": camera_list},
+        ],
     )
+    return [apriltag_launch, perception_manager_node]
 
-    ld = LaunchDescription()
 
-    ld.add_action(apriltag_launch) # For Debugging easily
-    ld.add_action(perception_manager_node)
-
-    return ld
+def generate_launch_description():
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'cameras',
+            default_value=os.environ.get('SDL_PERCEPTION_CAMERAS', 'camera_1,camera_2'),
+            description='Comma-separated camera TF frames to detect in and fuse over.',
+        ),
+        OpaqueFunction(function=_setup),
+    ])

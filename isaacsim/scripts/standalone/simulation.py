@@ -100,8 +100,14 @@ class Simulation(Node):
         # optimises on, so they are part of the measured planning latency; a
         # ground-truth-state run does not need them, and this makes the cost
         # measurable instead of assumed.
-        camera_paths = ["/World/camera_1", "/World/camera_2"]
-        camera_names = ["camera_1", "camera_2"]
+        # Whatever the task actually built, so adding a wrist camera is one
+        # switch (SDL_WRIST_CAMERA) rather than an edit in three places.
+        camera_paths = list(getattr(self.task, "camera_prim_paths",
+                                    ["/World/camera_1", "/World/camera_2"]))
+        camera_names = list(getattr(self.task, "camera_names",
+                                    ["camera_1", "camera_2"]))
+        print("[Sim] publishing %d camera(s): %s"
+              % (len(camera_names), ", ".join(camera_names)))
         self.camera_data_graph = None
         if os.environ.get("SDL_CAMERAS", "1").strip() != "0":
             self.camera_data_graph = self.create_ros_camera_graph(
@@ -112,7 +118,9 @@ class Simulation(Node):
         else:
             print("[Sim] SDL_CAMERAS=0: rendered cameras disabled")
         self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-        target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
+        # TF for every camera, including the wrist one, so perception can
+        # transform its detections into base_link like the fixed cameras'.
+        target_prim_paths = list(camera_paths)
         self.tf_graph = self.create_tf_graph(
             target_prim_paths=target_prim_paths,
             parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
@@ -201,7 +209,42 @@ class Simulation(Node):
 
         self.step = 0
 
+        # Aim the wrist camera now, not when the scene was built. At build time
+        # the arm has not been driven to its configuration yet -- the wrist sits
+        # behind the base, 50 mm off the bench -- so a mount fixed there points
+        # the camera at nothing: measured, the depth image came back entirely
+        # infinite from both a +Z and a -Z mount. By this point world.reset()
+        # has applied the arm's configuration, so aiming at the workspace here
+        # writes a LOCAL transform on a prim parented to wrist3_link, and the
+        # camera keeps that relationship as the arm moves.
+        self._aim_wrist_camera()
+
         self.get_logger().info("Simulation Start")
+
+    def _aim_wrist_camera(self):
+        """Point the wrist camera at the workspace from wherever the arm is."""
+        cams = getattr(self.task, "camera_names", [])
+        if "camera_3" not in cams:
+            return
+        try:
+            from isaacsim.core.prims import SingleXFormPrim
+            from camera import set_world_pose_from_view
+            import numpy as _np
+            cam_path = self.task.camera_prim_paths[cams.index("camera_3")]
+            eye = SingleXFormPrim(prim_path=cam_path, name="wrist_cam_view")
+            pos, _ = eye.get_world_pose()
+            target = _np.array([0.20, 0.0, 0.05])   # the workspace centre the
+            # fixed cameras also aim at (task.camera_targets)
+            set_world_pose_from_view(
+                self.task.cameras[cams.index("camera_3")],
+                _np.array([float(pos[0]), float(pos[1]), float(pos[2])]), target)
+            self.get_logger().info(
+                "wrist camera aimed from (%.3f, %.3f, %.3f) at the workspace centre"
+                % (pos[0], pos[1], pos[2]))
+        except Exception:
+            import traceback
+            self.get_logger().warning(
+                "could not aim the wrist camera:\n%s" % traceback.format_exc())
 
     def grasp_target_cb(self, msg):
         """Store the planner's intended grasp-target object name (MAJOR-1)."""

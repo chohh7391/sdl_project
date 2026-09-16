@@ -51,6 +51,28 @@ os.environ["UNSLOTH_DISABLE_STATISTICS"] = "1"
 import csv
 
 
+
+def _classify_plan_error(err):
+    """Name a planner exception so an ENVIRONMENT fault is not scored as a
+    planning failure.
+
+    A run that dies because the GPU is full says nothing about whether the
+    planner can solve the scene, but it reaches the trial CSV through the same
+    field as a genuine "no satisfying particle" -- the real-glassware batch of
+    2026-09-16 recorded 4/10 seeds as planning failures when every one of them
+    was `CUDA out of memory` with 10.5 of 11.5 GiB held by unrelated training
+    jobs. Those trials have to be EXCLUDED from a success rate, not counted
+    against it, so the reason has to survive to the analysis.
+    """
+    name = type(err).__name__
+    text = str(err)
+    if "CUDA out of memory" in text or "CUDA_ERROR_OUT_OF_MEMORY" in text:
+        return "CUDA_OOM"
+    if "CUDA" in text and ("illegal memory access" in text or "device-side assert" in text):
+        return "CUDA_FAULT"
+    return name
+
+
 class TAMP:
 
     def __init__(
@@ -235,7 +257,7 @@ class TAMP:
         failure_reason = ""
         if not success:
             failure_reason = (
-                f"planner_exception:{type(self.last_plan_error).__name__}"
+                f"planner_exception:{_classify_plan_error(self.last_plan_error)}"
                 if self.last_plan_error is not None else "no_satisfying_particles"
             )
         return PlanningResult(
@@ -400,6 +422,13 @@ class TAMPServer(Node):
         # can attribute measured carried-vessel tilt to the transport (MoveHolding)
         # phase specifically, separate from the pour (R3#2 theta_max question).
         self.current_op_pub = self.create_publisher(String, "tamp_current_op", _latched_qos)
+        # Why a topic and not a Plan.srv field: the reason a plan failed has to
+        # reach the trial harness, but adding a field to Plan.srv rebuilds
+        # tamp_interfaces and every package that links it. Latched so the
+        # harness reads the value even if it subscribes after the service call
+        # returns.
+        self.plan_failure_pub = self.create_publisher(
+            String, "tamp_plan_failure_reason", _latched_qos)
         self.set_simulation_state_cli = self.create_client(SetSimulationState, "set_simulation_state", callback_group=self.reentrant_group)
 
         # TF
@@ -608,11 +637,38 @@ class TAMPServer(Node):
             "SDL_RECOVERY_HOME", "0.0,-1.05,-2.18,-1.57,1.57,0.0").split(",")
     ]
 
-    #: L2 sweeps j1 over +/- this, once per j2 offset, around RECOVERY_HOME.
-    SCAN_J1_RANGE = float(os.environ.get("SDL_RECOVERY_SCAN_J1", "1.57"))
-    SCAN_J2_OFFSETS = [
-        float(v) for v in os.environ.get(
-            "SDL_RECOVERY_SCAN_J2", "0.0,0.2").split(",")
+    #: L2's viewpoints, as absolute 6-joint configurations separated by ";".
+    #:
+    #: These replace an earlier formulation that swept j1 by +/-1.57 rad at two
+    #: j2 offsets around RECOVERY_HOME. That sweep changed the camera's AZIMUTH
+    #: but never its REACH: forward kinematics on fr5_ag95.urdf puts the optical
+    #: axis of all six of those legs through the bench between 0.16 m and 0.27 m
+    #: from the base, while the randomizer places the vessels at a radius of
+    #: 0.46-0.65 m. Projecting the 30 seeds' layouts into the wrist camera
+    #: (D435 intrinsics, 1280x720) through those legs, the beaker fell inside
+    #: some leg's image on 6 of 30 layouts, the flask on 2, and BOTH on none --
+    #: the sweep looked at bare bench, so the rung could not have recovered a
+    #: transfer no matter how long it ran.
+    #:
+    #: Each pose here is solved instead from what the rung needs: the camera
+    #: 0.45 m above a chosen bench point with the optical axis vertical. The
+    #: three points (0.48, 0.12), (0.48, 0.28) and (0.48, 0.40) span the region
+    #: the randomizer draws from; against the same 30 layouts they contain the
+    #: beaker on 30/30, the flask on 30/30 and both on 30/30. The solution is
+    #: regularised towards RECOVERY_HOME and towards zero wrist roll (j6 is a
+    #: rotation about the optical axis, so it buys no coverage), which keeps
+    #: each leg under 1.5 rad of travel.
+    #:
+    #: Re-solve them with scripts/trials/solve_scan_poses.py if the camera
+    #: mount, its intrinsics, or the layout distribution changes.
+    SCAN_POSES = [
+        [float(v) for v in leg.split(",")]
+        for leg in os.environ.get(
+            "SDL_RECOVERY_SCAN_POSES",
+            "0.5787,-1.5163,-1.8198,-1.3762,1.5708,-0.0162;"
+            "0.8240,-1.6657,-1.6672,-1.3795,1.5708,-0.0224;"
+            "0.9571,-1.8310,-1.4700,-1.4113,1.5708,-0.0319"
+        ).split(";") if leg.strip()
     ]
 
     def _on_camera_info(self, msg):
@@ -795,13 +851,10 @@ class TAMPServer(Node):
                 "[recovery] no world model yet; not scanning")
             return None
 
-        legs = []
-        for j2 in self.SCAN_J2_OFFSETS:
-            for j1 in (-self.SCAN_J1_RANGE, self.SCAN_J1_RANGE, 0.0):
-                q = list(self.RECOVERY_HOME)
-                q[0] = self.RECOVERY_HOME[0] + j1
-                q[1] = self.RECOVERY_HOME[1] + j2
-                legs.append(q)
+        legs = [list(q) for q in self.SCAN_POSES]
+        if not legs:
+            self.get_logger().warn("[recovery] no scan poses configured; not scanning")
+            return None
 
         if not self._start_execution():
             self.get_logger().warn("[recovery] the plant refused the arm; not scanning")
@@ -1105,6 +1158,8 @@ class TAMPServer(Node):
                 self.plan_to_execute = None
                 response.curobo_plan = []
 
+            self.plan_failure_pub.publish(String(data=result.failure_reason or ""))
+
             self.get_logger().info(
                 f"TAMP planning finished. Success: {response.plan_success}, "
                 f"Satisfying particles: {total_num_satisfying}, "
@@ -1115,6 +1170,8 @@ class TAMPServer(Node):
         except Exception as e:
             self.get_logger().error(f"TAMP planning failed with exception: {e}")
             response.plan_success = False
+            self.plan_failure_pub.publish(
+                String(data="plan_cb_exception:%s" % _classify_plan_error(e)))
 
         return response
     
