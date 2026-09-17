@@ -24,6 +24,8 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import String
 
+from layout_log import read_layout
+
 
 class Recorder(Node):
     def __init__(self):
@@ -65,27 +67,6 @@ class Recorder(Node):
     def on_op(self, m):
         self.ops.append({"t": round(self._t(), 4), "op": m.data})
         self.get_logger().info("op -> %s" % m.data)
-
-
-LAYOUT = re.compile(r"\[Task\]\s+(beaker|flask|magnet|box|stirrer)\s+"
-                    r"xy=\(([-\d.]+),([-\d.]+)\)\s+yaw=([-\d.]+)deg")
-HOME = re.compile(r"\[Task\]\s+home_arm\(rad\) = \[([-\d.,\s]+)\]")
-
-
-def read_layout(path):
-    objs, home = {}, None
-    try:
-        for ln in open(path, errors="ignore"):
-            m = LAYOUT.search(ln)
-            if m:
-                objs[m.group(1)] = {"xy": [float(m.group(2)), float(m.group(3))],
-                                    "yaw_deg": float(m.group(4))}
-            m = HOME.search(ln)
-            if m and home is None:
-                home = [float(v) for v in m.group(1).split(",")]
-    except OSError:
-        pass
-    return objs, home
 
 
 def main():
