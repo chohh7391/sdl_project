@@ -10,6 +10,7 @@
 from typing import Optional
 
 import roma
+import os as _os
 import torch
 from curobo.geom.types import Obstacle, Cuboid, Mesh
 from jaxtyping import Float
@@ -19,8 +20,17 @@ from cutamp.utils.shapes import MultiSphere
 
 # Side-grasp approach inclination band (radians above horizontal). See
 # `grasp_side_sampler` for the measurement that picked it.
-BETA_MIN = 10.0 * torch.pi / 180.0
-BETA_MAX = 35.0 * torch.pi / 180.0
+#
+# Overridable in degrees because the band is not only a feasibility knob: it is
+# also the end-effector attitude the whole manipulation holds. The inclination
+# is fixed when the grasp is sampled and the arm keeps it from the moment the
+# fingers close to the moment they open, so a trial's EEF angle to the ground is
+# a single number drawn from this band -- measured over nine recorded solves,
+# 10.2 to 34.7 deg, exactly spanning it. Narrowing the band towards 0 buys a
+# level gripper at a cost in IK feasibility that the docstring below quantifies;
+# it is left to the caller rather than guessed at.
+BETA_MIN = float(_os.environ.get("SDL_GRASP_BETA_MIN_DEG", "10.0")) * torch.pi / 180.0
+BETA_MAX = float(_os.environ.get("SDL_GRASP_BETA_MAX_DEG", "35.0")) * torch.pi / 180.0
 
 Grasp4DOF = Place4DOF = Float[torch.Tensor, "n 4"]
 Grasp6DOF = Place6DOF = Float[torch.Tensor, "n 6"]

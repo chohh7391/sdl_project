@@ -79,6 +79,13 @@ def main():
     ap.add_argument("--tool", default="")
     ap.add_argument("--stop-after-idle", type=float, default=25.0,
                     help="stop once no arm command has arrived for this long")
+    ap.add_argument("--start-timeout", type=float, default=300.0,
+                    help="give up if the FIRST arm command never arrives within "
+                         "this long. A trial whose plan fails never commands the "
+                         "arm, so without this the recorder waits out --seconds "
+                         "(15 min at the default) while the harness blocks on it, "
+                         "which turned a 10-seed batch of planning failures into "
+                         "a 2.5-hour run.")
     a = ap.parse_args()
 
     rclpy.init()
@@ -94,6 +101,11 @@ def main():
             started = True
         if started and time.time() - last_change > a.stop_after_idle:
             n.get_logger().info("no arm command for %.0f s; stopping" % a.stop_after_idle)
+            break
+        if not started and time.time() - n.t0 > a.start_timeout:
+            n.get_logger().warning(
+                "no arm command at all within %.0f s; the trial probably never "
+                "planned. Stopping with nothing recorded." % a.start_timeout)
             break
 
     objs, home = read_layout(a.sim_log) if a.sim_log else ({}, None)
