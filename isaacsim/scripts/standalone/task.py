@@ -197,6 +197,38 @@ class Task(ABC, BaseTask):
 
         return
 
+    def _print_effective_layout(self):
+        """Print the layout as it FINALLY stands, in the canonical format.
+
+        The randomizer prints its draw, and the overrides above then move
+        objects without reprinting -- so a reader of the log (and
+        scripts/trials/layout_log.py, which recovers the layout a recorded
+        trajectory assumes) saw the pre-override draw. That produced a
+        deliverable whose stated beaker position was 0.43 m from where it
+        actually was, in a file whose own replay note says the vessels must be
+        at the layout above or the pour misses. Nothing flagged it, because a
+        randomized layout looks exactly as plausible as a measured one.
+
+        Printed last and in the same format, so the parser's "last one wins"
+        picks up the truth.
+        """
+        print("[Task] effective layout:")
+        for name in ("beaker", "flask", "magnet", "box", "stirrer"):
+            if name not in self.default_positions:
+                continue
+            p = self.default_positions[name]
+            q = self.default_orientations.get(name, np.array([1.0, 0.0, 0.0, 0.0]))
+            yaw = math.degrees(2.0 * math.atan2(float(q[3]), float(q[0])))
+            yaw = (yaw + 180.0) % 360.0 - 180.0
+            print("[Task]   %-8s xy=(%.4f,%.4f) yaw=%.1fdeg z=%.4f"
+                  % (name, p[0], p[1], yaw, p[2]))
+        if getattr(self, "_scale_pose", None) is not None:
+            p = self._scale_pose["position"]
+            q = self._scale_pose["orientation"]
+            yaw = math.degrees(2.0 * math.atan2(float(q[3]), float(q[0])))
+            print("[Task]   %-8s xy=(%.4f,%.4f) yaw=%.1fdeg dims=%s"
+                  % ("scale", p[0], p[1], yaw, self._scale_pose["dims"]))
+
     def _apply_scale_rig(self):
         """Stand the pour target on the real cell's electronic balance.
 
@@ -265,6 +297,7 @@ class Task(ABC, BaseTask):
         self._apply_scale_rig()
         spec = os.environ.get("SDL_LAYOUT_XY", "").strip()
         if not spec:
+            self._print_effective_layout()
             return
         for item in spec.split(";"):
             item = item.strip()
@@ -293,6 +326,7 @@ class Task(ABC, BaseTask):
             print("[Task] measured layout: %-8s xy=(%.4f, %.4f) z=%.4f%s"
                   % (name, nums[0], nums[1], z,
                      " yaw=%.1fdeg" % nums[2] if len(nums) == 3 else ""))
+        self._print_effective_layout()
 
     # In-plane bounding radius (circumscribed, = half-diagonal) of each movable's
     # cuTAMP box footprint [dx, dy] -- used for conservative circle-vs-circle
