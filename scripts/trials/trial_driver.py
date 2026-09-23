@@ -117,14 +117,18 @@ TASK_OUTCOMES = {
         # transfer.py pours into movables[1]; pour_region is placed at its xy.
         "pour_target": "flask",
     },
-    # Transfer as the real cell is laid out: same task, same goal, but the
-    # target vessel stands on the electronic balance. Scored identically -- the
-    # criteria describe the task, and the task did not change.
+    # Transfer as the real cell is laid out: the target vessel stands on the
+    # electronic balance, and the source vessel is put BACK on the riser it came
+    # from rather than on a patch of bench. The goal therefore rides the riser
+    # (transfer.py puts the goal region on it), so it is named as the goal
+    # entity instead of being a fixed xy.
     "transfer_real": {
         "target": "beaker",
-        "goal_entity": None,
-        "goal_xy": GOAL_REGION_XY,
-        "half_xy": (GOAL_REGION_HALF_M, GOAL_REGION_HALF_M),
+        "goal_entity": "riser",
+        # The beaker is 50 mm across and the box it stands on is 50 mm square,
+        # so "back on the box" is a tight test: its centre within 15 mm of the
+        # box centre still leaves it supported, 25 mm would not.
+        "half_xy": (0.015, 0.015),
         "require_pour": True,
         "aux": None,
         "pour_target": "flask",

@@ -15,6 +15,7 @@ def load_transfer_env(
     statics: List[Obstacle],
     ex_collision: List[Obstacle],
     tensor_args: TensorDeviceType = TensorDeviceType(),
+    return_to: str = None,
 ) -> TAMPEnvironment:
     """Pick-and-place environment with a cylindrical beaker and small MultiSphere near goal."""
 
@@ -90,9 +91,32 @@ def load_transfer_env(
     # lift above the real support so the vessel is set down on the table instead.
     goal_region = entities["goal_region"]
     table_top = entities["table"].pose[2] + entities["table"].dims[2] / 2.0
-    goal_region.pose = [
-        0.35, -0.35, table_top + PLANNER_Z_LIFT - goal_region.dims[2] / 2.0, *unit_quat,
-    ]
+    if return_to is not None:
+        # Put the source vessel BACK where it came from, on the thing it was
+        # standing on, rather than on a patch of bench 0.35 m away. The support
+        # is that object's top, not the table's, and the xy is the object's own
+        # -- the riser is under the vessel by construction, so taking the xy
+        # from the riser and the xy from the vessel cannot disagree.
+        support = entities[return_to]
+        support_top = support.pose[2] + support.dims[2] / 2.0
+        goal_region.pose = [
+            support.pose[0], support.pose[1],
+            support_top + PLANNER_Z_LIFT - goal_region.dims[2] / 2.0, *unit_quat,
+        ]
+        # Size the region from the ALLOWANCE wanted, not from the box: the
+        # in-xy constraint tests the vessel's collision-sphere centres, which
+        # sit on its surface, against the region inset by each sphere's radius.
+        # Setting the region to the box's own 0.05 m makes it unsatisfiable --
+        # measured, goal_region_in_xy was met by 0 of 1024 particles -- because
+        # a 0.05 m vessel needs 0.05 + 2*COLL_SPHERE_RADIUS_M before any
+        # tolerance at all. region_dims_for does that arithmetic.
+        RETURN_ALLOWANCE_M = 0.005
+        span = region_dims_for(from_vessel.dims[0], RETURN_ALLOWANCE_M)
+        goal_region.dims = [span, span, goal_region.dims[2]]
+    else:
+        goal_region.pose = [
+            0.35, -0.35, table_top + PLANNER_Z_LIFT - goal_region.dims[2] / 2.0, *unit_quat,
+        ]
 
     env = TAMPEnvironment(
         name="transfer",

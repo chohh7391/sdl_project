@@ -94,10 +94,24 @@ _ENVIRONMENTS = {
     # A separate entry rather than a flag on "transfer", so every number already
     # measured against "transfer" keeps describing the world it was measured in.
     "transfer_real": EnvironmentSpec(
-        "transfer_real", ("beaker", "flask", "magnet", "scale", "riser"),
+        # "stirrer" is QUERIED here, not just listed as a static. A static the
+        # simulator is not asked about keeps its ENTITIES default pose, which for
+        # the stirrer is the world origin: the planner then carried an 18 x 18 x
+        # 9 cm box at the robot's own base and never saw the real stirrer at
+        # (-0.115, 0.593). "transfer" has the same gap and every number measured
+        # against it was measured with it, so it is fixed here only.
+        "transfer_real", ("beaker", "flask", "magnet", "stirrer", "scale", "riser"),
         ("beaker", "flask"),
-        ("table", "goal_region", "stirrer", "magnet", "scale", "riser"),
-        ("pour_region",),
+        # goal_region is EX_COLLISION here, not a static. The collision world is
+        # movables + statics, so listing it as a static puts the planner-only
+        # goal surface into collision -- harmless in "transfer", where it sits
+        # 0.35 m from everything, but fatal here: the vessel is returned to
+        # where it came from, so the surface is directly under it and the
+        # initial state is reported 5 mm inside it before planning starts.
+        # Dropping it entirely is not the answer either -- the world still has
+        # to know the name to place anything On it.
+        ("table", "stirrer", "magnet", "scale", "riser"),
+        ("pour_region", "goal_region"),
     ),
     "stir": EnvironmentSpec(
         "stir", ALL_ENTITIES, ("flask", "magnet"),

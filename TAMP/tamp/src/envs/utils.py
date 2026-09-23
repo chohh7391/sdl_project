@@ -122,11 +122,18 @@ class TAMPEnvManager:
 
             if name in ("transfer", "transfer_real"):
 
+                # On the real cell the source vessel stands on a riser, and
+                # "put it back" means back on that riser, not on a patch of
+                # bench. Only when the scene actually has one.
+                return_to = None
+                if name == "transfer_real" and BEAKER_RISER_M > 0.0:
+                    return_to = "riser"
                 env, pour_region_pose = load_transfer_env(
                     entities=self.entities,
                     movables=self.movables,
                     statics=self.statics,
                     ex_collision=self.ex_collision,
+                    return_to=return_to,
                 )
 
             elif name == "stir":
