@@ -20,7 +20,9 @@
 # Env overrides:
 #   ROS_DOMAIN_ID (default 100)   SIM_READY_TIMEOUT (default 360)
 #   CSV (default <proj>/_2026__IEEE_Access/revision/analysis/data/transfer_trials.csv)
-#   TASK  (default transfer)  -- transfer | move | stir, per orchestration/registry
+#   TASK  (default transfer)  -- transfer | transfer_real | move | stir,
+#          per orchestration/registry. transfer_real is the same task with the
+#          target vessel on the electronic balance (see SDL_SCALE_PAN_XY).
 #   ROBOT (default: the tool TASK is evaluated with, per content/configs/xdl/tool_map.yml:
 #          transfer -> fr5_ag95 (2-finger, side grasp), move -> fr5_vgc10 (suction),
 #          stir -> fr5_dh3 (3-finger))
@@ -40,7 +42,7 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 CSV="${CSV:-$PROJ_DIR/_2026__IEEE_Access/revision/analysis/data/transfer_trials.csv}"
 TASK="${TASK:-transfer}"
 case "$TASK" in
-  transfer) DEFAULT_ROBOT="fr5_ag95" ;;
+  transfer|transfer_real) DEFAULT_ROBOT="fr5_ag95" ;;
   move)     DEFAULT_ROBOT="fr5_vgc10" ;;
   stir)     DEFAULT_ROBOT="fr5_dh3" ;;
   *)        DEFAULT_ROBOT="fr5_ag95" ;;

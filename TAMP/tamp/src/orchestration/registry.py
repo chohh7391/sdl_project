@@ -88,6 +88,15 @@ _ENVIRONMENTS = {
         "transfer", ("beaker", "flask", "magnet"), ("beaker", "flask"),
         ("table", "goal_region", "stirrer", "magnet"), ("pour_region",),
     ),
+    # Transfer as the REAL cell is laid out: the target vessel stands on the
+    # electronic balance instead of the bench, so the balance is a static
+    # obstacle sitting exactly where the arm has to bring the source vessel.
+    # A separate entry rather than a flag on "transfer", so every number already
+    # measured against "transfer" keeps describing the world it was measured in.
+    "transfer_real": EnvironmentSpec(
+        "transfer_real", ("beaker", "flask", "magnet", "scale"), ("beaker", "flask"),
+        ("table", "goal_region", "stirrer", "magnet", "scale"), ("pour_region",),
+    ),
     "stir": EnvironmentSpec(
         "stir", ALL_ENTITIES, ("flask", "magnet"),
         ("table", "stirrer", "beaker", "goal_region", "box"),

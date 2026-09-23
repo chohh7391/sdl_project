@@ -4,7 +4,8 @@ from cutamp.envs import TAMPEnvironment
 from cutamp.envs.utils import unit_quat
 from cutamp.envs import TAMPEnvironment
 
-from envs.constants import PLANNER_Z_LIFT, vessel_dims
+from envs.constants import (PLANNER_Z_LIFT, vessel_dims, scale_dims,
+                            scale_pose_from_pan, SCALE_TOP_M)
 from envs.transfer import load_transfer_env
 from envs.stir import load_stir_env
 from envs.default import load_default_env
@@ -28,6 +29,13 @@ ENTITIES = {
     # geometrically impossible. A real PTFE stir bar is ~10 mm across, 30-40 long.
     "magnet": Cuboid(name="magnet", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.010, 0.010, 0.035], color=[255, 0, 0]),
     "box" : Cuboid(name="box", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.108, 0.108, 0.08], color=[0, 0, 255]),
+    # The real cell's electronic balance, which the Transfer target stands on.
+    # Present only in the "transfer_real" environment; the nominal scenes never
+    # reference it, so adding it here cannot change any existing comparison.
+    # Its pose is set by the simulator like any other entity (see
+    # isaacsim Task.SCALE_*), so this default is a placeholder.
+    "scale": Cuboid(name="scale", pose=[0.0, 0.0, SCALE_TOP_M / 2.0, *unit_quat],
+                    dims=scale_dims(), color=[128, 128, 128]),
     "box_goal" : Cuboid(name="box_goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.15, 0.15, 0.01], color=[0, 255, 0]),
 
     # Regions
@@ -101,7 +109,7 @@ class TAMPEnvManager:
 
         if self.is_update_entities:
 
-            if name == "transfer":
+            if name in ("transfer", "transfer_real"):
 
                 env, pour_region_pose = load_transfer_env(
                     entities=self.entities,

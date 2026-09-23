@@ -24,10 +24,23 @@ from fr5 import FR5
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
 from object import (create_box_collider_rigid, create_box_collider_static,
-                    create_hollow_box_collider_rigid, create_single_rigid_prim_from_usd)
+                    create_box_static, create_hollow_box_collider_rigid,
+                    create_single_rigid_prim_from_usd)
 from camera import CameraInfo, set_world_pose_from_view
 
 ASSET_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets")
+
+
+def _SCALE_SRC():
+    """Balance geometry from the same table the planner reads (envs.constants)."""
+    import sys as _sys, os as _os
+    _src = _os.path.abspath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "..", "..", "..", "TAMP", "tamp", "src"))
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from envs.constants import scale_dims, scale_pose_from_pan, SCALE_TOP_M
+    return scale_dims, scale_pose_from_pan, SCALE_TOP_M
 
 
 def _FOOTPRINT_SRC(name):
@@ -184,6 +197,53 @@ class Task(ABC, BaseTask):
 
         return
 
+    def _apply_scale_rig(self):
+        """Stand the pour target on the real cell's electronic balance.
+
+        SDL_SCALE_PAN_XY="0.520,0.320" gives the centre of the weighing pan, in
+        metres, which is where the rig is actually measured -- a vessel stands
+        on the pan, so that is the point the tag reading describes. The balance
+        BODY is then placed from it (the pan is off-centre along the long axis,
+        which faces the robot), and the flask is stood on the pan rather than on
+        the bench.
+
+        Unset by default, so the nominal scenes are untouched. Pair it with the
+        "transfer_real" environment, which is what puts the balance into the
+        planner's collision world -- placing the prim here without that gives a
+        simulator with an obstacle the planner cannot see.
+        """
+        spec = os.environ.get("SDL_SCALE_PAN_XY", "").strip()
+        if not spec:
+            self._scale_pose = None
+            return
+        try:
+            pan = [float(v) for v in spec.split(",")]
+        except ValueError:
+            raise ValueError("SDL_SCALE_PAN_XY=%r is not x,y" % spec)
+        if len(pan) != 2:
+            raise ValueError("SDL_SCALE_PAN_XY=%r needs exactly x,y" % spec)
+
+        scale_dims, scale_pose_from_pan, top = _SCALE_SRC()
+        dims = scale_dims()
+        (cx, cy), yaw = scale_pose_from_pan(pan)
+        half = yaw / 2.0
+        self._scale_pose = dict(
+            dims=dims,
+            position=np.array([cx, cy, dims[2] / 2.0]),
+            orientation=np.array([math.cos(half), 0.0, 0.0, math.sin(half)]),
+        )
+        self.default_positions["scale"] = self._scale_pose["position"]
+        self.default_orientations["scale"] = self._scale_pose["orientation"]
+
+        # The flask stands ON the pan: its bottom is the pan top, not the bench.
+        flask_h = float(_FOOTPRINT_SRC("flask")[2])
+        self.default_positions["flask"] = np.array([pan[0], pan[1], top + flask_h / 2.0])
+        print("[Task] balance: pan=(%.4f, %.4f) body centre=(%.4f, %.4f) "
+              "yaw=%.1fdeg dims=%s top=%.3f m"
+              % (pan[0], pan[1], cx, cy, math.degrees(yaw), dims, top))
+        print("[Task] flask stands on the pan at z=%.4f (bench would be %.4f)"
+              % (top + flask_h / 2.0, flask_h / 2.0))
+
     def _apply_measured_layout(self):
         """Place named movables at poses MEASURED on the real cell.
 
@@ -202,6 +262,7 @@ class Task(ABC, BaseTask):
         it, so a measurement expressed in base_link shares the world frame's x
         and y and needs no transform -- only z differs, by base_link's 0.0455 m.
         """
+        self._apply_scale_rig()
         spec = os.environ.get("SDL_LAYOUT_XY", "").strip()
         if not spec:
             return
@@ -798,6 +859,21 @@ class Task(ABC, BaseTask):
             dims=[0.15, 0.15, 0.01],
         )
         self.scene.add(self.box_goal)
+
+        # spawn the electronic balance, when the run describes one. Static: it
+        # is furniture, and the planner sees it as an obstacle through the
+        # "transfer_real" environment. The prim lives at /World/scale so the
+        # TAMP server's GetEntityState finds it the way it finds every other
+        # entity -- no separate channel for the pose.
+        if getattr(self, "_scale_pose", None) is not None:
+            self.scale_prim = create_box_static(
+                prim_path="/World/scale", name="scale",
+                position=self._scale_pose["position"],
+                orientation=self._scale_pose["orientation"],
+                dims=self._scale_pose["dims"],
+            )
+            self.scene.add(self.scale_prim)
+            print("[Task] balance prim at /World/scale")
 
         # spawn gripper visual
         gripper_visual_asset_path = os.path.join(ASSET_PATH, "robot", "dcp_description", "usd", "gripper_visual")

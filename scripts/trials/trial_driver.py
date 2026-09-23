@@ -117,6 +117,18 @@ TASK_OUTCOMES = {
         # transfer.py pours into movables[1]; pour_region is placed at its xy.
         "pour_target": "flask",
     },
+    # Transfer as the real cell is laid out: same task, same goal, but the
+    # target vessel stands on the electronic balance. Scored identically -- the
+    # criteria describe the task, and the task did not change.
+    "transfer_real": {
+        "target": "beaker",
+        "goal_entity": None,
+        "goal_xy": GOAL_REGION_XY,
+        "half_xy": (GOAL_REGION_HALF_M, GOAL_REGION_HALF_M),
+        "require_pour": True,
+        "aux": None,
+        "pour_target": "flask",
+    },
     "move": {
         "target": "box",
         # move.py places the box on box_region, which is the goal tray's own

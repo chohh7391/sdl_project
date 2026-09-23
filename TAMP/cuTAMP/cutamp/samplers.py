@@ -29,6 +29,11 @@ from cutamp.utils.shapes import MultiSphere
 # 10.2 to 34.7 deg, exactly spanning it. Narrowing the band towards 0 buys a
 # level gripper at a cost in IK feasibility that the docstring below quantifies;
 # it is left to the caller rather than guessed at.
+#: Fraction of the feasible pinch-height band to discard from the BOTTOM, so the
+#: grasp sits higher up the vessel. 0 = the whole band (the default, and what
+#: every measurement so far used); 0.5 = the upper half.
+GRASP_H_FRAC = float(_os.environ.get("SDL_GRASP_H_FRAC", "0.0"))
+
 BETA_MIN = float(_os.environ.get("SDL_GRASP_BETA_MIN_DEG", "10.0")) * torch.pi / 180.0
 BETA_MAX = float(_os.environ.get("SDL_GRASP_BETA_MAX_DEG", "35.0")) * torch.pi / 180.0
 
@@ -195,7 +200,19 @@ def grasp_side_sampler(
     degenerate = h_hi < h_lo
     h_lo = torch.where(degenerate, torch.zeros_like(h_lo), h_lo)
     h_hi = torch.where(degenerate, torch.zeros_like(h_hi), h_hi)
-    h = h_lo + (h_hi - h_lo) * torch.rand(num_samples, device=device)
+    # Where in the feasible band to pinch. Uniform by default (GRASP_H_FRAC = 0),
+    # which is what every measurement so far used.
+    #
+    # Raising the floor pushes the pinch UP the vessel body, which is what keeps
+    # a LEVEL gripper off the bench: with the inclination band narrowed towards
+    # horizontal the gripper no longer reaches down and in, so a low pinch puts
+    # its body at bench height. Measured on the real cell's layout, that is the
+    # binding constraint -- cuTAMP reported robot_to_world satisfied by 1 and 5
+    # particles out of 1024 while every movable-to-movable constraint was
+    # satisfied by all 1024, i.e. the arm was hitting the table, not the props.
+    frac = min(max(GRASP_H_FRAC, 0.0), 0.95)
+    lo = h_lo + (h_hi - h_lo) * frac
+    h = lo + (h_hi - lo) * torch.rand(num_samples, device=device)
 
     translation = torch.stack([zeros, zeros, h], dim=1)      # on the vessel axis
     return torch.cat([translation, rpy], dim=1)

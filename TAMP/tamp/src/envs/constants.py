@@ -69,7 +69,11 @@ _GLASSWARE = {
         "flask_mouth_dia": 0.064,   # the hollow box's clear opening
     },
     "real": {
-        "beaker": [0.06, 0.06, 0.072],
+        # 90 mm, measured on the bench (author, 2026-09-23). The 72 mm here
+        # before came from the purchase note; the vessel actually in the cell is
+        # taller, and a grasp planned against the shorter model lands nearer its
+        # rim than intended.
+        "beaker": [0.06, 0.06, 0.090],
         "flask": [FLASK_BODY_DIA_M, FLASK_BODY_DIA_M, 0.160],
         "flask_mouth_dia": FLASK_MOUTH_DIA_M,
     },
@@ -121,3 +125,54 @@ def vessel_dims(name):
 
 def flask_mouth_dia():
     return float(_GLASSWARE[glassware_set()]["flask_mouth_dia"])
+
+# --- the real cell's electronic scale ---------------------------------------
+# The physical Transfer target stands on a balance, not on the bench, and the
+# balance is a large obstacle right where the arm has to pour. Measured on the
+# rig (author, 2026-09-23):
+#
+#   body            250 mm along its long axis x 200 mm across
+#   weighing pan    130 x 130 mm, centred across the short axis and 140 mm from
+#                   the FAR end of the long axis, i.e. 110 mm from the near end
+#   orientation     the pan end faces the robot, so the long axis is radial
+#
+# The pan TOP height is 90 mm, measured on the rig (author, 2026-09-23). It was
+# first inferred as 86 mm from the difference between the two tag readings
+# (beaker 0.144 m on the bench, flask 0.230 m on the pan, uniform mount height);
+# the measurement supersedes that, and the 4 mm agreement is a useful check that
+# the two readings describe what they were taken to describe.
+#
+# The body is modelled as ONE cuboid spanning the whole footprint up to the pan
+# top, rather than a body plus a thinner pan. That is deliberately conservative:
+# the planner then keeps the arm clear of the entire balance instead of letting
+# it swing through the space beside the pan, which is where the display and the
+# draft shield of a real balance are.
+SCALE_LONG_M = 0.25
+SCALE_SHORT_M = 0.20
+SCALE_PAN_XY_M = 0.13
+SCALE_PAN_FROM_FAR_M = 0.14
+SCALE_TOP_M = float(_os.environ.get("SDL_SCALE_TOP_M", "0.090"))
+
+
+def scale_dims():
+    """Outer cuboid dims of the balance: [long (radial), short, height]."""
+    return [SCALE_LONG_M, SCALE_SHORT_M, SCALE_TOP_M]
+
+
+def scale_pose_from_pan(pan_xy):
+    """Balance centre (x, y) and yaw [rad] that put its PAN at `pan_xy`.
+
+    The rig is measured at the pan because that is where the vessel stands, but
+    a cuboid is placed by its centre. The pan sits off-centre along the long
+    axis, so the body centre is displaced from the pan by half the difference
+    between the two end distances, along the radial direction the balance faces.
+    """
+    import math
+    px, py = float(pan_xy[0]), float(pan_xy[1])
+    r = math.hypot(px, py)
+    if r < 1e-6:
+        raise ValueError("the balance pan cannot be at the robot's own axis")
+    ux, uy = px / r, py / r                      # robot -> pan, the long axis
+    near = SCALE_LONG_M - SCALE_PAN_FROM_FAR_M   # pan centre to the near end
+    shift = (SCALE_PAN_FROM_FAR_M - near) / 2.0  # pan centre -> body centre
+    return (px + shift * ux, py + shift * uy), math.atan2(uy, ux)

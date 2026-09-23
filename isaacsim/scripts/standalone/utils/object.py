@@ -194,6 +194,37 @@ def create_hollow_box_collider_rigid(
     )
 
 
+def create_box_static(prim_path, name, position, orientation, dims,
+                      color=(0.6, 0.6, 0.62)):
+    """Static box with NO external asset: one visible cube that is also the
+    collider, sized to the full cuTAMP dims and centred on the prim origin.
+
+    `create_box_collider_static` needs a visual USD to reference. A piece of lab
+    furniture that only has to be the right size and be collided with -- the
+    electronic balance the Transfer target stands on -- has no such asset, and
+    inventing one would hide the fact that the shape is a measured bounding box
+    rather than a model of the instrument.
+    """
+    stage = get_current_stage()
+    UsdGeom.Xform.Define(stage, prim_path)          # plain Xform -> static
+
+    body_path = prim_path + "/body"
+    cube = UsdGeom.Cube.Define(stage, body_path)
+    half = np.asarray(dims, dtype=float) / 2.0
+    # UsdGeom.Cube has base size 2.0 (spans -1..1); scale by half-extents.
+    UsdGeom.XformCommonAPI(cube).SetScale((float(half[0]), float(half[1]), float(half[2])))
+    UsdGeom.XformCommonAPI(cube).SetTranslate((0.0, 0.0, 0.0))
+    cube.GetPrim().GetAttribute("primvars:displayColor").Set(
+        [tuple(float(c) for c in color)]
+    ) if cube.GetPrim().HasAttribute("primvars:displayColor") else \
+        UsdGeom.Gprim(cube).CreateDisplayColorAttr([tuple(float(c) for c in color)])
+    UsdPhysics.CollisionAPI.Apply(cube.GetPrim())
+
+    return SingleXFormPrim(
+        prim_path=prim_path, name=name, position=position, orientation=orientation,
+    )
+
+
 def create_box_collider_static(
     prim_path, usd_path, name, position, orientation, dims, visual_offset_z=0.0,
 ):
