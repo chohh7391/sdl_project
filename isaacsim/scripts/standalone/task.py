@@ -43,6 +43,18 @@ def _TABLE_Z_SRC():
     return TABLE_Z_OFFSET
 
 
+def _RISER_SRC():
+    """Riser geometry from the same table the planner reads (envs.constants)."""
+    import sys as _sys, os as _os
+    _src = _os.path.abspath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "..", "..", "..", "TAMP", "tamp", "src"))
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from envs.constants import beaker_riser_dims
+    return beaker_riser_dims()
+
+
 def _SCALE_SRC():
     """Balance geometry from the same table the planner reads (envs.constants)."""
     import sys as _sys, os as _os
@@ -234,6 +246,42 @@ class Task(ABC, BaseTask):
         print("[Task] bench offset %.4f m: table top now at %.4f"
               % (dz, dz))
 
+    def _apply_beaker_riser(self):
+        """Stand the source vessel on a box, at whatever xy it ended up at.
+
+        Runs after the measured layout, so the riser follows the beaker rather
+        than needing its own coordinates: the box is under the vessel by
+        definition, and a second independently-set position would let the two
+        disagree.
+
+        The box exists because a LEVEL gripper cannot reach low on a vessel
+        standing on the bench -- the wrist's 58 mm collision spheres occupy that
+        much below the grasp frame when held horizontal, so the grasp cannot go
+        under 58 mm above the bench without driving the wrist through the table.
+        Raising the vessel moves its body up past that floor.
+        """
+        dims = _RISER_SRC()
+        self._riser_pose = None
+        if not dims:
+            return
+        dz = float(getattr(self, "_bench_dz", 0.0))
+        p = self.default_positions["beaker"]
+        self._riser_pose = dict(
+            dims=dims,
+            position=np.array([p[0], p[1], dz + dims[2] / 2.0]),
+            orientation=np.array([1.0, 0.0, 0.0, 0.0]),
+        )
+        self.default_positions["riser"] = self._riser_pose["position"]
+        self.default_orientations["riser"] = self._riser_pose["orientation"]
+
+        beaker_h = float(_FOOTPRINT_SRC("beaker")[2])
+        self.default_positions["beaker"] = np.array(
+            [p[0], p[1], dz + dims[2] + beaker_h / 2.0])
+        print("[Task] beaker riser %s at (%.4f, %.4f); beaker now at z=%.4f "
+              "(on the bench it would be %.4f)"
+              % (dims, p[0], p[1], dz + dims[2] + beaker_h / 2.0,
+                 dz + beaker_h / 2.0))
+
     def _print_effective_layout(self):
         """Print the layout as it FINALLY stands, in the canonical format.
 
@@ -259,6 +307,10 @@ class Task(ABC, BaseTask):
             yaw = (yaw + 180.0) % 360.0 - 180.0
             print("[Task]   %-8s xy=(%.4f,%.4f) yaw=%.1fdeg z=%.4f"
                   % (name, p[0], p[1], yaw, p[2]))
+        if getattr(self, "_riser_pose", None) is not None:
+            p = self._riser_pose["position"]
+            print("[Task]   %-8s xy=(%.4f,%.4f) yaw=0.0deg dims=%s"
+                  % ("riser", p[0], p[1], self._riser_pose["dims"]))
         if getattr(self, "_scale_pose", None) is not None:
             p = self._scale_pose["position"]
             q = self._scale_pose["orientation"]
@@ -337,6 +389,7 @@ class Task(ABC, BaseTask):
         self._apply_scale_rig()
         spec = os.environ.get("SDL_LAYOUT_XY", "").strip()
         if not spec:
+            self._apply_beaker_riser()
             self._print_effective_layout()
             return
         for item in spec.split(";"):
@@ -366,6 +419,7 @@ class Task(ABC, BaseTask):
             print("[Task] measured layout: %-8s xy=(%.4f, %.4f) z=%.4f%s"
                   % (name, nums[0], nums[1], z,
                      " yaw=%.1fdeg" % nums[2] if len(nums) == 3 else ""))
+        self._apply_beaker_riser()
         self._print_effective_layout()
 
     # In-plane bounding radius (circumscribed, = half-diagonal) of each movable's
@@ -948,6 +1002,16 @@ class Task(ABC, BaseTask):
             )
             self.scene.add(self.scale_prim)
             print("[Task] balance prim at /World/scale")
+
+        if getattr(self, "_riser_pose", None) is not None:
+            self.riser_prim = create_box_static(
+                prim_path="/World/riser", name="riser",
+                position=self._riser_pose["position"],
+                orientation=self._riser_pose["orientation"],
+                dims=self._riser_pose["dims"],
+            )
+            self.scene.add(self.riser_prim)
+            print("[Task] riser prim at /World/riser")
 
         # spawn gripper visual
         gripper_visual_asset_path = os.path.join(ASSET_PATH, "robot", "dcp_description", "usd", "gripper_visual")

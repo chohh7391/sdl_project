@@ -6,7 +6,8 @@ from cutamp.envs import TAMPEnvironment
 
 from envs.constants import (PLANNER_Z_LIFT, vessel_dims, scale_dims,
                             scale_pose_from_pan, SCALE_TOP_M,
-                            TABLE_Z_OFFSET)
+                            TABLE_Z_OFFSET, BEAKER_RISER_M,
+                            BEAKER_RISER_XY_M)
 from envs.transfer import load_transfer_env
 from envs.stir import load_stir_env
 from envs.default import load_default_env
@@ -40,6 +41,12 @@ ENTITIES = {
     # isaacsim Task.SCALE_*), so this default is a placeholder.
     "scale": Cuboid(name="scale", pose=[0.0, 0.0, SCALE_TOP_M / 2.0, *unit_quat],
                     dims=scale_dims(), color=[128, 128, 128]),
+    # The box the source vessel stands on. Like the balance, its pose comes from
+    # the simulator; the dims are 0 when the run has no riser, and the entity is
+    # then simply not referenced by any environment.
+    "riser": Cuboid(name="riser", pose=[0.0, 0.0, BEAKER_RISER_M / 2.0, *unit_quat],
+                    dims=[max(BEAKER_RISER_XY_M, 1e-3), max(BEAKER_RISER_XY_M, 1e-3),
+                          max(BEAKER_RISER_M, 1e-3)], color=[90, 90, 90]),
     "box_goal" : Cuboid(name="box_goal", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.15, 0.15, 0.01], color=[0, 255, 0]),
 
     # Regions

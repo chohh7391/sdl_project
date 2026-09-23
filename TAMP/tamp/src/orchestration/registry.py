@@ -94,8 +94,10 @@ _ENVIRONMENTS = {
     # A separate entry rather than a flag on "transfer", so every number already
     # measured against "transfer" keeps describing the world it was measured in.
     "transfer_real": EnvironmentSpec(
-        "transfer_real", ("beaker", "flask", "magnet", "scale"), ("beaker", "flask"),
-        ("table", "goal_region", "stirrer", "magnet", "scale"), ("pour_region",),
+        "transfer_real", ("beaker", "flask", "magnet", "scale", "riser"),
+        ("beaker", "flask"),
+        ("table", "goal_region", "stirrer", "magnet", "scale", "riser"),
+        ("pour_region",),
     ),
     "stir": EnvironmentSpec(
         "stir", ALL_ENTITIES, ("flask", "magnet"),

@@ -194,3 +194,30 @@ def scale_pose_from_pan(pan_xy):
 # supporting surface is, not where one object is. The planner's goal region
 # derives its height from the table entity, so it follows without help.
 TABLE_Z_OFFSET = float(_os.environ.get("SDL_TABLE_Z_M", "0.0"))
+
+# --- riser under the source vessel ------------------------------------------
+# The beaker stands on a box, not on the bench. It is there because a LEVEL
+# gripper cannot reach low on a vessel that sits on the bench: the wrist's
+# collision spheres are 58 mm in radius and, held horizontal, they occupy that
+# much below the grasp frame, so the grasp cannot go under 58 mm above the
+# bench without driving the wrist through the table. Measured over six solves
+# it settled at 62 mm, 4 mm above that floor, on a 70 mm vessel -- i.e. at the
+# rim, which is where the beaker tapers.
+#
+# Raising the vessel moves its body up past that floor instead of fighting it:
+# on a 50 mm box the same 62 mm grasp lands 12 mm above the beaker's base.
+#
+# SDL_BEAKER_RISER_M is the height. The footprint defaults to a square of the
+# same size -- "a 5 cm box" -- and SDL_BEAKER_RISER_XY_M overrides it. The
+# footprint matters to the planner, not just the height: the riser is an
+# obstacle the arm has to come around to reach the vessel on top of it.
+BEAKER_RISER_M = float(_os.environ.get("SDL_BEAKER_RISER_M", "0.0"))
+BEAKER_RISER_XY_M = float(
+    _os.environ.get("SDL_BEAKER_RISER_XY_M", "0.0")) or BEAKER_RISER_M
+
+
+def beaker_riser_dims():
+    """Outer cuboid dims of the riser, or None when the run has no riser."""
+    if BEAKER_RISER_M <= 0.0:
+        return None
+    return [BEAKER_RISER_XY_M, BEAKER_RISER_XY_M, BEAKER_RISER_M]
