@@ -1,5 +1,6 @@
 from abc import ABC
 from typing import Dict, List, Optional, Tuple
+import math
 import os, sys
 import numpy as np
 
@@ -176,11 +177,61 @@ class Task(ABC, BaseTask):
                 print(f"[Task] SDL_SEED={_seed_env!r} is not an int; ignoring (nominal layout).")
         if self.seed is not None:
             self._randomize_layout(self.seed)
+        self._apply_measured_layout()
 
         self.scale_data = 0.0
         self.scale_gain = 50.0
 
         return
+
+    def _apply_measured_layout(self):
+        """Place named movables at poses MEASURED on the real cell.
+
+        SDL_LAYOUT_XY="beaker:0.585,-0.299;flask:0.763,0.321" (metres), with an
+        optional third value for yaw in degrees. Applied after any seeded
+        randomization, so it overrides it for the objects it names and leaves
+        the rest alone.
+
+        Only x and y are taken. The real cell reports a vessel's pose from an
+        AprilTag on a mount, so its z describes the tag, not the vessel, and the
+        two differ by the mount height; the vessel here is simply stood on the
+        bench, z = dims_z / 2, which is what every other placement in this file
+        does and what the planner's surface constraints assume.
+
+        The robot prim sits at the world origin and base_link is directly above
+        it, so a measurement expressed in base_link shares the world frame's x
+        and y and needs no transform -- only z differs, by base_link's 0.0455 m.
+        """
+        spec = os.environ.get("SDL_LAYOUT_XY", "").strip()
+        if not spec:
+            return
+        for item in spec.split(";"):
+            item = item.strip()
+            if not item:
+                continue
+            try:
+                name, vals = item.split(":", 1)
+                nums = [float(v) for v in vals.split(",")]
+            except ValueError:
+                raise ValueError(
+                    "SDL_LAYOUT_XY entry %r is not name:x,y[,yaw_deg]" % item)
+            name = name.strip()
+            if name not in self.default_positions:
+                raise ValueError(
+                    "SDL_LAYOUT_XY names %r, which is not one of %s"
+                    % (name, sorted(self.default_positions)))
+            if len(nums) not in (2, 3):
+                raise ValueError(
+                    "SDL_LAYOUT_XY entry %r needs x,y or x,y,yaw_deg" % item)
+            z = float(self.default_positions[name][2])
+            self.default_positions[name] = np.array([nums[0], nums[1], z])
+            if len(nums) == 3:
+                half = math.radians(nums[2]) / 2.0
+                self.default_orientations[name] = np.array(
+                    [math.cos(half), 0.0, 0.0, math.sin(half)])
+            print("[Task] measured layout: %-8s xy=(%.4f, %.4f) z=%.4f%s"
+                  % (name, nums[0], nums[1], z,
+                     " yaw=%.1fdeg" % nums[2] if len(nums) == 3 else ""))
 
     # In-plane bounding radius (circumscribed, = half-diagonal) of each movable's
     # cuTAMP box footprint [dx, dy] -- used for conservative circle-vs-circle
