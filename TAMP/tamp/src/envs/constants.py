@@ -69,11 +69,16 @@ _GLASSWARE = {
         "flask_mouth_dia": 0.064,   # the hollow box's clear opening
     },
     "real": {
-        # 90 mm, measured on the bench (author, 2026-09-23). The 72 mm here
-        # before came from the purchase note; the vessel actually in the cell is
-        # taller, and a grasp planned against the shorter model lands nearer its
-        # rim than intended.
-        "beaker": [0.06, 0.06, 0.090],
+        # The beaker MEASURES 50 x 50 x 70 mm (author, 2026-09-23). It is
+        # modelled 10 mm SHORTER than that on purpose: its upper part tapers, so
+        # the parallel fingers need to close below the taper, and the sampler
+        # draws the pinch height from the modelled body. Shortening the model
+        # moves the whole feasible band down the real vessel rather than biasing
+        # within it, which is what SDL_GRASP_H_FRAC does.
+        #
+        # Earlier values here were 72 mm (from the purchase note) and 90 mm
+        # (a mis-measurement); both are superseded.
+        "beaker": [0.05, 0.05, 0.060],
         "flask": [FLASK_BODY_DIA_M, FLASK_BODY_DIA_M, 0.160],
         "flask_mouth_dia": FLASK_MOUTH_DIA_M,
     },
@@ -176,3 +181,16 @@ def scale_pose_from_pan(pan_xy):
     near = SCALE_LONG_M - SCALE_PAN_FROM_FAR_M   # pan centre to the near end
     shift = (SCALE_PAN_FROM_FAR_M - near) / 2.0  # pan centre -> body centre
     return (px + shift * ux, py + shift * uy), math.atan2(uy, ux)
+
+# --- the bench plane --------------------------------------------------------
+# How far the table top sits BELOW the robot's base_link plane, beyond what the
+# nominal scene assumes. The simulated cell had the table top level with the
+# robot base's own reference; the real cell's bench is lower, and replaying a
+# trajectory planned against the nominal height closed the gripper above the
+# vessel. Measured on the rig as 13 mm (author, 2026-09-23).
+#
+# Everything that RESTS on the bench moves with it -- the vessels, the balance,
+# the stirrer, the box and its tray -- because the offset describes where the
+# supporting surface is, not where one object is. The planner's goal region
+# derives its height from the table entity, so it follows without help.
+TABLE_Z_OFFSET = float(_os.environ.get("SDL_TABLE_Z_M", "0.0"))

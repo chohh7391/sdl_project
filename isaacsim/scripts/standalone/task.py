@@ -31,6 +31,18 @@ from camera import CameraInfo, set_world_pose_from_view
 ASSET_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "TAMP", "tamp", "content", "assets")
 
 
+def _TABLE_Z_SRC():
+    """Bench offset from the same table the planner reads (envs.constants)."""
+    import sys as _sys, os as _os
+    _src = _os.path.abspath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "..", "..", "..", "TAMP", "tamp", "src"))
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from envs.constants import TABLE_Z_OFFSET
+    return TABLE_Z_OFFSET
+
+
 def _SCALE_SRC():
     """Balance geometry from the same table the planner reads (envs.constants)."""
     import sys as _sys, os as _os
@@ -197,6 +209,31 @@ class Task(ABC, BaseTask):
 
         return
 
+    def _apply_bench_offset(self):
+        """Drop the bench, and everything standing on it, by TABLE_Z_OFFSET.
+
+        The simulated cell put the table top level with the robot base's own
+        reference plane; the real bench is lower, so a trajectory planned
+        against the nominal height closes the gripper above the vessel. The
+        offset describes where the SUPPORTING SURFACE is, so every prop resting
+        on it moves too -- shifting the table alone would leave the vessels
+        hovering the same distance in the air that the gripper was missing by.
+
+        Applied before the scale rig and the measured layout, both of which
+        derive their z from these values.
+        """
+        dz = float(_TABLE_Z_SRC())
+        self._bench_dz = dz
+        if dz == 0.0:
+            return
+        for name in ("table", "stirrer", "beaker", "flask", "magnet",
+                     "box", "box_goal"):
+            if name in self.default_positions:
+                p = self.default_positions[name]
+                self.default_positions[name] = np.array([p[0], p[1], p[2] + dz])
+        print("[Task] bench offset %.4f m: table top now at %.4f"
+              % (dz, dz))
+
     def _print_effective_layout(self):
         """Print the layout as it FINALLY stands, in the canonical format.
 
@@ -259,9 +296,10 @@ class Task(ABC, BaseTask):
         dims = scale_dims()
         (cx, cy), yaw = scale_pose_from_pan(pan)
         half = yaw / 2.0
+        dz = float(getattr(self, "_bench_dz", 0.0))
         self._scale_pose = dict(
             dims=dims,
-            position=np.array([cx, cy, dims[2] / 2.0]),
+            position=np.array([cx, cy, dz + dims[2] / 2.0]),
             orientation=np.array([math.cos(half), 0.0, 0.0, math.sin(half)]),
         )
         self.default_positions["scale"] = self._scale_pose["position"]
@@ -269,12 +307,13 @@ class Task(ABC, BaseTask):
 
         # The flask stands ON the pan: its bottom is the pan top, not the bench.
         flask_h = float(_FOOTPRINT_SRC("flask")[2])
-        self.default_positions["flask"] = np.array([pan[0], pan[1], top + flask_h / 2.0])
+        self.default_positions["flask"] = np.array(
+            [pan[0], pan[1], dz + top + flask_h / 2.0])
         print("[Task] balance: pan=(%.4f, %.4f) body centre=(%.4f, %.4f) "
               "yaw=%.1fdeg dims=%s top=%.3f m"
               % (pan[0], pan[1], cx, cy, math.degrees(yaw), dims, top))
         print("[Task] flask stands on the pan at z=%.4f (bench would be %.4f)"
-              % (top + flask_h / 2.0, flask_h / 2.0))
+              % (dz + top + flask_h / 2.0, dz + flask_h / 2.0))
 
     def _apply_measured_layout(self):
         """Place named movables at poses MEASURED on the real cell.
@@ -294,6 +333,7 @@ class Task(ABC, BaseTask):
         it, so a measurement expressed in base_link shares the world frame's x
         and y and needs no transform -- only z differs, by base_link's 0.0455 m.
         """
+        self._apply_bench_offset()
         self._apply_scale_rig()
         spec = os.environ.get("SDL_LAYOUT_XY", "").strip()
         if not spec:

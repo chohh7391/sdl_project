@@ -5,7 +5,8 @@ from cutamp.envs.utils import unit_quat
 from cutamp.envs import TAMPEnvironment
 
 from envs.constants import (PLANNER_Z_LIFT, vessel_dims, scale_dims,
-                            scale_pose_from_pan, SCALE_TOP_M)
+                            scale_pose_from_pan, SCALE_TOP_M,
+                            TABLE_Z_OFFSET)
 from envs.transfer import load_transfer_env
 from envs.stir import load_stir_env
 from envs.default import load_default_env
@@ -15,7 +16,10 @@ import copy
 
 
 ENTITIES = {
-    "table": Cuboid(name="table", pose=[0.0, 0.0, -0.01, *unit_quat], dims=[1.5, 1.5, 0.02], color=[255, 0, 0]),
+    # The table's own pose is NOT reported by the simulator (it is not among any
+    # environment's queried entities), so the bench offset has to be applied to
+    # the planner's copy here as well as to the simulator's prim.
+    "table": Cuboid(name="table", pose=[0.0, 0.0, -0.01 + TABLE_Z_OFFSET, *unit_quat], dims=[1.5, 1.5, 0.02], color=[255, 0, 0]),
     "stirrer": Cuboid(name="stirrer", pose=[0.0, 0.0, 0.0, *unit_quat], dims=[0.18, 0.18, 0.09], color=[255, 0, 0]),
 
     # objects
