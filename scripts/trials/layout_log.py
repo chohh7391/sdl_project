@@ -10,10 +10,13 @@ import re
 LAYOUT = re.compile(r"\[Task\]\s+(beaker|flask|magnet|box|stirrer)\s+"
                     r"xy=\(([-\d.]+),([-\d.]+)\)\s+yaw=([-\d.]+)deg")
 HOME = re.compile(r"\[Task\]\s+home_arm\(rad\) = \[([-\d.,\s]+)\]")
-# The electronic balance, when the scene has one. It is furniture rather than a
-# movable, but a replay has to set it up too: the pour target stands on it.
-SCALE = re.compile(r"\[Task\]\s+scale\s+xy=\(([-\d.]+),\s*([-\d.]+)\)\s+"
-                   r"yaw=([-\d.]+)deg\s+dims=\[([-\d.,\s]+)\]")
+# Furniture the scene stands vessels on -- the balance under the pour target,
+# the riser under the source vessel. Not movables, but a replay has to set them
+# up or the vessels are at the wrong height, so they are recovered too. One
+# pattern for both: they are printed identically and naming them separately is
+# how the riser came to be missing from a delivered file.
+FURNITURE = re.compile(r"\[Task\]\s+(scale|riser)\s+xy=\(([-\d.]+),\s*([-\d.]+)\)\s+"
+                       r"yaw=([-\d.]+)deg\s+dims=\[([-\d.,\s]+)\]")
 
 
 def read_layout(path):
@@ -28,11 +31,12 @@ def read_layout(path):
             m = HOME.search(ln)
             if m and home is None:
                 home = [float(v) for v in m.group(1).split(",")]
-            m = SCALE.search(ln)
+            m = FURNITURE.search(ln)
             if m:
-                objs["scale"] = {"xy": [float(m.group(1)), float(m.group(2))],
-                                 "yaw_deg": float(m.group(3)),
-                                 "dims": [float(v) for v in m.group(4).split(",")]}
+                objs[m.group(1)] = {
+                    "xy": [float(m.group(2)), float(m.group(3))],
+                    "yaw_deg": float(m.group(4)),
+                    "dims": [float(v) for v in m.group(5).split(",")]}
     except OSError:
         pass
     return objs, home
