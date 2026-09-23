@@ -85,9 +85,38 @@ def glassware_set():
     return name
 
 
+def vessel_height_override(name):
+    """Extra height added to a vessel, in metres, from SDL_<NAME>_EXTRA_H_M.
+
+    Replaying a planned grasp on the real cell showed the fingers closing at the
+    beaker's rim rather than around its body: measured over the eight recorded
+    0-10 deg solves, the grasp frame closes 55.9-64.6 mm above the bench on a
+    beaker only 72 mm tall, i.e. 7-16 mm below the rim. PLANNER_Z_LIFT raises
+    every movable another 10 mm in the planner's world relative to the
+    simulator's, so the commanded height sits that much higher again against the
+    real object. Any calibration error on top of that closes the gripper in air.
+
+    Raising the modelled vessel moves the sampled grasp band down the body in
+    relative terms, so the grasp lands on the wall instead of the lip. It is an
+    override rather than a new glassware set because it describes the RIG -- a
+    vessel on a riser, or a taller vessel than the one first measured -- not a
+    different purchase, and the real cell is where the number comes from.
+    """
+    key = "SDL_%s_EXTRA_H_M" % name.upper()
+    try:
+        return float(_os.environ.get(key, "0.0"))
+    except ValueError:
+        raise ValueError("%s=%r is not a number" % (key, _os.environ.get(key)))
+
+
 def vessel_dims(name):
     """Outer cuboid dims [x, y, z] of `name` under the selected glassware."""
-    return list(_GLASSWARE[glassware_set()][name])
+    dims = list(_GLASSWARE[glassware_set()][name])
+    dims[2] = dims[2] + vessel_height_override(name)
+    if dims[2] <= 0.0:
+        raise ValueError("vessel %r ends up with non-positive height %.4f m"
+                         % (name, dims[2]))
+    return dims
 
 
 def flask_mouth_dia():
