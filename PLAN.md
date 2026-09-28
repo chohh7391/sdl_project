@@ -174,6 +174,11 @@ concern을 닫지 못하면 reject (binary review).
 
 ## 4. 오프라인 분석 스크립트 (Claude, 시뮬레이터 불필요)
 
+> **재실험(RTX 5080)은 [`RERUN.md`](RERUN.md) 한 문서로 진행한다.** 기존 시뮬레이션 scene만 쓰고
+> (실기 `transfer_real`과 분리, 스크립트가 강제), GPU 독점을 시행 단위로 감사하며, 예산은 실행 전에
+> 선언해 고정한다. 반복 실행 비교는 `analysis/planner_comparison.py`·`paired_outcome.py`,
+> 감사는 `analysis/rerun_audit.py`.
+
 `_2026__IEEE_Access/revision/analysis/`(신규)에 둘 것.
 - [x] **4.1 seeded 벤치 로그 생성/수집** — cuTAMP 로그는 기존 30 seed 런(b7/b8/b6). PDDLStream은
       스톡 러너가 자체 레이아웃을 샘플링해 paired가 아니었으므로, `analysis/export_layouts.py`로

@@ -1,0 +1,5 @@
+# pip freeze of `.venv-pddl` (PDDLStream baseline, py3.10.17) on the machine that produced the 2026-09 results
+# (RTX 5070). Reference lock: install from it, or compare against it.
+numpy==2.2.6
+pybullet==3.2.7
+scipy==1.15.3
