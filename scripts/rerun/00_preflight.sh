@@ -209,9 +209,9 @@ default_of() { grep -hoE "environ\.get\(\"$1\", \"[^\"]*\"\)" "$RR_ROOT"/TAMP/ta
   echo
   echo "## Behaviour switches, at their code defaults (no SDL_* variable was set)"
   echo
-  echo "Pour continuations and the recovery ladder were added AFTER the 2026-09-12/13"
-  echo "campaign, so this run measures them and that campaign did not. The other rows"
-  echo "describe the same scene that campaign ran."
+  echo "Pour continuations, the recovery ladder and the planning hold were added AFTER"
+  echo "the 2026-09-12/13 campaign, so this run measures them and that campaign did not."
+  echo "The other rows describe the same scene that campaign ran."
   echo
   echo "| switch | default | added |"
   echo "|---|---|---|"
@@ -219,6 +219,7 @@ default_of() { grep -hoE "environ\.get\(\"$1\", \"[^\"]*\"\)" "$RR_ROOT"/TAMP/ta
   echo "| SDL_RECOVERY | $(default_of SDL_RECOVERY) | 09-16, wait for a re-detection before a missed tag fails |"
   echo "| SDL_RECOVERY_RETREAT | $(default_of SDL_RECOVERY_RETREAT) | 09-16, retreat to home and look again |"
   echo "| SDL_RECOVERY_SCAN | $(default_of SDL_RECOVERY_SCAN) | off: needs the wrist camera |"
+  echo "| SDL_PLAN_HOLD_SIM | $(default_of SDL_PLAN_HOLD_SIM) | 09-28, the simulator stops stepping (physics + rendering) while cuTAMP plans |"
   echo "| SDL_UPRIGHT_TRANSPORT | $(default_of SDL_UPRIGHT_TRANSPORT) | upright bound on carry segments |"
   echo "| SDL_TAG_MOUNT | $(default_of SDL_TAG_MOUNT) | 09-12, tags on a raised mount |"
   echo "| SDL_GLASSWARE | $(default_of SDL_GLASSWARE) | the paper's glassware |"

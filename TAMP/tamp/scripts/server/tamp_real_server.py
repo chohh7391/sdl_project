@@ -358,6 +358,10 @@ class RealTAMPServer(TAMPServer):
             return False
         return True
 
+    def _hold_plant_for_planning(self, hold):
+        # No simulator shares the GPU with the planner on the real cell.
+        return False
+
     def _finish_execution(self, success):
         if not success:
             # Whatever was in flight is no longer wanted. The tree's abort

@@ -430,6 +430,8 @@ class TAMPServer(Node):
         self.plan_failure_pub = self.create_publisher(
             String, "tamp_plan_failure_reason", _latched_qos)
         self.set_simulation_state_cli = self.create_client(SetSimulationState, "set_simulation_state", callback_group=self.reentrant_group)
+        # Held around each plan; see _hold_plant_for_planning.
+        self.hold_sim_cli = self.create_client(SetBool, "isaac_hold_for_planning", callback_group=self.reentrant_group)
 
         # TF
         self.tf_buffer = tf2_ros.Buffer()
@@ -1123,11 +1125,17 @@ class TAMPServer(Node):
     def scale_cb(self, msg):
         self.scale = msg.data
 
+    # The simulator stops stepping while cuTAMP plans, so the scene does not
+    # share the GPU with the optimiser; SDL_PLAN_HOLD_SIM=0 plans beside a
+    # stepping scene, as every run before 2026-09-28 did.
+    PLAN_HOLD_SIM = os.environ.get("SDL_PLAN_HOLD_SIM", "1") == "1"
+
     def tamp_plan_cb(self, request, response):
 
-        # Planning runs in this process and does not require pausing Isaac Sim.
-        # Keeping the timeline playing preserves /isaac_joint_states, so q_init
-        # is the actual live state rather than an empty value/q_home fallback.
+        # q_init is read BEFORE the plant is held: /isaac_joint_states only
+        # publishes while the scene steps, and the original pause-then-read
+        # left q0 empty and crashed solve_curobo. The hold is released in the
+        # finally below, however planning ends.
         q_init = list(self._arm_q())  # num_dof = 6
         if len(q_init) < 6:
             # isaac_joint_states not received yet (e.g. the sim is paused, so the
@@ -1142,6 +1150,7 @@ class TAMPServer(Node):
                 f"using q_home for '{self.tamp.config.robot}' as q_init."
             )
 
+        held = self._hold_plant_for_planning(True)
         try:
             result = self.tamp.plan(q_init, None)
             curobo_plan = with_explicit_pour_steps(result.plan)
@@ -1172,6 +1181,10 @@ class TAMPServer(Node):
             response.plan_success = False
             self.plan_failure_pub.publish(
                 String(data="plan_cb_exception:%s" % _classify_plan_error(e)))
+
+        finally:
+            if held:
+                self._hold_plant_for_planning(False)
 
         return response
     
@@ -1255,6 +1268,37 @@ class TAMPServer(Node):
 
         self.set_simulation_state_cli.call(start_req)
         return True
+
+    def _hold_plant_for_planning(self, hold):
+        """Stop (hold=True) or resume the plant's stepping around a plan.
+
+        In simulation the scene renders on the GPU the planner optimises on,
+        so the simulator stops stepping for the length of the plan
+        (isaac_hold_for_planning in simulation.py). True means the simulator
+        acknowledged. A hold that fails is logged and planning goes ahead
+        beside a stepping scene. Real hardware has nothing to hold, so the
+        subclass replaces this with a no-op.
+        """
+        if not self.PLAN_HOLD_SIM:
+            return False
+        what = "hold" if hold else "resume"
+        if not self.hold_sim_cli.wait_for_service(timeout_sec=2.0):
+            self.get_logger().error("isaac_hold_for_planning unavailable; cannot %s the simulator" % what)
+            return False
+        request = SetBool.Request()
+        request.data = bool(hold)
+        # Idempotent on the simulator side, so a lost response is simply retried.
+        for _ in range(3):
+            future = self.hold_sim_cli.call_async(request)
+            deadline = time.time() + 5.0
+            while not future.done() and time.time() < deadline:
+                time.sleep(0.005)
+            if future.done() and future.result() is not None and future.result().success:
+                self.get_logger().info("simulator %s for planning" % ("held" if hold else "resumed"))
+                return True
+            future.cancel()
+        self.get_logger().error("simulator did not acknowledge the %s for planning" % what)
+        return False
 
     def _finish_execution(self, success):
         """Release the plant after a plan, however it ended."""

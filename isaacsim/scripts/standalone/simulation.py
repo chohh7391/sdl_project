@@ -8,7 +8,7 @@ from std_msgs.msg import Float32, Float32MultiArray, String
 from geometry_msgs.msg import Wrench
 from tamp_interfaces.srv import ToolChange, GetRobotInfo, GetToolInfo
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy
-import sys, os
+import sys, os, time
 
 ROBOT_STAGE_PATH = "/World/Robot"
 ROOT_JOINT_PATH = ROBOT_STAGE_PATH + "/root_joint"
@@ -97,9 +97,9 @@ class Simulation(Node):
         # action graphs
         # SDL_CAMERAS=0 skips the rendered-camera graph entirely. The two
         # 1280x720 cameras render continuously on the same GPU that cuTAMP
-        # optimises on, so they are part of the measured planning latency; a
-        # ground-truth-state run does not need them, and this makes the cost
-        # measurable instead of assumed.
+        # optimises on (outside planning, which holds stepping -- see
+        # hold_for_planning_cb); a ground-truth-state run does not need them,
+        # and this makes the cost measurable instead of assumed.
         # Whatever the task actually built, so adding a wrist camera is one
         # switch (SDL_WRIST_CAMERA) rather than an edit in three places.
         camera_paths = list(getattr(self.task, "camera_prim_paths",
@@ -177,6 +177,11 @@ class Simulation(Node):
         self.get_robot_info_srv = self.create_service(GetRobotInfo, "get_robot_info", self.get_robot_info_cb)
         self.get_tool_info_srv = self.create_service(GetToolInfo, "get_tool_info", self.get_tool_info_cb)
         self.tool_change_srv = self.create_service(ToolChange, "tool_change", self.tool_change_cb)
+
+        # Set by tamp_server around each plan; see hold_for_planning_cb.
+        self._held_for_planning = False
+        self._held_since = None
+        self.hold_for_planning_srv = self.create_service(SetBool, "isaac_hold_for_planning", self.hold_for_planning_cb)
 
         self.ft_pub = self.create_publisher(Wrench, "raw_ft_data", 10)
         self.scale_pub = self.create_publisher(Float32, "raw_scale_data", 10)
@@ -457,6 +462,9 @@ class Simulation(Node):
 
     def step_cb(self):
 
+        if self._held_for_planning:
+            return
+
         if self.simulation_app.is_running():
 
             # step simulation
@@ -489,6 +497,31 @@ class Simulation(Node):
         else:
             self.get_logger().info("Quit ROS2 Node")
             rclpy.try_shutdown()
+
+    def hold_for_planning_cb(self, request, response):
+        """Stop stepping the scene (data=True) or resume it (data=False).
+
+        cuTAMP optimises on the GPU this scene renders on. Measured on the
+        RTX 5080 with an idle scene (2026-09-28): 98 % GPU utilisation while
+        stepping, 24-25 % with the timeline paused through
+        set_simulation_state (step_cb still renders every tick), 6 % held
+        here, 8-13 % with no simulator at all. So the planner holds stepping
+        itself -- no physics, no rendering, no action-graph publishing -- and
+        the timeline stays playing, so resuming continues the same physics
+        state. The services of this node keep answering while held; the timer
+        callback returns at once.
+        """
+        hold = bool(request.data)
+        if hold and not self._held_for_planning:
+            self._held_since = time.time()
+            self.get_logger().info("stepping held for planning")
+        elif not hold and self._held_for_planning:
+            self.get_logger().info("stepping resumed after %.2f s held for planning"
+                                   % (time.time() - self._held_since))
+        self._held_for_planning = hold
+        response.success = True
+        response.message = "held" if hold else "stepping"
+        return response
 
     def publish_ft(self, ft_data: np.ndarray):
         
