@@ -75,6 +75,21 @@ def km_rmst(times, events, horizon):
     return area, surv, curve
 
 
+def _refuse_repeat(out, seed, path):
+    """One row per seed, or stop.
+
+    Results are keyed by seed, so a file with several rows per seed -- repeated
+    runs, several planner seeds -- used to keep only the LAST row for each and
+    report it as if it were the whole file: the five-stream PDDLStream CSVs
+    scored one stream in five without a word. planner_comparison.py pairs
+    repeated runs properly.
+    """
+    if seed in out:
+        raise SystemExit(
+            "%s has more than one row for seed %d. This script compares ONE run "
+            "per planner; for repeated runs use planner_comparison.py." % (path, seed))
+
+
 def load_cutamp(path):
     out = {}
     for r in csv.DictReader(open(path)):
@@ -83,6 +98,7 @@ def load_cutamp(path):
             continue
         ok = str(r.get("plan_success", "")).strip().lower() == "true"
         t = r.get("planning_time_s", "")
+        _refuse_repeat(out, int(s), path)
         out[int(s)] = (ok, float(t) if t not in ("", None) else None,
                        r.get("failure_reason", ""))
     return out
@@ -93,6 +109,7 @@ def load_pddl(path):
     for r in csv.DictReader(open(path)):
         ok = str(r.get("plan_success", "")).strip() in ("1", "True", "true")
         t = r.get("planning_time_s", "")
+        _refuse_repeat(out, int(r["seed"]), path)
         out[int(r["seed"])] = (ok, float(t) if t else None,
                               r.get("failure_reason", ""))
     return out

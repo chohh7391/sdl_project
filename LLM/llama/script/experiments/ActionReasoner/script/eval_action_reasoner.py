@@ -1,4 +1,5 @@
 import os
+import time
 os.environ["UNSLOTH_DISABLE_STATISTICS"] = "1"
 import json
 import torch
@@ -14,7 +15,9 @@ _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ar_prompt import build_prompt, geometry_enabled
 print("[eval] geometry grounding: %s" % ("ON" if geometry_enabled() else "off"))
 
-_AR = "/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner"
+# The experiment directory, from this file rather than from one machine's home
+# directory, so the evaluation runs from any clone.
+_AR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 # Overridable so the same evaluation can be pointed at a checkpoint trained on
 # the 2400-sample split, which the shipped one was not (see train.py).
 MODEL_DIR = os.environ.get("AR_MODEL_DIR", os.path.join(_AR, "model/checkpoint"))
@@ -86,9 +89,16 @@ print(f"Test samples: {len(test_data)}\n")
 # =========================
 # Inference
 # =========================
+# Wall-clock time of each query, tokenization to decoded answer. The paper
+# reports an average inference time for this module, and the number has to come
+# from the model it evaluates, on the machine it states.
+INFER_TIMES = []
+
+
 def predict(example):
     inst = example["instruction"]
     prompt = build_prompt(inst)
+    _t0 = time.perf_counter()
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     with torch.no_grad():
         outputs = model.generate(
@@ -99,6 +109,9 @@ def predict(example):
             pad_token_id=tokenizer.eos_token_id,
         )
     generated = tokenizer.decode(outputs[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    INFER_TIMES.append(time.perf_counter() - _t0)
     return generated.strip().split("\n")[0].strip()
 
 # =========================
@@ -214,6 +227,15 @@ print("EVALUATION RESULTS")
 print("=" * 60)
 
 print(f"\nTotal: {total}, Format errors: {results['format_errors']}")
+if INFER_TIMES:
+    _ts = sorted(INFER_TIMES)
+    # The first query pays for CUDA warm-up; report it separately so it does not
+    # masquerade as the per-query cost.
+    _steady = sorted(INFER_TIMES[1:]) or _ts
+    print("Avg Inference Time: %.4fs  (median %.4fs, first query %.4fs, "
+          "steady-state mean %.4fs over %d queries)"
+          % (sum(_ts) / len(_ts), _ts[len(_ts) // 2], INFER_TIMES[0],
+             sum(_steady) / len(_steady), len(_steady)))
 
 print(f"\n--- Overall Accuracy ---")
 print(f"  Exact Match:      {results['exact_match']}/{total} ({100*results['exact_match']/total:.1f}%)")

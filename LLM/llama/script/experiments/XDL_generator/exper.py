@@ -18,14 +18,21 @@ from validator import ProcedureValidator, ProcedureValidationError
 # ==========================================
 # 0. 설정 및 모델 로드
 # ==========================================
-MODEL_PATH = "/home/home/sdl_ws/src/sdl_project/LLM/llama/model/checkpoint/xdl_generator/checkpoint"
+# The generator the paper evaluates. Its weights are NOT in git (see .gitignore:
+# LLM/llama/model/checkpoint/ is ignored); RERUN.md says how to bring them over
+# and the checksum to check them against. XDL_MODEL_DIR overrides the location.
+MODEL_PATH = os.environ.get("XDL_MODEL_DIR", os.path.abspath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "..", "..", "model", "checkpoint", "xdl_generator", "checkpoint")))
+# Where the generations go; defaults beside this script as before.
+_DUMP_OVERRIDE = os.environ.get("XDL_GENERATIONS_OUT")
 # test_data.json lives beside this script; test_data_gen.py's SAVE_PATH points
 # one directory up, where no such file exists, so this path was broken.
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data.json")
 # Every generation is also written out, so field-level scoring (score_xdl.py)
 # can run against the recovered labels without re-running inference.
-DUMP_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "xdl_generations.json")
+DUMP_PATH = _DUMP_OVERRIDE or os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                           "xdl_generations.json")
 
 print("⏳ Loading model...")
 model, tokenizer = FastLanguageModel.from_pretrained(
