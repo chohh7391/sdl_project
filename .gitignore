@@ -49,6 +49,11 @@ scripts/trials/logs/**
 !scripts/trials/logs/*/
 !scripts/trials/logs/**/RUN_INFO.txt
 
+# --- re-run campaign logs (scripts/rerun) ------------------------------------
+# Same size problem as the trial logs above; the CSVs, RUN_INFO.md, the GPU
+# monitor and RESULTS.md beside them are the record and stay tracked.
+_2026__IEEE_Access/revision/analysis/data/rerun/*/logs/
+
 # --- LLM model weights and archives -----------------------------------------
 # Fine-tuned adapters / tokenizers / optimizer state. Re-obtain from the
 # training scripts in LLM/llama/script/ or the authors' model store.
@@ -82,10 +87,29 @@ experiments/pddlstream/examples/**
 !experiments/pddlstream/examples/pybullet/fr5_Stir/**
 !experiments/pddlstream/examples/pybullet/fr5_obstacle/
 !experiments/pddlstream/examples/pybullet/fr5_obstacle/**
+# fr5_paired is the runner the paper's planner comparison actually uses
+# (run_paired_trials.py, on the layouts exported from Isaac Sim), with the
+# URDFs make_models.py writes for it. It was missing from this list, so a clone
+# had the baseline's results but not the code that produced them.
+!experiments/pddlstream/examples/pybullet/fr5_paired/
+!experiments/pddlstream/examples/pybullet/fr5_paired/**
 !experiments/pddlstream/examples/pybullet/utils/
 !experiments/pddlstream/examples/pybullet/utils/pybullet_tools/
 !experiments/pddlstream/examples/pybullet/utils/pybullet_tools/**
-experiments/pddlstream/examples/pybullet/utils/models/
+# The vendored model packs stay out, EXCEPT the FR5 description the baseline
+# loads: the three robot URDFs fr5_paired uses (ag95 for Transfer, the *_pb
+# conversions for Move and Stir) and their meshes, 14 MB. Without them a clone
+# cannot run the baseline at all. The USD and config trees are not needed.
+experiments/pddlstream/examples/pybullet/utils/models/**
+!experiments/pddlstream/examples/pybullet/utils/models/
+!experiments/pddlstream/examples/pybullet/utils/models/fr5_description/
+!experiments/pddlstream/examples/pybullet/utils/models/fr5_description/meshes/
+!experiments/pddlstream/examples/pybullet/utils/models/fr5_description/meshes/**
+!experiments/pddlstream/examples/pybullet/utils/models/fr5_description/urdf/
+!experiments/pddlstream/examples/pybullet/utils/models/fr5_description/urdf/robot/
+!experiments/pddlstream/examples/pybullet/utils/models/fr5_description/urdf/robot/fr5_ag95.urdf
+!experiments/pddlstream/examples/pybullet/utils/models/fr5_description/urdf/robot/fr5_vgc10_pb.urdf
+!experiments/pddlstream/examples/pybullet/utils/models/fr5_description/urdf/robot/fr5_dh3_pb.urdf
 experiments/pddlstream/examples/pybullet/utils/pybullet_tools/ikfast/
 
 # --- vendored simulation assets ---------------------------------------------
