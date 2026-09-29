@@ -1,0 +1,26 @@
+
+=== stir_ground_truth_rep1.csv : 30 trials ===
+  seeds 0..29, 30 distinct
+
+RATES
+  task success                  29/30  =  96.7%  [95% CI  83.3,  99.4]   <- headline [stir]: vessel upright on the stirrer + stir bar inside it
+  planning success              29/30  =  96.7%  [95% CI  83.3,  99.4]
+  trajectory ran to completion  29/30  =  96.7%  [95% CI  83.3,  99.4]   (NOT a task-success criterion)
+  flask upright after release   29/30  =  96.7%  [95% CI  83.3,  99.4]
+  flask inside goal region      29/30  =  96.7%  [95% CI  83.3,  99.4]
+  pour step executed             0/30  =   0.0%  [95% CI  -0.0,  11.4]
+  task-specific extra condition  29/30  =  96.7%  [95% CI  83.3,  99.4]
+  placement error from goal centre [mm]: n=29 min 0.8  median 7.2  max 17.7
+
+PLANNING
+  time [s]                     n=29  min 11.45  median 11.84  mean 11.79  sd 0.16  max 12.08 
+  time <= 180 s                 29/29  = 100.0%  [95% CI  88.3, 100.0]
+  satisfying particles         n=29  min 620.00  median 680.00  mean 705.14  sd 64.36  max 855.00 
+
+CARRIED-VESSEL TILT (executed, simulator measurement)
+  transport max [deg]          n=29  min 1.71  median 2.96  mean 3.05  sd 1.11  max 5.47 
+  transport <= 5 deg            28/29  =  96.6%  [95% CI  82.8,  99.4]
+  final tilt after release [deg] n=29  min 0.00  median 0.01  mean 0.01  sd 0.01  max 0.02 
+
+FAILURES
+    1x plan_planner_exception:RuntimeError

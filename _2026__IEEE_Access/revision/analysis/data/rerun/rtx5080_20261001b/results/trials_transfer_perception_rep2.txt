@@ -1,0 +1,26 @@
+
+=== transfer_perception_rep2.csv : 30 trials ===
+  seeds 0..29, 30 distinct
+
+RATES
+  task success                  27/30  =  90.0%  [95% CI  74.4,  96.5]   <- headline [transfer]: poured + placed upright in the goal region
+  planning success              27/30  =  90.0%  [95% CI  74.4,  96.5]
+  trajectory ran to completion  27/30  =  90.0%  [95% CI  74.4,  96.5]   (NOT a task-success criterion)
+  beaker upright after release  27/30  =  90.0%  [95% CI  74.4,  96.5]
+  beaker inside goal region     27/30  =  90.0%  [95% CI  74.4,  96.5]
+  pour step executed            27/30  =  90.0%  [95% CI  74.4,  96.5]
+  placement error from goal centre [mm]: n=27 min 3.3  median 13.2  max 23.2
+
+PLANNING
+  time [s]                     n=27  min 14.18  median 14.51  mean 18.18  sd 7.52  max 42.97 
+  time <= 180 s                 27/27  = 100.0%  [95% CI  87.5, 100.0]
+  satisfying particles         n=27  min 299.00  median 454.00  mean 446.04  sd 84.14  max 587.00 
+
+CARRIED-VESSEL TILT (executed, simulator measurement)
+  transport max [deg]          n=27  min 2.11  median 3.61  mean 3.80  sd 1.30  max 7.29 
+  transport <= 5 deg            23/27  =  85.2%  [95% CI  67.5,  94.1]
+  final tilt after release [deg] n=27  min 0.00  median 0.00  mean 0.00  sd 0.00  max 0.00 
+
+FAILURES
+    2x set_tamp_env_failed
+    1x plan_planner_exception:RuntimeError

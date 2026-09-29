@@ -1,0 +1,24 @@
+
+=== move_ground_truth_rep2.csv : 30 trials ===
+  seeds 0..29, 30 distinct
+
+RATES
+  task success                  30/30  = 100.0%  [95% CI  88.6, 100.0]   <- headline [move]: placed upright inside the goal region (no pour step)
+  planning success              30/30  = 100.0%  [95% CI  88.6, 100.0]
+  trajectory ran to completion  30/30  = 100.0%  [95% CI  88.6, 100.0]   (NOT a task-success criterion)
+  box upright after release     30/30  = 100.0%  [95% CI  88.6, 100.0]
+  box inside goal region        30/30  = 100.0%  [95% CI  88.6, 100.0]
+  placement error from goal centre [mm]: n=30 min 5.6  median 12.2  max 22.2
+
+PLANNING
+  time [s]                     n=30  min 8.73  median 8.82  mean 8.82  sd 0.08  max 9.16 
+  time <= 180 s                 30/30  = 100.0%  [95% CI  88.6, 100.0]
+  satisfying particles         n=30  min 662.00  median 710.50  mean 708.97  sd 19.13  max 751.00 
+
+CARRIED-VESSEL TILT (executed, simulator measurement)
+  transport max [deg]          n=30  min 1.20  median 2.12  mean 2.01  sd 0.35  max 2.54 
+  transport <= 5 deg            30/30  = 100.0%  [95% CI  88.6, 100.0]
+  final tilt after release [deg] n=30  min 0.00  median 0.00  mean 0.00  sd 0.00  max 0.00 
+
+FAILURES
+  none recorded

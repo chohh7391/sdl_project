@@ -1,0 +1,196 @@
+Skipping import of cpp extensions due to incompatible torch version 2.7.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:
+    PyTorch 2.10.0+cu128 with CUDA 1208 (you have 2.7.0+cu128)
+    Python  3.10.19 (you have 3.10.19)
+  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)
+  Memory-efficient attention, SwiGLU, sparse and more won't be available.
+  Set XFORMERS_MORE_DETAILS=1 for more details
+Unsloth 2025.10.8 patched 16 layers with 0 QKV layers, 0 O layers and 0 MLP layers.
+🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+========
+Switching to PyTorch attention since your Xformers is broken.
+========
+
+Unsloth: Xformers was not installed correctly.
+Please install xformers separately first.
+Then confirm if it's correctly installed by running:
+python -m xformers.info
+
+Longer error message:
+xFormers can't load C++/CUDA extensions. xFormers was built for:
+    PyTorch 2.10.0+cu128 with CUDA 1208 (you have 2.7.0+cu128)
+    Python  3.10.19 (you have 3.10.19)
+  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)
+  Memory-efficient attention, SwiGLU, sparse and more won't be available.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+[eval] geometry grounding: off
+[eval] model=/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/model_unseen/checkpoint
+[eval] test =/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/dataset/unseen/L1_unseen_class.jsonl
+Loading model...
+==((====))==  Unsloth 2025.10.8: Fast Llama patching. Transformers: 4.56.2.
+   \\   /|    NVIDIA GeForce RTX 5080. Num GPUs = 1. Max memory: 15.447 GB. Platform: Linux.
+O^O/ \_/ \    Torch: 2.7.0+cu128. CUDA: 12.0. CUDA Toolkit: 12.8. Triton: 3.3.0
+\        /    Bfloat16 = TRUE. FA [Xformers = None. FA2 = False]
+ "-____-"     Free license: http://github.com/unslothai/unsloth
+Unsloth: Fast downloading is enabled - ignore downloading bars which are red colored!
+Model loaded.
+
+Loading test data...
+Test samples: 1546
+
+Running evaluation...
+  [50/1546] running accuracy: 52.0%
+  [100/1546] running accuracy: 49.0%
+  [150/1546] running accuracy: 55.3%
+  [200/1546] running accuracy: 50.5%
+  [250/1546] running accuracy: 50.4%
+  [300/1546] running accuracy: 49.0%
+  [350/1546] running accuracy: 49.1%
+  [400/1546] running accuracy: 49.2%
+  [450/1546] running accuracy: 48.0%
+  [500/1546] running accuracy: 47.4%
+  [550/1546] running accuracy: 47.5%
+  [600/1546] running accuracy: 47.5%
+  [650/1546] running accuracy: 47.4%
+  [700/1546] running accuracy: 47.1%
+  [750/1546] running accuracy: 46.0%
+  [800/1546] running accuracy: 46.1%
+  [850/1546] running accuracy: 45.8%
+  [900/1546] running accuracy: 45.6%
+  [950/1546] running accuracy: 45.8%
+  [1000/1546] running accuracy: 45.4%
+  [1050/1546] running accuracy: 45.5%
+  [1100/1546] running accuracy: 45.1%
+  [1150/1546] running accuracy: 45.2%
+  [1200/1546] running accuracy: 45.1%
+  [1250/1546] running accuracy: 45.8%
+  [1300/1546] running accuracy: 45.2%
+  [1350/1546] running accuracy: 45.6%
+  [1400/1546] running accuracy: 45.9%
+  [1450/1546] running accuracy: 45.8%
+  [1500/1546] running accuracy: 45.6%
+
+============================================================
+EVALUATION RESULTS
+============================================================
+
+Total: 1546, Format errors: 0
+Avg Inference Time: 0.0700s  (median 0.0633s, first query 0.4177s, steady-state mean 0.0698s over 1545 queries)
+
+--- Overall Accuracy ---
+  Exact Match:      702/1546 (45.4%)
+  Main Tool:        1230/1546 (79.6%)
+  Need Rearrange:   1279/1546 (82.7%)
+  Aux Tool:         950/1546 (61.4%)
+  Target Grid (category match): 1032/1546 (66.8%)
+  Target Grid (exact match):    918/1546 (59.4%)
+
+--- Accuracy by Category ---
+  no_rearrange: 696/895 (77.8%)
+  rearrange_context: 0/161 (0.0%)
+  rearrange_irrelevant: 6/490 (1.2%)
+
+--- Error Samples (first 10) ---
+
+  [1] Category: no_rearrange
+    Current XDL:     <Add vessel="flask_B" reagent="ethanol" volume="17 mL" />
+    Next XDL:        <Stir vessel="flask_A" time="20 s" />
+    Obstacle:        bottle_A at G3
+    Candidate Grids: stirrer zone: [G2]
+plate zone: [G1]
+workspace edge: [G7]
+open area: [G4, G5, G6, G9, G10, G11]
+    GT:   dh3,False,None,None
+    Pred: dh3,True,dh3,G2
+
+  [5] Category: rearrange_context
+    Current XDL:     <Transfer from_vessel="beaker_C" to_vessel="flask_C" volume="2 mL" />
+    Next XDL:        <Move object="box_A" place="plate_A" />
+    Obstacle:        box_A at G7 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G8]
+open area: [G2, G3, G4, G5, G6, G10, G11]
+    GT:   ag95,True,vgc10,G4
+    Pred: ag95,True,dh3,G2
+
+  [9] Category: rearrange_context
+    Current XDL:     <Move object="box" place="plate_A" />
+    Next XDL:        <CleanVessel vessel="flask_A" />
+    Obstacle:        flask_A at G11 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G8, G12]
+open area: [G2, G3, G4, G5, G6, G9, G11]
+    GT:   vgc10,True,dh3,G5
+    Pred: dh3,False,None,None
+
+  [11] Category: rearrange_irrelevant
+    Current XDL:     <Stir vessel="beaker_A" time="19 s" />
+    Next XDL:        <Move object="bottle_B" place="plate_A" />
+    Obstacle:        box_C at G10 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G8, G12]
+open area: [G2, G3, G4, G5, G6, G9, G10]
+    GT:   dh3,True,vgc10,G8
+    Pred: dh3,False,None,None
+
+  [12] Category: rearrange_irrelevant
+    Current XDL:     <Stir vessel="beaker_A" time="14 s" />
+    Next XDL:        <Add vessel="flask_C" reagent="water" volume="16 mL" />
+    Obstacle:        box at G7 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G8, G12]
+open area: [G2, G3, G4, G5, G10, G11]
+    GT:   dh3,True,vgc10,G8
+    Pred: dh3,True,dh3,G8
+
+  [18] Category: no_rearrange
+    Current XDL:     <Transfer from_vessel="flask_C" to_vessel="beaker_C" volume="5 mL" />
+    Next XDL:        <HeatChill vessel="flask_C" temp="12 C" active="true" />
+    Obstacle:        box_B at G11
+    Candidate Grids: heater zone: [G2]
+plate zone: [G1]
+workspace edge: [G7, G12]
+open area: [G4, G5, G6, G9, G10]
+    GT:   ag95,False,None,None
+    Pred: ag95,True,dh3,G2
+
+  [20] Category: rearrange_context
+    Current XDL:     <Move object="box_A" place="plate_A" />
+    Next XDL:        <Transfer from_vessel="flask" to_vessel="beaker" volume="12 mL" />
+    Obstacle:        beaker at G4 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G12]
+open area: [G2, G3, G4, G5, G6, G10, G11]
+    GT:   vgc10,True,dh3,G3
+    Pred: dh3,True,dh3,G10
+
+  [22] Category: rearrange_irrelevant
+    Current XDL:     <CleanVessel vessel="flask" />
+    Next XDL:        <Add vessel="flask_B" reagent="ethanol" volume="13 mL" />
+    Obstacle:        bottle_B at G11 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G12]
+open area: [G2, G3, G4, G5, G6, G9, G11]
+    GT:   dh3,True,vgc10,G7
+    Pred: dh3,True,dh3,G12
+
+  [25] Category: rearrange_irrelevant
+    Current XDL:     <CleanVessel vessel="beaker_A" />
+    Next XDL:        <Add vessel="flask_B" reagent="ethanol" volume="20 mL" />
+    Obstacle:        bottle_B at G10 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G8, G12]
+open area: [G2, G3, G4, G5, G6, G10, G11]
+    GT:   dh3,True,vgc10,G12
+    Pred: dh3,True,dh3,G8
+
+  [26] Category: rearrange_irrelevant
+    Current XDL:     <Add vessel="beaker_B" reagent="ethanol" volume="12 mL" />
+    Next XDL:        <Transfer from_vessel="flask" to_vessel="flask_C" volume="15 mL" />
+    Obstacle:        box_A at G6 (blocking)
+    Candidate Grids: workspace edge: [G7, G8, G12]
+open area: [G2, G3, G4, G5, G6, G10]
+    GT:   dh3,True,vgc10,G7
+    Pred: dh3,True,dh3,G8
+
+Detailed results saved to: /home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001b/llm/ar_unseen_L1_unseen_class.jsonl

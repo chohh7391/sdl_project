@@ -1,0 +1,9 @@
+pours: 29
+  along  mean   -3.4  sd  17.4  median   -9.3  95% CI of the mean [-9.7, +3.0]  |mean|/sd 0.19  negative 22/29
+  perp   mean   +8.2  sd  13.1  median   +6.9  95% CI of the mean [+3.5, +13.0]  |mean|/sd 0.63  negative 10/29
+  |err|  median  14.7  p90  39.5  within 17 mm 16/29 = 55%
+
+counterfactual: subtract the mean 'along' offset from every pour
+  |err| median  14.7 ->  15.6   within 17 mm 16/29 -> 18/29
+
+verdict: scatter dominates; no constant correction recovers much
