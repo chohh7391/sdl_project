@@ -43,8 +43,12 @@ from solve_scan_poses import Arm, URDF  # noqa: E402
 GRIP = "gripper_finger1_joint"
 
 
-def grasp_offset_from_urdf(urdf=URDF):
+def grasp_offset_from_urdf(urdf=URDF, flange=0.0):
     """The grasp_frame origin in wrist3_link coordinates, composed along the URDF.
+
+    *flange* is the real cell's adapter flange (SDL_GRIPPER_FLANGE_M, from the
+    run's SCENE_ENV.txt): the gripper rides it out along the tool axis, which
+    is wrist3_link's z, so it adds to the grasp frame's z and nothing else.
 
     Read from the URDF, not hardcoded, so a change such as the D435 mount's 4 mm
     TCP shift reaches the score as soon as the URDF carries it. The chain has
@@ -69,7 +73,12 @@ def grasp_offset_from_urdf(urdf=URDF):
             raise SystemExit("grasp chain has a %s joint at %s" % (typ, cur))
         M = T @ M
         cur = p
-    return M @ np.array([0.0, 0.0, 0.0, 1.0])
+    return M @ np.array([0.0, 0.0, 0.0, 1.0]) + np.array([0.0, 0.0, float(flange), 0.0])
+
+
+def flange_of(env):
+    """The adapter flange a run was recorded with (SCENE_ENV.txt), in metres."""
+    return float(env.get("SDL_GRIPPER_FLANGE_M", "0") or 0.0)
 
 
 #: How far inside the target's mouth radius the lip has to land. 2 mm is what
@@ -127,7 +136,7 @@ def main():
     bench = float(env.get("SDL_TABLE_Z_M", "0") or 0)
     riser = float(env.get("SDL_BEAKER_RISER_M", "0") or 0)
     base_z = bench + riser                       # the beaker's base, world z
-    arm, grasp = Arm(), grasp_offset_from_urdf()
+    arm, grasp = Arm(), grasp_offset_from_urdf(flange=flange_of(env))
     print("scene: bench %+.3f m, riser %.3f m -> beaker base at z=%.3f; real beaker %.0f mm; "
           "grasp_frame at (%.3f, %.3f, %.3f) in wrist3_link"
           % (bench, riser, base_z, a.beaker_h * 1000, grasp[0], grasp[1], grasp[2]))

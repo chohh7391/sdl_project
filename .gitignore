@@ -124,3 +124,8 @@ nohup.out
 
 # Isolated env for the PDDLStream baseline (CPU-only, pybullet).
 .venv-pddl/
+
+# Real-cell only: flange-patched copies of the shared robot model, written at
+# load time by TAMP/cuTAMP/cutamp/robots/flange.py (SDL_GRIPPER_FLANGE_M).
+*.flange_*mm.urdf
+*.flange_*mm.yml

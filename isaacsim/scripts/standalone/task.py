@@ -115,6 +115,73 @@ def _FOOTPRINT_SRC(name):
     return vessel_dims(name)
 
 
+def _apply_gripper_flange(robot_prim_path):
+    """REAL-CELL only: move the AG-95 out along the tool axis by SDL_GRIPPER_FLANGE_M.
+
+    The real cell's gripper sits on an adapter flange (author, 2026-09-29: about
+    1.5 cm) that the shared fr5_ag95 asset does not have, and the paper's scene
+    keeps the asset as it is: unset, nothing here runs. Set (by
+    scripts/real_cell/record_transfer_real.sh), the simulator's gripper goes out
+    by the same amount as cuTAMP's (TAMP/cuTAMP/cutamp/robots/flange.py), so the
+    grasp the planner computes is the grasp the simulated jaws make.
+
+    Done on the stage before physics starts, and in three parts, because the
+    importer split the gripper: its body is an Xform under wrist3_link/flange/
+    tool0, whose z is the tool axis; its fingers are separate rigid bodies at
+    the asset's rest pose; and the joints that hang them on the arm are anchored
+    in wrist3_link's frame, whose z is the same tool axis.
+    """
+    raw = os.environ.get("SDL_GRIPPER_FLANGE_M", "").strip()
+    flange = float(raw) if raw else 0.0
+    if flange == 0.0:
+        return
+    if not 0.0 < flange <= 0.05:
+        raise ValueError("SDL_GRIPPER_FLANGE_M=%r: the flange is metres, 0..0.05" % raw)
+    from pxr import Gf, Usd, UsdGeom, UsdPhysics
+    from isaacsim.core.utils.stage import get_current_stage
+
+    stage = get_current_stage()
+    root = stage.GetPrimAtPath(robot_prim_path)
+    prims = {prim.GetName(): prim for prim in Usd.PrimRange(root)}
+    wrist, body = prims["wrist3_link"], prims["gripper_base_link"]
+    now = Usd.TimeCode.Default()
+
+    def shift(prim, local_delta):
+        xform = UsdGeom.Xformable(prim)
+        ops = [op for op in xform.GetOrderedXformOps()
+               if op.GetOpType() == UsdGeom.XformOp.TypeTranslate]
+        op = ops[0] if ops else xform.AddTranslateOp()
+        value = op.Get(now) or Gf.Vec3d(0.0, 0.0, 0.0)
+        op.Set(type(value)(value[0] + local_delta[0], value[1] + local_delta[1],
+                           value[2] + local_delta[2]))
+
+    # The tool axis in the world, at the pose the asset was authored in.
+    axis = UsdGeom.Xformable(wrist).ComputeLocalToWorldTransform(now).TransformDir(
+        Gf.Vec3d(0.0, 0.0, 1.0)).GetNormalized() * flange
+    shift(body, (0.0, 0.0, flange))
+    fingers = [prim for name, prim in prims.items()
+               if name.startswith("gripper_") and prim.HasAPI(UsdPhysics.RigidBodyAPI)
+               and not str(prim.GetPath()).startswith(str(wrist.GetPath()) + "/")]
+    for prim in fingers:
+        to_parent = UsdGeom.Xformable(prim.GetParent()).ComputeLocalToWorldTransform(now).GetInverse()
+        shift(prim, to_parent.TransformDir(axis))
+    anchors = []
+    for prim in Usd.PrimRange(root):
+        if not prim.IsA(UsdPhysics.Joint):
+            continue
+        joint = UsdPhysics.Joint(prim)
+        body0, body1 = joint.GetBody0Rel().GetTargets(), joint.GetBody1Rel().GetTargets()
+        if (body0 and body1 and body0[0] == wrist.GetPath()
+                and body1[0].name.startswith("gripper_")):
+            pos = joint.GetLocalPos0Attr().Get()
+            joint.GetLocalPos0Attr().Set(Gf.Vec3f(pos[0], pos[1], pos[2] + flange))
+            anchors.append(prim.GetName())
+    print("[Task] gripper on a %.1f mm adapter flange (SDL_GRIPPER_FLANGE_M): body, %d finger "
+          "bodies (%s) and %d wrist joints (%s) moved out along the tool axis"
+          % (flange * 1e3, len(fingers), ", ".join(sorted(p.GetName() for p in fingers)),
+             len(anchors), ", ".join(sorted(anchors))))
+
+
 class Task(ABC, BaseTask):
 
     def __init__(self, name: str, robot_prim_path: str, robot_name: str) -> None:
@@ -830,6 +897,7 @@ class Task(ABC, BaseTask):
                 gripper_closed_position=np.array([0.6524]),
                 deltas = np.array([-0.6524/5]) / get_stage_units(),
             )
+            _apply_gripper_flange(robot_prim_path)
             self._robot.joints_default_state = np.array([
                 0.0, -1.05, -2.18, -1.57, 1.57, 0.0, # Arm joint position
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, # Gripper joint position

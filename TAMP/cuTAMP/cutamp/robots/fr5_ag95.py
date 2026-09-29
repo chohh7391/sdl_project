@@ -22,6 +22,7 @@ from curobo.wrap.reacher.ik_solver import IKSolver, IKSolverConfig
 from jaxtyping import Float
 from yourdfpy import URDF
 
+from cutamp.robots.flange import apply_to_curobo_cfg
 from cutamp.robots.utils import RerunRobot
 
 # or simplified: (0, -1.57, 1.57, -1.57, -1.57, 0)
@@ -38,7 +39,8 @@ def fr5_ag95_curobo_cfg() -> dict:
     for key in keys:
         if key not in cfg["robot_cfg"]["kinematics"]:
             cfg["robot_cfg"]["kinematics"][key] = str(assets_dir)
-    return cfg
+    # The real cell's adapter flange, only when SDL_GRIPPER_FLANGE_M says so.
+    return apply_to_curobo_cfg(cfg)
     # return load_yaml(join_path(get_robot_configs_path(), "ur5e_robotiq_2f_140.yml"))
 
 
