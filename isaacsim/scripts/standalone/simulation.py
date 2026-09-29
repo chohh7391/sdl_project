@@ -343,20 +343,33 @@ class Simulation(Node):
         )
 
     def _movable_candidates(self):
-        """Name -> rigid-prim handle for the movable grasp candidates."""
-        return {
+        """Name -> rigid-prim handle for the movable grasp candidates.
+
+        Only the vessels the scene spawned: with SDL_TARGET_VESSEL=beaker2 there
+        is no flask, and a None handle here would be dereferenced downstream."""
+        cands = {
             "beaker": self.task.beaker,
             "flask": self.task.flask,
+            "beaker2": getattr(self.task, "beaker2", None),
             "box": self.task.box,
             "magnet": self.task.magnet,
         }
+        return {k: v for k, v in cands.items() if v is not None}
 
-    # Full side lengths [m] of the spawned colliders, matching task.py set_object().
-    # Only needed for vessels whose POURING LIP has to be located.
-    _VESSEL_DIMS = {
-        "beaker": (0.05, 0.05, 0.135),
-        "flask": (0.07, 0.07, 0.12),
-    }
+    def _vessel_lip_dims(self, name):
+        """Full side lengths [m] of a vessel's spawned collider, for locating its
+        POURING LIP, or None for an object that is not a vessel.
+
+        Read from the table the colliders are built from (task._vessel_dims ->
+        envs.constants), not repeated here. The copy that used to be here held
+        the legacy sizes whatever SDL_GLASSWARE said, so under the real
+        glassware the lip was placed as if the 60 mm beaker were 135 mm tall:
+        37.5 mm too far along its axis, about 32 mm sideways at a 60 deg pour.
+        Under the legacy set the two agree, so nothing measured with it moves.
+        """
+        if name not in ("beaker", "flask", "beaker2"):
+            return None
+        return tuple(self.task._vessel_dims(name))
 
     def _lip_world_xy(self, name):
         """World (x, y, z) of the pouring lip of a tilted vessel, or None.
@@ -372,7 +385,7 @@ class Simulation(Node):
         direction of the rim plane. Undefined while the vessel is upright, where
         the whole rim is level -- that case returns the vessel's own xy.
         """
-        dims = self._VESSEL_DIMS.get(name)
+        dims = self._vessel_lip_dims(name)
         cand = self._movable_candidates().get(name)
         if dims is None or cand is None:
             return None
