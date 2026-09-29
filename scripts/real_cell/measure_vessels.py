@@ -29,7 +29,13 @@ Default topics:
 A vessel is reported only if it gave --min-samples poses within --seconds, all
 within --max-spread-mm of their median, in base_link. Anything else exits 1 and
 names the vessel: a plan against a pose that is still moving, or that one camera
-alone jumps between, is a plan against a guess.
+alone jumps between, is a plan against a guess. The vessels that DID pass are
+printed either way, so a caller can tell which ones to go and look for.
+
+--latch is for an occlusion-recovery sweep, where a tag is in view only while
+the wrist camera dwells over it: each vessel is reported as soon as its last
+--min-samples poses agree within the same limits, and the wait ends when every
+vessel has latched or after --seconds.
 """
 import argparse
 import math
@@ -54,6 +60,17 @@ def median(values):
     return v[n // 2] if n % 2 else 0.5 * (v[n // 2 - 1] + v[n // 2])
 
 
+def assess(pts):
+    """(x, y, z, spread_mm, bearing_deg, bearing_spread_deg) of a set of poses."""
+    mx, my = median([p[0] for p in pts]), median([p[1] for p in pts])
+    mz = median([p[2] for p in pts])
+    spread = max(math.hypot(p[0] - mx, p[1] - my) for p in pts) * 1e3
+    bearing = math.degrees(math.atan2(sum(p[4] for p in pts), sum(p[3] for p in pts)))
+    bspread = max(abs((math.degrees(math.atan2(p[4], p[3])) - bearing + 180.0) % 360.0 - 180.0)
+                  for p in pts)
+    return mx, my, mz, spread, bearing, bspread
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("vessels", nargs="+", help="NAME or NAME=TOPIC")
@@ -61,6 +78,9 @@ def main():
     ap.add_argument("--min-samples", type=int, default=10)
     ap.add_argument("--max-spread-mm", type=float, default=5.0)
     ap.add_argument("--max-bearing-spread-deg", type=float, default=5.0)
+    ap.add_argument("--latch", action="store_true",
+                    help="report each vessel once its last --min-samples poses agree; "
+                         "wait up to --seconds for all of them")
     a = ap.parse_args()
 
     topics = {}
@@ -101,8 +121,23 @@ def main():
         samples[name].clear()
         frames[name].clear()
     deadline = time.monotonic() + a.seconds
+    latched = {}
     while time.monotonic() < deadline:
         rclpy.spin_once(node, timeout_sec=0.05)
+        if not a.latch:
+            continue
+        for name, pts in samples.items():
+            if name in latched or len(pts) < a.min_samples:
+                continue
+            recent = pts[-a.min_samples:]
+            if assess(recent)[3] <= a.max_spread_mm and assess(recent)[5] <= a.max_bearing_spread_deg:
+                latched[name] = list(recent)
+                print("%s: latched after %d poses" % (name, len(pts)), file=sys.stderr)
+        if len(latched) == len(topics):
+            break
+    if a.latch:
+        for name in samples:
+            samples[name] = latched.get(name, samples[name])
     del subs
     node.destroy_node()
     rclpy.shutdown()
@@ -121,12 +156,7 @@ def main():
                   % (name, len(pts), topic, a.seconds, a.min_samples), file=sys.stderr)
             ok = False
             continue
-        mx, my = median([p[0] for p in pts]), median([p[1] for p in pts])
-        mz = median([p[2] for p in pts])
-        spread = max(math.hypot(p[0] - mx, p[1] - my) for p in pts) * 1e3
-        bearing = math.degrees(math.atan2(sum(p[4] for p in pts), sum(p[3] for p in pts)))
-        bspread = max(abs((math.degrees(math.atan2(p[4], p[3])) - bearing + 180.0) % 360.0 - 180.0)
-                      for p in pts)
+        mx, my, mz, spread, bearing, bspread = assess(pts)
         outward = math.degrees(math.atan2(my, mx))
         off = (bearing - outward + 180.0) % 360.0 - 180.0
         print("%s: (%.4f, %.4f) from %d poses on %s, spread %.1f mm; base at z=%.4f; tag plate "
@@ -143,10 +173,9 @@ def main():
                   "from; the planner routes around it, but turn it away if the plan fails"
                   % name, file=sys.stderr)
         out.append("%s %.4f %.4f %.1f" % (name, mx, my, bearing))
-    if not ok:
-        return 1
-    print("\n".join(out))
-    return 0
+    if out:
+        print("\n".join(out))
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

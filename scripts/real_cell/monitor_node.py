@@ -8,8 +8,6 @@ scripts/real_cell/rviz/real_cell.rviz. The robot model, the camera images and
 the perceived beakers (/perception/object_markers) come from the bringup and
 the pose node; this node adds what only the plan knows:
 
-  /real_cell/planned       MarkerArray  where the trajectory was PLANNED for: the
-                                        beakers, riser, balance and tag plates
   /real_cell/planned_path  MarkerArray  the grasp frame along the trajectory,
                                         coloured by operation, with the gripper
                                         closing (green) and opening (red)
@@ -17,6 +15,9 @@ the pose node; this node adds what only the plan knows:
                                         writes RUNS/STATUS), the balance reading,
                                         and how far each perceived beaker is from
                                         where the plan put it
+
+No object is drawn from the plan or from any preset layout: the objects in
+rviz are the perceived ones only, and the plan is shown as the path it drives.
 
 The trajectory shown is the one plan_remote.sh last selected: the file stem in
 RUNS/CURRENT. The node rereads it whenever that file changes, so a new plan
@@ -76,7 +77,6 @@ class Monitor:
         self.node, self.runs_dir, self.frame = node, runs_dir, frame
         latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
                              reliability=ReliabilityPolicy.RELIABLE)
-        self.pub_scene = node.create_publisher(MarkerArray, "/real_cell/planned", latched)
         # One message per topic: a latched topic keeps only its last message,
         # so the path and its gripper events travel together.
         self.pub_path = node.create_publisher(MarkerArray, "/real_cell/planned_path", latched)
@@ -123,10 +123,9 @@ class Monitor:
             self.node.get_logger().error(self.plan_label)
 
     def clear(self):
-        self.pub_scene.publish(MarkerArray(markers=[Marker(action=Marker.DELETEALL)]))
         self.pub_path.publish(MarkerArray(markers=[Marker(action=Marker.DELETEALL)]))
         self.current, self.current_mtime, self.planned_xy = None, -1.0, {}
-        self.plan_label = "no plan selected (green bodies appear once plan_remote.sh has one)"
+        self.plan_label = "no plan selected yet"
 
     def load(self, base):
         meta = json.load(open(base + ".meta.json"))
@@ -173,10 +172,12 @@ class Monitor:
                 owner = name[len("tag_"):]
                 z = support.get(owner, bench) - d[2] / 2.0
                 add(Marker.CUBE, "planned tag plates", (x, y, z), d, yaw, (0.9, 0.9, 0.9, 0.8))
-        self.pub_scene.publish(MarkerArray(markers=markers))
+        # The planned bodies are kept for the status line's plan-vs-perception
+        # distance only; nothing preset is drawn (the author, 2026-09-29).
+        del markers
         self.publish_path(base, meta, stamp)
         self.current = base
-        self.plan_label = "PLAN (green, not perception): %s / %s" % (
+        self.plan_label = "plan: %s / %s" % (
             os.path.basename(run_dir), os.path.basename(base))
         self.node.get_logger().info("showing %s" % base)
 

@@ -3,9 +3,10 @@
 # the three camera images. Started by scripts/real_cell/monitor.sh, which also
 # runs monitor_node.py for the /real_cell/* topics.
 #
-# Green = planned (from the fetched trajectory's meta), blue/orange = perceived
-# now (cho_object_pose, pour_beakers.yaml). A perceived beaker that is not inside
-# its green body is a cell that no longer matches the plan: stop before replaying.
+# Objects are shown ONLY as the cameras perceive them (cho_object_pose,
+# pour_beakers.yaml: beaker1 blue, beaker2 orange) -- no preset or planned
+# positions are drawn. The plan appears as the grasp path it will drive, and the
+# status line says how far each perceived beaker is from where it was planned.
 #
 # The RobotModel is the bringup's /robot_description; the images need the camera
 # drivers. Fixed Frame is the FR5's base_link.
@@ -82,17 +83,6 @@ Visualization Manager:
         Value: /perception/object_pose/beaker2
         Depth: 1
         Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-    - Class: rviz_default_plugins/MarkerArray
-      Name: Planned scene
-      Enabled: true
-      Namespaces:
-        {}
-      Topic:
-        Value: /real_cell/planned
-        Depth: 1
-        Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
     - Class: rviz_default_plugins/MarkerArray
