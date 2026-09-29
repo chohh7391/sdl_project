@@ -16,7 +16,10 @@ Pooled success rates use every trial of each planner (all cuTAMP repetitions,
 all PDDLStream seeds) with a Wilson 95% interval. A success that arrives after
 the budget is an unsolved, censored observation under that budget, for both
 planners alike, and the restricted mean time to solution comes from the
-Kaplan-Meier estimate over the budget.
+Kaplan-Meier estimate over the budget, as do the times by which 25/50/75% of
+the runs were solved (NR: never reached within the budget). The spread of the
+solved runs alone (mean, SD, quartiles) is reported beside them, labelled as
+such: it describes only the runs that succeeded.
 
 compare_planners.py answers the same question for ONE run per planner; it keys
 results by seed and refuses files with several rows per seed, which is why
@@ -30,6 +33,7 @@ import csv
 import glob
 import os
 import re
+import statistics
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -126,18 +130,40 @@ def within(res, budget):
     return {s: (ok and t is not None and t <= budget, t) for s, (ok, t) in res.items()}
 
 
-def rmst(trials, budget):
+def _km(trials, budget):
     times, ev = [], []
     for ok, t in trials:
         if ok:
             times.append(min(t, budget)); ev.append(1)
         else:
             times.append(budget); ev.append(0)
-    return km_rmst(times, ev, budget)[0]
+    return km_rmst(times, ev, budget)
+
+
+def rmst(trials, budget):
+    return _km(trials, budget)[0]
+
+
+def km_quartiles(trials, budget):
+    """Times by which 25/50/75% of the runs were solved; None if not within the budget."""
+    curve = _km(trials, budget)[2]
+    return [next((t for t, s in curve if s <= 1.0 - q + 1e-12), None) for q in (0.25, 0.5, 0.75)]
+
+
+def _q(t):
+    return "NR" if t is None else "%.1f" % t
 
 
 def solved_times(res_list):
     return sorted(t for res in res_list for ok, t in res.values() if ok and t is not None)
+
+
+def spread(ts):
+    """Solved-only spread: mean, SD (n-1), median and quartiles (linear interpolation)."""
+    if len(ts) == 1:
+        return ts[0], 0.0, ts[0], ts[0], ts[0]
+    q1, med, q3 = statistics.quantiles(ts, n=4, method="inclusive")
+    return statistics.mean(ts), statistics.stdev(ts), med, q1, q3
 
 
 def main():
@@ -173,15 +199,16 @@ def main():
             % (sorted(cu), sorted(pd), pairs, n_same))
 
         cs, ps = solved_times(cu.values()), solved_times(pd.values())
-        if cs:
-            say("- cuTAMP solved-only planning time: median %.2f s, range %.2f-%.2f s (n=%d)"
-                % (cs[len(cs) // 2], cs[0], cs[-1], len(cs)))
-        if ps:
-            say("- PDDLStream solved-only planning time: median %.2f s, range %.2f-%.2f s (n=%d)"
-                % (ps[len(ps) // 2], ps[0], ps[-1], len(ps)))
+        for name, ts in (("cuTAMP", cs), ("PDDLStream", ps)):
+            if ts:
+                mean, sd, med, q1, q3 = spread(ts)
+                say("- %s solved-only planning time (n=%d): mean %.2f s, SD %.2f s, "
+                    "median %.2f s [IQR %.2f-%.2f], range %.2f-%.2f s"
+                    % (name, len(ts), mean, sd, med, q1, q3, ts[0], ts[-1]))
         say("")
-        say("| budget | cuTAMP success [Wilson 95%] | RMST | PDDLStream success [Wilson 95%] | RMST |")
-        say("|---|---|---|---|---|")
+        say("| budget | cuTAMP success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] "
+            "| PDDLStream success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] |")
+        say("|---|---|---|---|---|---|---|")
         per_budget = []
         for budget in budgets:
             cu_trials = [v for r in cu for v in within(cu[r], budget).values()]
@@ -190,9 +217,12 @@ def main():
             kp, np_ = sum(v[0] for v in pd_trials), len(pd_trials)
             lc, hc = wilson(kc, nc)
             lp, hp = wilson(kp, np_)
-            say("| %.0f s | %d/%d = %.1f%% [%.1f, %.1f] | %.1f s | %d/%d = %.1f%% [%.1f, %.1f] | %.1f s |"
+            say("| %.0f s | %d/%d = %.1f%% [%.1f, %.1f] | %.1f s | %s "
+                "| %d/%d = %.1f%% [%.1f, %.1f] | %.1f s | %s |"
                 % (budget, kc, nc, 100.0 * kc / nc, lc, hc, rmst(cu_trials, budget),
-                   kp, np_, 100.0 * kp / np_, lp, hp, rmst(pd_trials, budget)))
+                   " / ".join(_q(t) for t in km_quartiles(cu_trials, budget)),
+                   kp, np_, 100.0 * kp / np_, lp, hp, rmst(pd_trials, budget),
+                   " / ".join(_q(t) for t in km_quartiles(pd_trials, budget))))
             rows = []
             for r in pairs:
                 c, p = within(cu[r], budget), within(pd[r], budget)

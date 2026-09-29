@@ -1,6 +1,6 @@
 # 재실험 결과 — `rtx5080_20261001b`
 
-`scripts/rerun/90_analyse.sh`가 2026-09-29 11:47:33에 생성했습니다. 손으로 고치지 말고 다시 생성하세요.
+`scripts/rerun/90_analyse.sh`가 2026-09-29 15:05:37에 생성했습니다. 손으로 고치지 말고 다시 생성하세요.
 환경과 코드는 [RUN_INFO.md](RUN_INFO.md), 절차와 원고 반영 위치는 저장소 루트의 `RERUN.md`에 있습니다.
 
 > **감사: CLEAN.** 모든 배치가 끝났고, 실행 중 GPU를 공유한 프로세스가 없었고, 논문 scene에서 돌았습니다.
@@ -94,14 +94,14 @@ budgets (declared): 60, 120, 180 s
 
 cuTAMP repetitions [0, 1, 2], PDDLStream planner seeds [0, 1, 2, 3, 4]; paired on [0, 1, 2]. Layouts checked identical on all 30 shared seeds.
 
-- cuTAMP solved-only planning time: median 14.23 s, range 13.96-43.73 s (n=88)
-- PDDLStream solved-only planning time: median 1.57 s, range 0.19-22.01 s (n=89)
+- cuTAMP solved-only planning time (n=88): mean 18.72 s, SD 8.69 s, median 14.22 s [IQR 14.05-14.84], range 13.96-43.73 s
+- PDDLStream solved-only planning time (n=89): mean 2.80 s, SD 3.87 s, median 1.57 s [IQR 0.77-2.92], range 0.19-22.01 s
 
-| budget | cuTAMP success [Wilson 95%] | RMST | PDDLStream success [Wilson 95%] | RMST |
-|---|---|---|---|---|
-| 60 s | 88/90 = 97.8% [92.3, 99.4] | 19.6 s | 89/150 = 59.3% [51.3, 66.9] | 26.1 s |
-| 120 s | 88/90 = 97.8% [92.3, 99.4] | 21.0 s | 89/150 = 59.3% [51.3, 66.9] | 50.5 s |
-| 180 s | 88/90 = 97.8% [92.3, 99.4] | 22.3 s | 89/150 = 59.3% [51.3, 66.9] | 74.9 s |
+| budget | cuTAMP success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] | PDDLStream success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] |
+|---|---|---|---|---|---|---|
+| 60 s | 88/90 = 97.8% [92.3, 99.4] | 19.6 s | 14.1 / 14.2 / 28.1 | 89/150 = 59.3% [51.3, 66.9] | 26.1 s | 1.2 / 5.1 / NR |
+| 120 s | 88/90 = 97.8% [92.3, 99.4] | 21.0 s | 14.1 / 14.2 / 28.1 | 89/150 = 59.3% [51.3, 66.9] | 50.5 s | 1.2 / 5.1 / NR |
+| 180 s | 88/90 = 97.8% [92.3, 99.4] | 22.3 s | 14.1 / 14.2 / 28.1 | 89/150 = 59.3% [51.3, 66.9] | 74.9 s | 1.2 / 5.1 / NR |
 
 | budget | pairing | cuTAMP | PDDLStream | cuTAMP-only | PDDLStream-only | exact McNemar p |
 |---|---|---|---|---|---|---|
@@ -119,14 +119,14 @@ cuTAMP repetitions [0, 1, 2], PDDLStream planner seeds [0, 1, 2, 3, 4]; paired o
 
 cuTAMP repetitions [0, 1, 2], PDDLStream planner seeds [0, 1, 2, 3, 4]; paired on [0, 1, 2]. Layouts checked identical on all 30 shared seeds.
 
-- cuTAMP solved-only planning time: median 8.81 s, range 8.73-9.16 s (n=90)
-- PDDLStream solved-only planning time: median 0.08 s, range 0.05-0.64 s (n=150)
+- cuTAMP solved-only planning time (n=90): mean 8.81 s, SD 0.06 s, median 8.81 s [IQR 8.78-8.84], range 8.73-9.16 s
+- PDDLStream solved-only planning time (n=150): mean 0.12 s, SD 0.10 s, median 0.08 s [IQR 0.07-0.11], range 0.05-0.64 s
 
-| budget | cuTAMP success [Wilson 95%] | RMST | PDDLStream success [Wilson 95%] | RMST |
-|---|---|---|---|---|
-| 60 s | 90/90 = 100.0% [95.9, 100.0] | 8.8 s | 150/150 = 100.0% [97.5, 100.0] | 0.1 s |
-| 120 s | 90/90 = 100.0% [95.9, 100.0] | 8.8 s | 150/150 = 100.0% [97.5, 100.0] | 0.1 s |
-| 180 s | 90/90 = 100.0% [95.9, 100.0] | 8.8 s | 150/150 = 100.0% [97.5, 100.0] | 0.1 s |
+| budget | cuTAMP success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] | PDDLStream success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] |
+|---|---|---|---|---|---|---|
+| 60 s | 90/90 = 100.0% [95.9, 100.0] | 8.8 s | 8.8 / 8.8 / 8.8 | 150/150 = 100.0% [97.5, 100.0] | 0.1 s | 0.1 / 0.1 / 0.1 |
+| 120 s | 90/90 = 100.0% [95.9, 100.0] | 8.8 s | 8.8 / 8.8 / 8.8 | 150/150 = 100.0% [97.5, 100.0] | 0.1 s | 0.1 / 0.1 / 0.1 |
+| 180 s | 90/90 = 100.0% [95.9, 100.0] | 8.8 s | 8.8 / 8.8 / 8.8 | 150/150 = 100.0% [97.5, 100.0] | 0.1 s | 0.1 / 0.1 / 0.1 |
 
 | budget | pairing | cuTAMP | PDDLStream | cuTAMP-only | PDDLStream-only | exact McNemar p |
 |---|---|---|---|---|---|---|
@@ -144,14 +144,14 @@ cuTAMP repetitions [0, 1, 2], PDDLStream planner seeds [0, 1, 2, 3, 4]; paired o
 
 cuTAMP repetitions [0, 1, 2], PDDLStream planner seeds [0, 1, 2, 3, 4]; paired on [0, 1, 2]. Layouts checked identical on all 30 shared seeds.
 
-- cuTAMP solved-only planning time: median 11.84 s, range 11.45-25.75 s (n=88)
-- PDDLStream solved-only planning time: median 0.77 s, range 0.30-3.29 s (n=117)
+- cuTAMP solved-only planning time (n=88): mean 12.96 s, SD 3.77 s, median 11.84 s [IQR 11.71-11.93], range 11.45-25.75 s
+- PDDLStream solved-only planning time (n=117): mean 0.89 s, SD 0.50 s, median 0.77 s [IQR 0.49-1.18], range 0.30-3.29 s
 
-| budget | cuTAMP success [Wilson 95%] | RMST | PDDLStream success [Wilson 95%] | RMST |
-|---|---|---|---|---|
-| 60 s | 88/90 = 97.8% [92.3, 99.4] | 14.0 s | 117/150 = 78.0% [70.7, 83.9] | 13.9 s |
-| 120 s | 88/90 = 97.8% [92.3, 99.4] | 15.3 s | 117/150 = 78.0% [70.7, 83.9] | 27.1 s |
-| 180 s | 88/90 = 97.8% [92.3, 99.4] | 16.7 s | 117/150 = 78.0% [70.7, 83.9] | 40.3 s |
+| budget | cuTAMP success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] | PDDLStream success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] |
+|---|---|---|---|---|---|---|
+| 60 s | 88/90 = 97.8% [92.3, 99.4] | 14.0 s | 11.7 / 11.8 / 11.9 | 117/150 = 78.0% [70.7, 83.9] | 13.9 s | 0.6 / 0.9 / 1.8 |
+| 120 s | 88/90 = 97.8% [92.3, 99.4] | 15.3 s | 11.7 / 11.8 / 11.9 | 117/150 = 78.0% [70.7, 83.9] | 27.1 s | 0.6 / 0.9 / 1.8 |
+| 180 s | 88/90 = 97.8% [92.3, 99.4] | 16.7 s | 11.7 / 11.8 / 11.9 | 117/150 = 78.0% [70.7, 83.9] | 40.3 s | 0.6 / 0.9 / 1.8 |
 
 | budget | pairing | cuTAMP | PDDLStream | cuTAMP-only | PDDLStream-only | exact McNemar p |
 |---|---|---|---|---|---|---|
