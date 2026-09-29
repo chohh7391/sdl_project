@@ -17,6 +17,10 @@
 #   grasp          level: 0-10 deg above horizontal
 #   after pouring  the beaker goes back on its box
 #
+# SDL_TARGET_VESSEL=beaker2 records the two-beaker variant of the same cell: the
+# flask is replaced by a second beaker standing at the centre of the balance pan
+# (SDL_SCALE_PAN_XY), and the task becomes transfer_real_beakers.
+#
 # Why the rig differs from the paper's scene: the level side grasp puts the
 # wrist body ~58 mm below the grasp point, so a vessel standing on the bench
 # could only be grasped at its tapered rim; the box raises it past that.
@@ -40,7 +44,13 @@ export SDL_GRASP_BETA_MIN_DEG="${SDL_GRASP_BETA_MIN_DEG:-0}" SDL_GRASP_BETA_MAX_
 export SDL_GRASP_H_FRAC="${SDL_GRASP_H_FRAC:-0.0}"
 export SDL_SCALE_PAN_XY="${SDL_SCALE_PAN_XY:-0.520,0.320}"
 export SDL_LAYOUT_XY="${SDL_LAYOUT_XY:-beaker:0.584,-0.298}"
-export TASK=transfer_real SDL_STATE_SOURCE=ground_truth PLAN_TIMEOUT="${PLAN_TIMEOUT:-300}"
+export SDL_TARGET_VESSEL="${SDL_TARGET_VESSEL:-flask}"
+case "$SDL_TARGET_VESSEL" in
+  flask)   TASK=transfer_real ;;
+  beaker2) TASK=transfer_real_beakers ;;
+  *) echo "SDL_TARGET_VESSEL must be flask or beaker2, not $SDL_TARGET_VESSEL" >&2; exit 2 ;;
+esac
+export TASK SDL_STATE_SOURCE=ground_truth PLAN_TIMEOUT="${PLAN_TIMEOUT:-300}"
 export LOGDIR="$OUT/logs" CSV="$OUT/transfer_real.csv"
 env | grep -E '^SDL_' | sort > "$OUT/SCENE_ENV.txt"
 git -C "$ROOT" rev-parse HEAD > "$OUT/COMMIT"

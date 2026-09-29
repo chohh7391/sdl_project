@@ -84,6 +84,30 @@ _GLASSWARE = {
     },
 }
 
+# A second beaker of the same kind, used as the pour TARGET on the real cell in
+# place of the flask (SDL_TARGET_VESSEL=beaker2). It is modelled at the height it
+# MEASURES, not shortened like the source beaker: the source is shortened only to
+# move the grasp band below its taper, whereas the target is never grasped and its
+# rim is what the pour clearance is measured from -- a model 10 mm short would put
+# the lip 10 mm closer to the real rim than planned. Its clear opening is the
+# outer width less the simulator's hollow-collider walls.
+_GLASSWARE["legacy"]["beaker2"] = list(_GLASSWARE["legacy"]["beaker"])
+_GLASSWARE["legacy"]["beaker2_mouth_dia"] = _GLASSWARE["legacy"]["beaker"][0] - 2 * VESSEL_WALL_M
+_GLASSWARE["real"]["beaker2"] = [0.05, 0.05, 0.070]
+_GLASSWARE["real"]["beaker2_mouth_dia"] = 0.05 - 2 * VESSEL_WALL_M
+
+#: The vessels that can stand on the balance as the pour target.
+TARGET_VESSELS = ("flask", "beaker2")
+
+
+def target_vessel():
+    """The pour target the scene stands on the balance: SDL_TARGET_VESSEL=flask
+    (default, the scene every earlier run used) or beaker2."""
+    name = _os.environ.get("SDL_TARGET_VESSEL", "flask").strip().lower() or "flask"
+    if name not in TARGET_VESSELS:
+        raise ValueError("SDL_TARGET_VESSEL=%r is not one of %s" % (name, TARGET_VESSELS))
+    return name
+
 
 def glassware_set():
     """Which glassware the run uses: SDL_GLASSWARE=legacy (default) or real."""
@@ -130,6 +154,11 @@ def vessel_dims(name):
 
 def flask_mouth_dia():
     return float(_GLASSWARE[glassware_set()]["flask_mouth_dia"])
+
+
+def mouth_dia(name):
+    """Clear opening [m] of a pour-target vessel (flask or beaker2)."""
+    return float(_GLASSWARE[glassware_set()]["%s_mouth_dia" % name])
 
 # --- the real cell's electronic scale ---------------------------------------
 # The physical Transfer target stands on a balance, not on the bench, and the

@@ -7,7 +7,7 @@ import rclpy just to reuse a regex.
 """
 import re
 
-LAYOUT = re.compile(r"\[Task\]\s+(beaker|flask|magnet|box|stirrer)\s+"
+LAYOUT = re.compile(r"\[Task\]\s+(beaker2|beaker|flask|magnet|box|stirrer)\s+"
                     r"xy=\(([-\d.]+),([-\d.]+)\)\s+yaw=([-\d.]+)deg")
 HOME = re.compile(r"\[Task\]\s+home_arm\(rad\) = \[([-\d.,\s]+)\]")
 # Furniture the scene stands vessels on -- the balance under the pour target,

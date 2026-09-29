@@ -1045,6 +1045,17 @@ class TAMPServer(Node):
                 ]
                 entities_states["poses"][entity] = entity_pose
                 sources[entity] = "ground_truth"
+            elif env_name == "transfer_real_beakers":
+                # An entity the simulator does not report keeps its ENTITIES
+                # placeholder pose -- the world origin -- and the planner would
+                # plan against a vessel standing in the robot's base. Earlier
+                # environments tolerate that silently and their measured numbers
+                # were taken that way, so the refusal is scoped to this one.
+                self.get_logger().error(
+                    "[state] the simulator reports no /World/%s; start it with "
+                    "SDL_TARGET_VESSEL=beaker2 for %s" % (entity, env_name))
+                response.success = False
+                return response
 
         self.get_logger().info(
             "[state] source=%s %s" % (state_source, " ".join(

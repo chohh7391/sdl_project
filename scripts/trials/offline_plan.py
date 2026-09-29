@@ -29,7 +29,7 @@ log = sys.argv[1]
 txt = open(log, errors="ignore").read()
 # the LAST block of each object is the effective layout
 lay = {}
-for m in re.finditer(r"\[Task\]\s+(beaker|flask|magnet|box|stirrer)\s+xy=\(([-\d.]+),([-\d.]+)\)\s+"
+for m in re.finditer(r"\[Task\]\s+(beaker2|beaker|flask|magnet|box|stirrer)\s+xy=\(([-\d.]+),([-\d.]+)\)\s+"
                      r"yaw=([-\d.]+)deg\s+z=([-\d.]+)", txt):
     lay[m.group(1)] = [float(m.group(i)) for i in (2, 3, 5, 4)]   # x, y, z, yaw
 for m in re.finditer(r"\[Task\]\s+(scale|riser)\s+xy=\(([-\d.]+),([-\d.]+)\)\s+yaw=([-\d.]+)deg\s+"

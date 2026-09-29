@@ -67,6 +67,18 @@ def _SCALE_SRC():
     return scale_dims, scale_pose_from_pan, SCALE_TOP_M
 
 
+def _TARGET_SRC():
+    """Which vessel stands on the balance (envs.constants.target_vessel)."""
+    import sys as _sys, os as _os
+    _src = _os.path.abspath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "..", "..", "..", "TAMP", "tamp", "src"))
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from envs.constants import target_vessel
+    return target_vessel()
+
+
 def _FOOTPRINT_SRC(name):
     """Vessel dims for the class-body footprint table (see Task._vessel_dims)."""
     import sys as _sys, os as _os
@@ -186,6 +198,21 @@ class Task(ABC, BaseTask):
             "box_goal": np.array([1.0, 0.0, 0.0, 0.0]),
         }
 
+        # SDL_TARGET_VESSEL=beaker2: the real cell with a second beaker as the
+        # pour target instead of the flask. It takes the flask's place -- same
+        # nominal xy, same slot in the randomizer's draw order -- so the other
+        # objects of a seed land exactly where they do in the flask scene, and
+        # the scale rig then stands it on the pan like the flask. There is no
+        # flask in this scene at all: a leftover one would stand on the pan too.
+        self.target_vessel = _TARGET_SRC()
+        if self.target_vessel != "flask":
+            p = self.default_positions.pop("flask")
+            self.default_orientations.pop("flask")
+            self.default_positions[self.target_vessel] = np.array(
+                [p[0], p[1], _FOOTPRINT_SRC(self.target_vessel)[2] / 2.0])
+            self.default_orientations[self.target_vessel] = np.array([1.0, 0.0, 0.0, 0.0])
+            print("[Task] target vessel: %s (no flask in this scene)" % self.target_vessel)
+
         # Nominal ("home") arm configuration, shared by every tool build in
         # set_robot(). Kept as a field so seeded randomization (SDL_SEED, below)
         # can perturb it deterministically without touching the four tool blocks.
@@ -238,7 +265,7 @@ class Task(ABC, BaseTask):
         self._bench_dz = dz
         if dz == 0.0:
             return
-        for name in ("table", "stirrer", "beaker", "flask", "magnet",
+        for name in ("table", "stirrer", "beaker", "flask", "beaker2", "magnet",
                      "box", "box_goal"):
             if name in self.default_positions:
                 p = self.default_positions[name]
@@ -298,7 +325,7 @@ class Task(ABC, BaseTask):
         picks up the truth.
         """
         print("[Task] effective layout:")
-        for name in ("beaker", "flask", "magnet", "box", "stirrer"):
+        for name in ("beaker", "flask", "beaker2", "magnet", "box", "stirrer"):
             if name not in self.default_positions:
                 continue
             p = self.default_positions[name]
@@ -357,15 +384,17 @@ class Task(ABC, BaseTask):
         self.default_positions["scale"] = self._scale_pose["position"]
         self.default_orientations["scale"] = self._scale_pose["orientation"]
 
-        # The flask stands ON the pan: its bottom is the pan top, not the bench.
-        flask_h = float(_FOOTPRINT_SRC("flask")[2])
-        self.default_positions["flask"] = np.array(
+        # The target vessel stands ON the pan, at its centre: its bottom is the
+        # pan top, not the bench.
+        target = self.target_vessel
+        flask_h = float(_FOOTPRINT_SRC(target)[2])
+        self.default_positions[target] = np.array(
             [pan[0], pan[1], dz + top + flask_h / 2.0])
         print("[Task] balance: pan=(%.4f, %.4f) body centre=(%.4f, %.4f) "
               "yaw=%.1fdeg dims=%s top=%.3f m"
               % (pan[0], pan[1], cx, cy, math.degrees(yaw), dims, top))
-        print("[Task] flask stands on the pan at z=%.4f (bench would be %.4f)"
-              % (dz + top + flask_h / 2.0, dz + flask_h / 2.0))
+        print("[Task] %s stands on the pan at z=%.4f (bench would be %.4f)"
+              % (target, dz + top + flask_h / 2.0, dz + flask_h / 2.0))
 
     def _apply_measured_layout(self):
         """Place named movables at poses MEASURED on the real cell.
@@ -459,6 +488,7 @@ class Task(ABC, BaseTask):
         # glassware are not comparable seed for seed.
         "beaker":  tuple(_FOOTPRINT_SRC("beaker")[:2]),
         "flask":   tuple(_FOOTPRINT_SRC("flask")[:2]),
+        "beaker2": tuple(_FOOTPRINT_SRC("beaker2")[:2]),
         # Deliberately still the pre-stir-bar 45 mm footprint, NOT STIR_BAR_DIMS.
         # This table only drives the non-overlap rejection during layout
         # sampling, so reserving more space than the object occupies is
@@ -471,7 +501,9 @@ class Task(ABC, BaseTask):
     }
     # Objects randomized when SDL_SEED is set (fixed order => deterministic RNG
     # draw sequence). table/box_goal (goal tray) stay fixed like the goal region.
-    _RANDOMIZE_ORDER = ["beaker", "flask", "magnet", "box", "stirrer"]
+    # beaker2 sits in the flask's slot and only one of the two is ever in a
+    # scene, so either scene draws the same sequence for the objects after it.
+    _RANDOMIZE_ORDER = ["beaker", "flask", "beaker2", "magnet", "box", "stirrer"]
 
     # Per-tool correction to the shared home arm configuration, applied on top of
     # the (optionally seeded) home in set_robot().
@@ -520,7 +552,7 @@ class Task(ABC, BaseTask):
     # box), so the clearance test uses whichever is larger.
     _TAG_PLATE_HALF_M = 0.05 * np.sqrt(2.0)
     _TAG_OFFSET_M = 0.15
-    _VISUAL_RADIUS_M = {"beaker": 0.051, "flask": 0.069}
+    _VISUAL_RADIUS_M = {"beaker": 0.051, "flask": 0.069, "beaker2": 0.051}
 
     def _clear_tag_angle(self, name, step_deg=2.0):
         """World angle for `name`'s tag plate that clears every other object.
@@ -845,14 +877,29 @@ class Task(ABC, BaseTask):
         # The outer envelope is unchanged, so the planner's Cuboid model of the
         # flask and every external contact stay exactly as before; only the
         # interior becomes real. FLASK_WALL_M gives a 64 mm clear opening.
-        flask_usd_path = os.path.join(ASSET_PATH, "lab", "flask.usd")
-        self.flask = create_hollow_box_collider_rigid(
-            usd_path=flask_usd_path, prim_path="/World/flask", name="flask",
-            position=current_positions["flask"],
-            orientation=current_orientations["flask"],
-            dims=self._vessel_dims("flask"), wall=self.FLASK_WALL_M,
-        )
-        self.scene.add(self.flask)
+        #
+        # With SDL_TARGET_VESSEL=beaker2 the second beaker is spawned in its
+        # place, drawn with the beaker asset and hollow like the flask so the
+        # pour target has a real opening. self.flask is then None.
+        self.flask = None
+        self.beaker2 = None
+        if self.target_vessel == "flask":
+            flask_usd_path = os.path.join(ASSET_PATH, "lab", "flask.usd")
+            self.flask = create_hollow_box_collider_rigid(
+                usd_path=flask_usd_path, prim_path="/World/flask", name="flask",
+                position=current_positions["flask"],
+                orientation=current_orientations["flask"],
+                dims=self._vessel_dims("flask"), wall=self.FLASK_WALL_M,
+            )
+            self.scene.add(self.flask)
+        else:
+            self.beaker2 = create_hollow_box_collider_rigid(
+                usd_path=beaker_usd_path, prim_path="/World/beaker2", name="beaker2",
+                position=current_positions["beaker2"],
+                orientation=current_orientations["beaker2"],
+                dims=self._vessel_dims("beaker2"), wall=self.FLASK_WALL_M,
+            )
+            self.scene.add(self.beaker2)
 
         # spawn magnet -- BOX collider matching cuTAMP dims [0.045,0.045,0.03]
         # (TAMP/tamp/src/envs/utils.py ENTITIES["magnet"] is a Cuboid, and the
@@ -907,7 +954,7 @@ class Task(ABC, BaseTask):
         _tag_height = float(os.environ.get("SDL_TAG_HEIGHT", "0.18"))
         from pxr import Gf, UsdGeom as _UG
         from isaacsim.core.utils.stage import get_current_stage as _gcs
-        for _nm in ("beaker", "flask"):
+        for _nm in ("beaker", self.target_vessel):
             for _tid in ("00", "01"):
                 _tp = "/World/%s/visual/apriltag_%s" % (_nm, _tid)
                 _pr = _gcs().GetPrimAtPath(_tp)
@@ -1246,7 +1293,8 @@ class Task(ABC, BaseTask):
         table_pos, table_ori = self.table.get_world_pose()
         stirrer_pos, stirrer_ori = self.stirrer.get_world_pose()
         beaker_pos, beaker_ori = self.beaker.get_world_pose()
-        flask_pos, flask_ori = self.flask.get_world_pose()
+        target_prim = self.flask if self.flask is not None else self.beaker2
+        target_pos, target_ori = target_prim.get_world_pose()
         magnet_pos, magnet_ori = self.magnet.get_world_pose()
         box_pos, box_ori = self.box.get_world_pose()
         box_goal_pos, box_goal_ori = self.box_goal.get_world_pose()
@@ -1269,7 +1317,7 @@ class Task(ABC, BaseTask):
                 "table": table_pos,
                 "stirrer": stirrer_pos,
                 "beaker": beaker_pos,
-                "flask": flask_pos,
+                self.target_vessel: target_pos,
                 "magnet": magnet_pos,
                 "box": box_pos,
                 "box_goal": box_goal_pos,
@@ -1278,7 +1326,7 @@ class Task(ABC, BaseTask):
                 "table": table_ori,
                 "stirrer": stirrer_ori,
                 "beaker": beaker_ori,
-                "flask": flask_ori,
+                self.target_vessel: target_ori,
                 "magnet": magnet_ori,
                 "box": box_ori,
                 "box_goal": box_goal_ori,

@@ -20,7 +20,8 @@ stream and the URDF:
 A recording is ACCEPTED only if all hold: EEF <= --max-eef deg, rim clearance >=
 --min-rim mm, returned upright onto the box, lip error < --max-lip mm, peak tilt
 >= --min-tilt deg. --export writes accepted ones as trajectory CSV + meta through
-export_trajectory.py and checks each meta names beaker, flask, scale and riser.
+export_trajectory.py and checks each meta names beaker, the pour target (flask, or
+beaker2 when SCENE_ENV.txt has SDL_TARGET_VESSEL=beaker2), scale and riser.
 
 Real-cell only: these trajectories are for the robot, not for the paper.
 """
@@ -190,7 +191,8 @@ def main():
                         "--sim-log-dir", os.path.join(a.run_dir, "logs")], check=True,
                        stdout=subprocess.DEVNULL)
         lay = json.load(open(base + ".meta.json")).get("layout_the_trajectory_assumes") or {}
-        missing = [k for k in ("beaker", "flask", "scale", "riser") if k not in lay]
+        target = env.get("SDL_TARGET_VESSEL", "flask") or "flask"
+        missing = [k for k in ("beaker", target, "scale", "riser") if k not in lay]
         print("exported %s%s" % (base + ".csv", "  META MISSING %s" % missing if missing else ""))
     return 0
 

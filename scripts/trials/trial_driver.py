@@ -92,8 +92,9 @@ SETTLE_AFTER_EXECUTE_S = 2.0
 # records the raw distance, so the manuscript's tighter Move criterion (final
 # placement within a stated tolerance of the target) can be applied to the
 # recorded numbers without another batch.
-def _flask_dims():
-    """Flask outer dims from the shared table (envs.constants, SDL_GLASSWARE)."""
+def _flask_dims(name="flask"):
+    """A vessel's outer dims from the shared table (envs.constants,
+    SDL_GLASSWARE); the flask unless a pour target is named."""
     import sys as _sys, os as _os
     _src = _os.path.abspath(_os.path.join(
         _os.path.dirname(_os.path.abspath(__file__)),
@@ -101,7 +102,7 @@ def _flask_dims():
     if _src not in _sys.path:
         _sys.path.insert(0, _src)
     from envs.constants import vessel_dims
-    return vessel_dims("flask")
+    return vessel_dims(name)
 
 
 TASK_OUTCOMES = {
@@ -132,6 +133,17 @@ TASK_OUTCOMES = {
         "require_pour": True,
         "aux": None,
         "pour_target": "flask",
+    },
+    # The same real cell with a second beaker on the balance instead of the flask
+    # (SDL_TARGET_VESSEL=beaker2). Scored exactly like transfer_real; only the
+    # vessel the pour is measured against changes.
+    "transfer_real_beakers": {
+        "target": "beaker",
+        "goal_entity": "riser",
+        "half_xy": (0.015, 0.015),
+        "require_pour": True,
+        "aux": None,
+        "pour_target": "beaker2",
     },
     "move": {
         "target": "box",
@@ -359,7 +371,7 @@ class TaskOrchestrator(Node):
             if tgt is not None:
                 lx, ly, lz = self.pour_peak_lip_xy
                 row["pour_lip_height_mm"] = (
-                    f"{(lz - (tgt[2] + _flask_dims()[2] / 2.0)) * 1000:.1f}")
+                    f"{(lz - (tgt[2] + _flask_dims(pour_target)[2] / 2.0)) * 1000:.1f}")
                 row["pour_lip_err_mm"] = (
                     f"{math.hypot(lx - tgt[0], ly - tgt[1]) * 1000:.1f}"
                 )
@@ -467,9 +479,12 @@ class TaskOrchestrator(Node):
         outcome_spec = TASK_OUTCOMES.get(task)
         self.tilt_target = outcome_spec["target"] if outcome_spec else None
 
-        # record the ACTUAL (randomized, settled) beaker/flask poses used
+        # record the ACTUAL (randomized, settled) beaker/flask poses used. The
+        # column keeps its name for every earlier CSV; in transfer_real_beakers
+        # it holds the pour target, beaker2, because there is no flask.
         row["beaker_xy"] = self._get_xy("beaker")
-        row["flask_xy"] = self._get_xy("flask")
+        row["flask_xy"] = self._get_xy(
+            (outcome_spec or {}).get("pour_target") or "flask")
 
         # 3. set_tamp_env transfer
         spec = get_environment_spec(task)

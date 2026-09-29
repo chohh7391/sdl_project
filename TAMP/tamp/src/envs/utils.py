@@ -28,6 +28,10 @@ ENTITIES = {
     # and the trial scoring cannot drift apart; SDL_GLASSWARE selects the set.
     "beaker": Cuboid(name="beaker", pose=[0.0, 0.0, 0.0, *unit_quat], dims=vessel_dims("beaker"), color=[255, 0, 0]),
     "flask": Cuboid(name="flask", pose=[0.0, 0.0, 0.0, *unit_quat], dims=vessel_dims("flask"), color=[255, 0, 0]),
+    # The second beaker, the pour target of "transfer_real_beakers" (it stands
+    # on the balance where the flask stands in "transfer_real"). No other
+    # environment references it.
+    "beaker2": Cuboid(name="beaker2", pose=[0.0, 0.0, 0.0, *unit_quat], dims=vessel_dims("beaker2"), color=[255, 0, 0]),
     # Magnetic stir bar. Must match isaacsim Task.STIR_BAR_DIMS. It was a 45 mm
     # cube, whose worst-yaw diagonal (63.6 mm) does not clear the flask's 64 mm
     # opening, so the Stir terminal condition ("stir bar inside the vessel") was
@@ -93,6 +97,7 @@ class TAMPEnvManager:
             offset = PLANNER_Z_LIFT
             self.entities["beaker"].pose[2] += offset
             self.entities["flask"].pose[2] += offset
+            self.entities["beaker2"].pose[2] += offset
             self.entities["box"].pose[2] += offset
             self.entities["stirrer"].pose[2] += offset
             self.entities["magnet"].pose[2] += 2 * offset
@@ -120,13 +125,13 @@ class TAMPEnvManager:
 
         if self.is_update_entities:
 
-            if name in ("transfer", "transfer_real"):
+            if name in ("transfer", "transfer_real", "transfer_real_beakers"):
 
                 # On the real cell the source vessel stands on a riser, and
                 # "put it back" means back on that riser, not on a patch of
                 # bench. Only when the scene actually has one.
                 return_to = None
-                if name == "transfer_real" and BEAKER_RISER_M > 0.0:
+                if name != "transfer" and BEAKER_RISER_M > 0.0:
                     return_to = "riser"
                 env, pour_region_pose = load_transfer_env(
                     entities=self.entities,

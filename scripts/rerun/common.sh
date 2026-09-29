@@ -45,7 +45,7 @@ rr_scene_guard() {
 # Lines the simulator prints ONLY when a real-cell switch is active. Checked in
 # every batch's sim logs after the batch, so a scene change that got in some
 # other way than an environment variable is still caught.
-RR_REAL_SCENE_MARKERS='measured layout:|\[Task\] balance:|beaker riser|bench offset|flask stands on the pan|wrist camera at'
+RR_REAL_SCENE_MARKERS='measured layout:|\[Task\] balance:|beaker riser|bench offset|stands on the pan|target vessel:|wrist camera at'
 rr_check_scene_logs() {
   local dir="$1" hits
   hits="$(grep -alE "$RR_REAL_SCENE_MARKERS" "$dir"/sim_seed*.log 2>/dev/null || true)"
