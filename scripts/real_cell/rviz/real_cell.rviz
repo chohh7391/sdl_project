@@ -134,7 +134,7 @@ Visualization Manager:
       Enabled: true
       Normalize Range: true
       Topic:
-        Value: /side_2/side_2/infra1/image_rect_raw
+        Value: /side_2/side_2/color/image_raw
         Depth: 1
         Durability Policy: Volatile
         History Policy: Keep Last
@@ -144,7 +144,7 @@ Visualization Manager:
       Enabled: true
       Normalize Range: true
       Topic:
-        Value: /wrist/wrist/infra1/image_rect_raw
+        Value: /wrist/wrist/color/image_raw
         Depth: 1
         Durability Policy: Volatile
         History Policy: Keep Last
