@@ -11,10 +11,13 @@
 # exporting it before the call:
 #   bench          13 mm below the robot base's reference plane
 #   beaker         measures 50 x 50 x 70 mm, modelled 60 mm tall (tapered top),
-#                  standing on a 50 mm box at base_link (0.584, -0.298)
+#                  standing on a 50 mm box. WHERE is perception's only: there is
+#                  no default position (SDL_LAYOUT_XY must name the beaker, as
+#                  plan_remote.sh --perceive does; author, 2026-09-29)
 #   flask          87 x 160 mm, on the balance pan at (0.520, 0.320)
 #   balance        250 x 200 mm, pan top 90 mm, pan end facing the robot
 #   grasp          level: 0-10 deg above horizontal
+#   gripper        on a 15 mm adapter flange (SDL_GRIPPER_FLANGE_M)
 #   after pouring  the beaker goes back on its box
 #
 # SDL_TARGET_VESSEL=beaker2 records the two-beaker variant of the same cell: the
@@ -40,12 +43,17 @@ source /opt/ros/humble/setup.bash
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-100}" RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 export SDL_GLASSWARE="${SDL_GLASSWARE:-real}"
+# The cell's AG-95 sits on an adapter flange, about 15 mm long (author,
+# 2026-09-29): cuTAMP and the simulator both move the gripper out by this much
+# (TAMP/cuTAMP/cutamp/robots/flange.py, isaacsim task.py _apply_gripper_flange),
+# and the score reads it back from SCENE_ENV.txt. 0 is the bare asset.
+export SDL_GRIPPER_FLANGE_M="${SDL_GRIPPER_FLANGE_M:-0.015}"
 export SDL_TABLE_Z_M="${SDL_TABLE_Z_M:--0.013}"
 if [[ "${SDL_TARGET_VESSEL:-flask}" == beaker2 ]]; then
   # The two-beaker cell (author, 2026-09-29):
   #   beaker1  on a bar 200 mm along x, 70 mm along y and 70 mm tall, whose
   #            bottom centre is at base_link (0.36, -0.30, -0.013), anywhere on
-  #            its top (measured per run)
+  #            its top -- where, only perception says (SDL_LAYOUT_XY)
   #   balance  square to the robot base, pan at its +x end: its long end, 140 mm
   #            from the pan, is towards -x (SDL_SCALE_BODY_BEARING_DEG=180)
   # Both beakers stand on the 2 mm pads of their tag mounts (hardware/tag_mount),
@@ -57,14 +65,19 @@ if [[ "${SDL_TARGET_VESSEL:-flask}" == beaker2 ]]; then
   export SDL_RISER_XY="${SDL_RISER_XY:-0.360,-0.300}"
   export SDL_SCALE_TOP_M="${SDL_SCALE_TOP_M:-0.092}"
   export SDL_SCALE_BODY_BEARING_DEG="${SDL_SCALE_BODY_BEARING_DEG:-180}"
-  export SDL_LAYOUT_XY="${SDL_LAYOUT_XY:-beaker:0.360,-0.300}"
 fi
 export SDL_BEAKER_RISER_M="${SDL_BEAKER_RISER_M:-0.05}"
 export SDL_GRASP_BETA_MIN_DEG="${SDL_GRASP_BETA_MIN_DEG:-0}" SDL_GRASP_BETA_MAX_DEG="${SDL_GRASP_BETA_MAX_DEG:-10}"
 export SDL_GRASP_H_FRAC="${SDL_GRASP_H_FRAC:-0.0}"
 export SDL_SCALE_PAN_XY="${SDL_SCALE_PAN_XY:-0.520,0.320}"
-export SDL_LAYOUT_XY="${SDL_LAYOUT_XY:-beaker:0.584,-0.298}"
 export SDL_TARGET_VESSEL="${SDL_TARGET_VESSEL:-flask}"
+# The vessels are placed only where perception put them: no layout stands in.
+need="beaker"; [[ "$SDL_TARGET_VESSEL" == beaker2 ]] && need="beaker beaker2"
+for n in $need; do
+  [[ ";${SDL_LAYOUT_XY:-};" =~ \;[[:space:]]*$n: ]] || {
+    echo "SDL_LAYOUT_XY must give $n's perceived position ($n:X,Y); there is no default" >&2
+    exit 2; }
+done
 case "$SDL_TARGET_VESSEL" in
   flask)   TASK=transfer_real ;;
   beaker2) TASK=transfer_real_beakers ;;

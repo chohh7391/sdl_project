@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the FR5 trajectory_replay tree for a fetched trajectory, without moving.
 
-    check_replay.py BASE [--grams G --material liquid|granular [--flow-index F]]
-                         [--home-via moveit|direct]
+    check_replay.py BASE [--grams G --material liquid|granular [--flow-index F]
+                          --receiver X,Y,Z [--grasp-marker X,Y,Z]] [--home-via moveit|direct]
 
 BASE is a deliver/ file stem (BASE.csv, BASE.meta.json, BASE_cell.yaml). The
 tree is BUILT and never ticked, so nothing is sent to the robot, but everything
@@ -25,6 +25,10 @@ def main():
     ap.add_argument("--grams", type=float, default=0.0)
     ap.add_argument("--material", default="liquid")
     ap.add_argument("--flow-index", type=float, default=0.0)
+    ap.add_argument("--receiver", default="",
+                    help="the receiver's rim centre x,y,z (base_link, m); required with a pour")
+    ap.add_argument("--grasp-marker", default="",
+                    help="beaker1's perceived bottom centre x,y,z, the grasp's marker")
     ap.add_argument("--home-via", default="moveit")
     a = ap.parse_args()
 
@@ -35,7 +39,9 @@ def main():
                    "home_via": a.home_via})
     if a.grams > 0:
         config.update({"replay_pour_grams": a.grams, "replay_pour_material": a.material,
-                       "replay_pour_flow_index": a.flow_index})
+                       "replay_pour_flow_index": a.flow_index,
+                       "replay_pour_receiver": a.receiver,
+                       "replay_pour_grasp_marker": a.grasp_marker})
     try:
         tree = build_task_tree("trajectory_replay", config)
     except Exception as err:   # RecordingRejected, LayoutMismatch, ValueError
@@ -47,8 +53,14 @@ def main():
     for seg in summary.get("segments", []):
         print("   %s" % seg)
     pour = summary.get("pour")
-    print("   pour: %s" % ("%(target_grams)g g of %(material)s by weight, marker %(marker_topic)s" % pour
-                           if pour else "replayed as recorded"))
+    if pour:
+        marker = ("the perceived (%.4f, %.4f, %.4f)" % tuple(pour["grasp_marker"])
+                  if pour.get("grasp_marker") else pour["marker_topic"])
+        print("   pour: %g g of %s by weight, grasp marker %s, into the receiver rim at "
+              "(%.4f, %.4f, %.4f)" % (pour["target_grams"], pour["material"], marker,
+                                      *pour["receiver_rim"]))
+    else:
+        print("   pour: replayed as recorded")
     return 0
 
 

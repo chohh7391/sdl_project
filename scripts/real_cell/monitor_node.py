@@ -10,7 +10,10 @@ the pose node; this node adds what only the plan knows:
 
   /real_cell/planned_path  MarkerArray  the grasp frame along the trajectory,
                                         coloured by operation, with the gripper
-                                        closing (green) and opening (red)
+                                        closing (green) and opening (red), and
+                                        the rim the pour goes into (magenta):
+                                        the perceived receiver plan_remote.sh
+                                        hands the pouring controller
   /real_cell/status        Marker       the pipeline's stage (plan_remote.sh
                                         writes RUNS/STATUS), the balance reading,
                                         and how far each perceived beaker is from
@@ -60,6 +63,23 @@ def colour(rgb, a=1.0):
     return ColorRGBA(r=float(rgb[0]), g=float(rgb[1]), b=float(rgb[2]), a=float(a))
 
 
+#: The receiver's outer rim radius, as the pouring controller is configured
+#: (controllers.yaml geometry.receiver_radius).
+RIM_RADIUS = 0.025
+
+
+def receiver_rim(run_dir):
+    """The rim centre plan_remote.sh sends with the pour (REQUEST.env), or None."""
+    try:
+        for line in open(os.path.join(run_dir, "REQUEST.env")):
+            if line.startswith("RECEIVER_RIM="):
+                xyz = [float(v) for v in line.split("=", 1)[1].strip().split(",")]
+                return tuple(xyz) if len(xyz) == 3 else None
+    except (OSError, ValueError):
+        pass
+    return None
+
+
 def scene_env(run_dir):
     env = {}
     try:
@@ -83,6 +103,7 @@ class Monitor:
         self.pub_status = node.create_publisher(Marker, "/real_cell/status", 10)
         self.current, self.current_mtime = None, None
         self.planned_xy, self.plan_label = {}, "no plan selected yet"
+        self.receiver_rim = None
         self.perceived, self.scale = {}, None
         for name, topic in PERCEIVED.items():
             node.create_subscription(
@@ -175,6 +196,7 @@ class Monitor:
         # The planned bodies are kept for the status line's plan-vs-perception
         # distance only; nothing preset is drawn (the author, 2026-09-29).
         del markers
+        self.receiver_rim = receiver_rim(run_dir)
         self.publish_path(base, meta, stamp)
         self.current = base
         self.plan_label = "plan: %s / %s" % (
@@ -183,9 +205,12 @@ class Monitor:
 
     def publish_path(self, base, meta, stamp):
         from solve_scan_poses import Arm
-        from score_real_trajectories import grasp_offset_from_urdf
+        from score_real_trajectories import flange_of, grasp_offset_from_urdf
         import numpy as np
-        arm, grasp = Arm(), grasp_offset_from_urdf()
+        # The gripper as the run was planned with it: on the adapter flange if
+        # SCENE_ENV.txt says so.
+        env = scene_env(os.path.dirname(os.path.dirname(base)))
+        arm, grasp = Arm(), grasp_offset_from_urdf(flange=flange_of(env))
         rows = list(csv.DictReader(open(base + ".csv")))
         joints = meta.get("joint_names") or ["j1", "j2", "j3", "j4", "j5", "j6"]
         line = Marker()
@@ -215,6 +240,21 @@ class Monitor:
             s.scale.x = s.scale.y = s.scale.z = 0.02
             s.color = colour((0.2, 1.0, 0.2) if ev["event"] == "close" else (1.0, 0.2, 0.2))
             path.append(s)
+        if self.receiver_rim is not None:
+            # The receiver's rim as the pour goal will carry it: a ring at the
+            # rim's height, its outer radius (controllers.yaml receiver_radius).
+            ring = Marker()
+            ring.header.frame_id, ring.header.stamp = self.frame, stamp
+            ring.ns, ring.id, ring.type, ring.action = "pour target", 100, Marker.LINE_STRIP, Marker.ADD
+            ring.pose.orientation.w = 1.0
+            ring.scale.x = 0.003
+            ring.color = colour((1.0, 0.2, 1.0))
+            cx, cy, cz = self.receiver_rim
+            for k in range(33):
+                a = 2.0 * math.pi * k / 32
+                ring.points.append(Point(x=cx + RIM_RADIUS * math.cos(a),
+                                         y=cy + RIM_RADIUS * math.sin(a), z=cz))
+            path.append(ring)
         self.pub_path.publish(MarkerArray(markers=path))
 
     # ------------------------------------------------------------- the status
@@ -225,6 +265,8 @@ class Monitor:
         except OSError:
             lines.append("(no pipeline status yet)")
         lines.append(self.plan_label)
+        if self.current is not None and self.receiver_rim is not None:
+            lines.append("pour into the rim at (%.3f, %.3f, %.3f)" % self.receiver_rim)
         if self.scale is not None:
             lines.append("balance: %.2f g%s" % (self.scale[0], "" if self.scale[1] else " (settling)"))
         now = self.node.get_clock().now()

@@ -3,11 +3,12 @@
 # Tailscale), bring the accepted ones back, and replay one on the FR5 attached to
 # THIS machine.
 #
-#   scripts/real_cell/plan_remote.sh --beaker 0.584,-0.298 --flask 0.520,0.320 0 1 2 3
+#   scripts/real_cell/plan_remote.sh --perceive --pan 0.520,0.320 0 1 2 3
 #   scripts/real_cell/plan_remote.sh --perceive --beakers --material liquid --grams 20 4
 #   scripts/real_cell/plan_remote.sh --attach 20260929-141203     # re-join after the ssh dropped
 #   scripts/real_cell/plan_remote.sh --fetch  20260929-141203     # a finished run: copy + check only
-#   add --replay to also launch trajectory_replay here (it asks before moving the arm)
+#   add --replay to also launch trajectory_replay here. Nothing asks before the arm
+#   moves (the author, 2026-09-29); --confirm brings the yes/N prompts back.
 #
 # What runs where:
 #   remote  record_transfer_real.sh (headless Isaac Sim + tamp_server, one trial
@@ -17,20 +18,22 @@
 #           given here, write the cell layout the replay gate reads, and print (or
 #           run) the trajectory_replay launch.
 #
-# Scene (base_link metres):
-#   --beaker X,Y    the source beaker, on its riser (--beaker1 is the same)  -> SDL_LAYOUT_XY
-#                   (two-beaker cell: anywhere on the 200 x 70 mm bar at (0.36, -0.30))
+# Scene (base_link metres). WHERE THE BEAKERS ARE comes from perception only
+# (--perceive, required): no option or default gives a beaker's position.
 #   --pan X,Y       the balance pan centre the target stands on (--flask is the same)
 #                                                                            -> SDL_SCALE_PAN_XY
 #   --beakers       the two-beaker cell: a second beaker, beaker2, stands at the
 #                   centre of the pan instead of the flask   -> SDL_TARGET_VESSEL=beaker2
-#   --beaker2 X,Y   where beaker2 stands on the pan (implies --beakers); planned
-#                   there. More than BEAKER2_TOL_M (default 0.015) off the pan
-#                   centre refuses the run: the pouring controller holds the
-#                   receiver at the pan centre (controllers.yaml), not where it
-#                   was perceived -- re-centre the beaker, or move --pan.
-#                   The two-beaker cell is planned ONLY against perceived (or
-#                   given) positions: no default layout stands in for a beaker.
+#                   beaker2 is planned, and poured into, where it was perceived. It
+#                   may stand anywhere on the 130 mm pan with all of its 50 mm on
+#                   it: within BEAKER2_ON_PAN_M (default 0.040) of the pan centre
+#                   along x and along y.
+#   The rim the pouring controller pours into is derived, never given: two-beaker
+#   cell, beaker2's PERCEIVED bottom centre raised by its height (BEAKER2_HEIGHT_M,
+#   0.070); flask cell, the pan centre at the flask's measured rim height
+#   (FLASK_RIM_Z_M, 0.180, measured 2026-09-23). The controller has no receiver of
+#   its own: a pour goal without one is refused. beaker1's perceived bottom centre
+#   is the replay's grasp marker (replay_pour_grasp_marker).
 #   --plate1 DEG, --plate2 DEG
 #                   two-beaker cell: the bearing (base frame, from the vessel's
 #                   axis) of each beaker's tag-mount plate, an obstacle beside
@@ -43,6 +46,13 @@
 #                   rasters the wrist camera over the bench (the arm moves; asked
 #                   first) while measure_vessels.py --latch catches the pose.
 #   --no-recover    fail instead of recovering
+#   --recover NAME  re-measure NAME (beaker1, beaker2) by occlusion recovery even
+#                   though the standing cameras -- or the pose node's HELD pose, kept
+#                   while nothing moved the vessel -- report it: e.g. when side_1 and
+#                   side_2 disagree on it and only one of them is publishing. Repeatable.
+#   Only the vessels being recovered are swept for (a subset of CHO_SWEEP), and
+#   only poses the wrist camera itself measured count (measure_vessels.py --camera
+#   wrist, decode margin >= RECOVERY_MIN_MARGIN, the sweep table's 55).
 # Omitted positions take record_transfer_real.sh's defaults, and the check below
 # compares against those.
 #
@@ -65,14 +75,18 @@
 #   REAL_CELL_RUNS   runs directory on BOTH sides; relative = under $HOME (default real_cell_runs)
 #   CHO_WS           local ROS 2 workspace holding cho_task_manager (default ~/ros2_ws)
 #   REPLAY_ARGS      extra launch args for the replay, e.g. "home_via:=direct"
-#   BEAKER2_TOL_M    how far a measured beaker2 may sit off the pan centre (0.015)
+#   BEAKER2_ON_PAN_M how far beaker2's centre may sit off the pan centre, along x
+#                    and along y (0.040: pan half-width 65 mm less the beaker's 25)
+#   BEAKER2_HEIGHT_M beaker2's height, bottom to rim (0.070)
+#   FLASK_RIM_Z_M    the flask cell's rim height (0.180)
 #   CHO_TABLE, CHO_SWEEP   the pose node's object table and the recovery raster
 #                    (default: cho_task_manager's pour_beakers.yaml, fr5_bench_beakers.yaml)
 #   RECOVERY_WAIT_S  longest a recovery may take (360)
+#   RECOVERY_MIN_MARGIN  the wrist's decode margin a recovered pose needs (55)
 #   ALLOW_COMMIT_MISMATCH=1   plan on a remote checkout that is not this HEAD
 # Forwarded to the remote when set here: SDL_TABLE_Z_M SDL_BEAKER_RISER_M
 #   SDL_BEAKER_RISER_XY_M SDL_BEAKER_RISER_Y_M SDL_RISER_XY SDL_SCALE_TOP_M
-#   SDL_SCALE_BODY_BEARING_DEG
+#   SDL_SCALE_BODY_BEARING_DEG SDL_GRIPPER_FLANGE_M
 #   SDL_GRASP_BETA_MIN_DEG SDL_GRASP_BETA_MAX_DEG SDL_GRASP_H_FRAC PLAN_TIMEOUT
 #   CUDA_VISIBLE_DEVICES
 #
@@ -102,19 +116,21 @@ status() {
 }
 die() { echo "plan_remote: $*" >&2; status "STOPPED: ${1%%$'\n'*}"; exit 1; }
 
-BEAKER="" FLASK="" BEAKER2="" PLATE1="" PLATE2="" TARGET=flask PERCEIVE=0
+BEAKER="" BEAKER_Z="" FLASK="" BEAKER2="" BEAKER2_Z="" RECEIVER="" GRASP_MARKER=""
+PLATE1="" PLATE2="" TARGET=flask PERCEIVE=0
 MATERIAL="" GRAMS="" FLOW="" HOME_VIA=moveit RECOVER=1
-MODE=new STAMP="" REPLAY=0 YES=0 SEEDS=()
+MODE=new STAMP="" REPLAY=0 YES=1 SEEDS=() FORCE_RECOVER=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --beaker|--beaker1) BEAKER="${2:?$1 X,Y}"; shift 2 ;;
+    --beaker|--beaker1|--beaker2|--receiver)
+                die "$1: a beaker's position comes from perception only (--perceive)" ;;
     --flask|--pan)      FLASK="${2:?$1 X,Y}"; shift 2 ;;
-    --beaker2)  BEAKER2="${2:?--beaker2 X,Y}"; TARGET=beaker2; shift 2 ;;
     --beakers)  TARGET=beaker2; shift ;;
     --plate1)   PLATE1="${2:?--plate1 DEG}"; TARGET=beaker2; shift 2 ;;
     --plate2)   PLATE2="${2:?--plate2 DEG}"; TARGET=beaker2; shift 2 ;;
     --perceive) PERCEIVE=1; shift ;;
     --no-recover) RECOVER=0; shift ;;
+    --recover)  FORCE_RECOVER+=("${2:?--recover beaker1|beaker2}"); shift 2 ;;
     --material) MATERIAL="${2:?--material liquid|granular}"; shift 2 ;;
     --grams)    GRAMS="${2:?--grams G}"; shift 2 ;;
     --flow-index) FLOW="${2:?--flow-index F}"; shift 2 ;;
@@ -124,6 +140,7 @@ while [[ $# -gt 0 ]]; do
     --fetch)  MODE=fetch  STAMP="${2:?--fetch RUN_ID}"; shift 2 ;;
     --replay) REPLAY=1; shift ;;
     --yes)    YES=1; shift ;;
+    --confirm) YES=0; shift ;;
     -h|--help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
     -*) die "unknown option $1" ;;
     *) [[ "$1" =~ ^[0-9]+$ ]] || die "seed must be an integer: $1"; SEEDS+=("$1"); shift ;;
@@ -147,13 +164,21 @@ if [[ $MODE == new && $PERCEIVE == 1 ]]; then
   measured="$(ros_env && python3 "$ROOT/scripts/real_cell/measure_vessels.py" "${names[@]}")"
   missing=()
   for n in "${names[@]}"; do grep -q "^$n " <<< "$measured" || missing+=("$n"); done
+  for n in "${FORCE_RECOVER[@]}"; do
+    [[ " ${names[*]} " == *" $n "* ]] || die "--recover $n: not a vessel of this cell (${names[*]})"
+    if grep -q "^$n " <<< "$measured"; then
+      echo "=== $n: $(grep "^$n " <<< "$measured") from the standing cameras (or held); re-measuring it (--recover)"
+      measured="$(grep -v "^$n " <<< "$measured")"
+      missing+=("$n")
+    fi
+  done
   if [[ ${#missing[@]} -gt 0 ]]; then
     # Occluded, or out of both standing cameras' view: the wrist camera goes and
     # looks (cho_task_manager occlusion_recovery), on the pose node already
     # running, while measure_vessels latches each vessel the moment the wrist
     # holds it in view. This MOVES THE ARM.
     [[ $RECOVER == 1 ]] || die "not perceived: ${missing[*]} (and --no-recover was given)"
-    echo "=== not perceived by side_1/side_2: ${missing[*]} -- occlusion recovery with the wrist camera"
+    echo "=== to recover with the wrist camera: ${missing[*]}"
     status "occlusion recovery: the wrist camera looks for ${missing[*]}"
     if [[ $YES != 1 ]]; then
       [[ -t 0 ]] || die "occlusion recovery moves the arm; run interactively or pass --yes"
@@ -163,14 +188,29 @@ if [[ $MODE == new && $PERCEIVE == 1 ]]; then
       [[ "$ans" == yes ]] || die "occlusion recovery not confirmed; nothing moved"
     fi
     mkdir -p "$LOCAL_RUNS/live_logs"
-    rlog="$LOCAL_RUNS/live_logs/recovery_$(date +%Y%m%d-%H%M%S).log"
+    rstamp="$(date +%Y%m%d-%H%M%S)"
+    rlog="$LOCAL_RUNS/live_logs/recovery_$rstamp.log"
     rout="$(mktemp)"
+    # Sweep only for the vessels being recovered: the raster ends once they are
+    # found, and it does not go looking for a vessel that is already measured.
+    rsweep="$LOCAL_RUNS/live_logs/sweep_$rstamp.yaml"
+    python3 - "$CHO_SWEEP" "$rsweep" "${missing[@]}" <<'PY' || die "could not write the recovery's sweep table"
+import sys, yaml
+src, dst, names = sys.argv[1], sys.argv[2], sys.argv[3:]
+table = yaml.safe_load(open(src))
+table["sweeps"] = [s for s in table["sweeps"] if s.get("object") in names]
+missing = sorted(set(names) - {s["object"] for s in table["sweeps"]})
+if missing:
+    sys.exit("the sweep table %s has no sweep for %s" % (src, missing))
+yaml.safe_dump(table, open(dst, "w"), sort_keys=False)
+PY
     (ros_env && exec python3 "$ROOT/scripts/real_cell/measure_vessels.py" "${missing[@]}" \
-        --latch --seconds "${RECOVERY_WAIT_S:-360}") > "$rout" 2>> "$rlog" &
+        --latch --seconds "${RECOVERY_WAIT_S:-360}" \
+        --camera wrist --min-margin "${RECOVERY_MIN_MARGIN:-55}") > "$rout" 2>> "$rlog" &
     mpid=$!
     (ros_env && exec timeout "${RECOVERY_WAIT_S:-360}" ros2 launch cho_task_manager \
         run_task_manager.launch.py task:=occlusion_recovery robot_type:=fr5 \
-        "vessel_table:=$CHO_TABLE" "sweep_config:=$CHO_SWEEP") >> "$rlog" 2>&1
+        "vessel_table:=$CHO_TABLE" "sweep_config:=$rsweep") >> "$rlog" 2>&1
     echo "recovery tree: $(grep -a -o 'Task finished with status: [A-Za-z.]*' "$rlog" | tail -1)" \
       "(log $rlog)"
     for _ in $(seq 1 10); do kill -0 "$mpid" 2>/dev/null || break; sleep 1; done
@@ -181,18 +221,19 @@ if [[ $MODE == new && $PERCEIVE == 1 ]]; then
       grep -q "^$n " <<< "$measured" || die "occlusion recovery did not find $n either (see $rlog)"
     done
   fi
-  while read -r name x y bearing; do
+  while read -r name x y z bearing; do
     case "$name" in
-      beaker1) [[ -z "$BEAKER" ]] || die "--perceive and --beaker both give beaker1"
-               BEAKER="$x,$y"; [[ -n "$PLATE1" ]] || PLATE1="$bearing" ;;
-      beaker2) [[ -z "$BEAKER2" ]] || die "--perceive and --beaker2 both give beaker2"
-               BEAKER2="$x,$y"; [[ -n "$PLATE2" ]] || PLATE2="$bearing" ;;
+      beaker1) BEAKER="$x,$y"; BEAKER_Z="$z"; [[ -n "$PLATE1" ]] || PLATE1="$bearing" ;;
+      beaker2) BEAKER2="$x,$y"; BEAKER2_Z="$z"; [[ -n "$PLATE2" ]] || PLATE2="$bearing" ;;
     esac
   done <<< "$(grep -E '^beaker[12] ' <<< "$measured")"
 fi
-if [[ $MODE == new && $TARGET == beaker2 && ( -z "$BEAKER" || -z "$BEAKER2" ) ]]; then
-  die "the two-beaker cell is planned only against perceived positions: use --perceive, or give
-  both --beaker1 X,Y and --beaker2 X,Y"
+if [[ $MODE == new ]]; then
+  [[ $PERCEIVE == 1 ]] || die "the beakers' positions come from perception only: use --perceive"
+  [[ -n "$BEAKER" ]] || die "beaker1 was not perceived; nothing stands in for it"
+  [[ $TARGET != beaker2 || -n "$BEAKER2" ]] || die "beaker2 was not perceived; nothing stands in for it"
+  # The replay grasps beaker1 where it was perceived, and measures the grasp there.
+  GRASP_MARKER="$BEAKER,$BEAKER_Z"
 fi
 for v in "$BEAKER" "$FLASK" "$BEAKER2"; do
   [[ -z "$v" || "$v" =~ ^-?[0-9.]+,-?[0-9.]+$ ]] || die "position must be X,Y in metres: $v"
@@ -203,20 +244,48 @@ done
 plates=""
 [[ -n "$PLATE1" ]] && plates="beaker:$PLATE1"
 [[ -n "$PLATE2" ]] && plates="${plates:+$plates;}beaker2:$PLATE2"
+PAN="${FLASK:-0.520,0.320}"   # record_transfer_real.sh's default pan
 if [[ -n "$BEAKER2" ]]; then
-  # beaker2 is planned where it was perceived, standing on the pan. It has to be
-  # near the pan centre all the same: the pouring controller holds the receiver
-  # there (controllers.yaml receiver_rim_center), not where it was perceived.
-  pan="${FLASK:-0.520,0.320}"   # record_transfer_real.sh's default pan
+  # beaker2 is planned, and poured into, where it was perceived. It only has to
+  # stand on the pan -- the balance weighs the pour -- which is square to the
+  # robot base (SDL_SCALE_BODY_BEARING_DEG=180), so the pan's edges run along x
+  # and y. A pose off the pan is a tag turned on its plate (220 mm out) or a
+  # beaker that is not on the balance, and neither is poured into.
   python3 -c '
-import math, sys
+import sys
 b = [float(v) for v in sys.argv[1].split(",")]; p = [float(v) for v in sys.argv[2].split(",")]
-tol = float(sys.argv[3]); d = math.hypot(b[0] - p[0], b[1] - p[1])
-print("beaker2 measured at (%.4f, %.4f), %.1f mm from the pan centre (%.4f, %.4f); tolerance %.0f mm"
-      % (b[0], b[1], d * 1e3, p[0], p[1], tol * 1e3))
-sys.exit(d > tol)' "$BEAKER2" "$pan" "${BEAKER2_TOL_M:-0.015}" \
-    || die "beaker2 is too far from the pan centre, where the pouring controller expects it"
+lim = float(sys.argv[3]); dx, dy = b[0] - p[0], b[1] - p[1]
+print("beaker2 at (%.4f, %.4f): %+.1f / %+.1f mm from the pan centre (%.4f, %.4f) along x / y; "
+      "on the pan within %.0f mm" % (b[0], b[1], dx * 1e3, dy * 1e3, p[0], p[1], lim * 1e3))
+sys.exit(abs(dx) > lim or abs(dy) > lim)' "$BEAKER2" "$PAN" "${BEAKER2_ON_PAN_M:-0.040}" \
+    || die "beaker2 is not standing on the balance pan (or its tag is turned on its plate)"
 fi
+# Where the pour goes: the receiver's rim centre, which the pouring controller
+# takes from the goal and has no default for.
+if [[ $MODE != new ]]; then
+  # A re-joined run grasps and pours where it was planned to: the perceived
+  # positions its request recorded.
+  req="$(eval echo "$(rpath "$RUNS/$STAMP")")/REQUEST.env"
+  RECEIVER="$(sed -n 's/^RECEIVER_RIM=//p' "$req" 2>/dev/null)"
+  GRASP_MARKER="$(sed -n 's/^GRASP_MARKER=//p' "$req" 2>/dev/null)"
+  grep -q '^SDL_TARGET_VESSEL=beaker2$' "$req" 2>/dev/null && TARGET=beaker2
+fi
+if [[ -n "$MATERIAL" && -z "$RECEIVER" ]]; then
+  if [[ $TARGET == beaker2 ]]; then
+    [[ -n "$BEAKER2" && -n "$BEAKER2_Z" ]] || die "the pour needs beaker2's rim, and only perception gives it
+  (--perceive; for a re-joined run, its REQUEST.env RECEIVER_RIM)"
+    RECEIVER="$(python3 -c 'import sys; x, y = sys.argv[1].split(","); z = float(sys.argv[2]) + float(sys.argv[3])
+print("%.4f,%.4f,%.4f" % (float(x), float(y), z))' "$BEAKER2" "$BEAKER2_Z" "${BEAKER2_HEIGHT_M:-0.070}")"
+    echo "pour into beaker2's rim at ($RECEIVER): perceived base z=$BEAKER2_Z + ${BEAKER2_HEIGHT_M:-0.070} m"
+  else
+    RECEIVER="$PAN,${FLASK_RIM_Z_M:-0.180}"
+    echo "pour into the flask's rim at ($RECEIVER): the pan centre at the measured rim height"
+  fi
+fi
+[[ -z "$RECEIVER" || "$RECEIVER" =~ ^-?[0-9.]+,-?[0-9.]+,-?[0-9.]+$ ]] \
+  || die "the receiver rim must be X,Y,Z in metres: $RECEIVER"
+[[ -z "$GRASP_MARKER" || "$GRASP_MARKER" =~ ^-?[0-9.]+,-?[0-9.]+,-?[0-9.]+$ ]] \
+  || die "beaker1's grasp marker must be X,Y,Z in metres: $GRASP_MARKER"
 
 # --- reach the planner ---------------------------------------------------------
 "${SSH[@]}" "$HOST" true 2>/dev/null || die "cannot ssh to $HOST without a password.
@@ -249,7 +318,7 @@ $dirty" >&2
   [[ $TARGET == beaker2 ]] && envs+=("SDL_TARGET_VESSEL=beaker2")
   [[ -n "$plates" ]] && envs+=("SDL_TAG_PLATES=$plates")
   for k in SDL_TABLE_Z_M SDL_BEAKER_RISER_M SDL_BEAKER_RISER_XY_M SDL_BEAKER_RISER_Y_M SDL_RISER_XY \
-           SDL_SCALE_TOP_M SDL_SCALE_BODY_BEARING_DEG \
+           SDL_SCALE_TOP_M SDL_SCALE_BODY_BEARING_DEG SDL_GRIPPER_FLANGE_M \
            SDL_GRASP_BETA_MIN_DEG SDL_GRASP_BETA_MAX_DEG \
            SDL_GRASP_H_FRAC PLAN_TIMEOUT CUDA_VISIBLE_DEVICES; do
     [[ -n "${!k:-}" ]] && envs+=("$k=${!k}")
@@ -280,7 +349,7 @@ LOCAL="$(eval echo "$(rpath "$RUNS/$STAMP")")"
 mkdir -p "$LOCAL"
 # What THIS side asked for, so the check below can tell a request that never
 # reached the planner from one that did (SCENE_ENV.txt alone shows only the latter).
-[[ $MODE == new ]] && printf '%s\n' "${envs[@]}" "HOST=$HOST" > "$LOCAL/REQUEST.env"
+[[ $MODE == new ]] && printf '%s\n' "${envs[@]}" "HOST=$HOST" "RECEIVER_RIM=$RECEIVER" "GRASP_MARKER=$GRASP_MARKER" > "$LOCAL/REQUEST.env"
 
 # --- follow it to the end ------------------------------------------------------
 if [[ $MODE != fetch ]]; then
@@ -378,9 +447,11 @@ awk '/^  [a-z]/ { keep = /^  (beaker|beaker2|riser|flask|scale|tag_beaker|tag_be
 LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=trajectory_replay robot_type:=fr5
         "replay_trajectory:=$CSV" "replay_meta:=$META" "replay_layout:=$CELL")
 if [[ -n "$MATERIAL" ]]; then
-  LAUNCH+=("replay_pour_material:=$MATERIAL" "replay_pour_grams:=$GRAMS")
+  LAUNCH+=("replay_pour_material:=$MATERIAL" "replay_pour_grams:=$GRAMS"
+           "replay_pour_receiver:=$RECEIVER")
+  [[ -n "$GRASP_MARKER" ]] && LAUNCH+=("replay_pour_grasp_marker:=$GRASP_MARKER")
   [[ -n "$FLOW" ]] && LAUNCH+=("replay_pour_flow_index:=$FLOW")
-  echo "pour: $GRAMS g of $MATERIAL by weight, handed to the pouring controller"
+  echo "pour: $GRAMS g of $MATERIAL by weight, handed to the pouring controller, into the rim at ($RECEIVER)"
 else
   echo "pour: replayed as recorded (no --material), nothing is weighed"
 fi
@@ -389,7 +460,8 @@ LAUNCH+=("home_via:=$HOME_VIA" ${REPLAY_ARGS:-})
 # refuses at build time (layout gate, pour splice, velocity limits) is refused
 # before anyone is asked to stand back from the arm.
 check=(python3 "$ROOT/scripts/real_cell/check_replay.py" "${CSV%.csv}" --home-via "$HOME_VIA")
-[[ -n "$MATERIAL" ]] && check+=(--grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}")
+[[ -n "$MATERIAL" ]] && check+=(--grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}"
+                                --receiver "$RECEIVER" --grasp-marker "$GRASP_MARKER")
 (set +u; source /opt/ros/humble/setup.bash && source "$CHO_WS/install/setup.bash" && cd /tmp && "${check[@]}") \
   || die "the replay tree does not build for this trajectory (see above); nothing moved"
 echo
@@ -410,7 +482,7 @@ fi
 set +u
 source /opt/ros/humble/setup.bash
 source "$CHO_WS/install/setup.bash"
-status "REPLAYING run $STAMP seed $BEST on the FR5${MATERIAL:+, pouring $GRAMS g of $MATERIAL by weight}"
+status "REPLAYING run $STAMP seed $BEST on the FR5${MATERIAL:+, pouring $GRAMS g of $MATERIAL by weight into the rim at ($RECEIVER)}"
 "${LAUNCH[@]}"
 rc=$?
 status "replay of run $STAMP seed $BEST ended (exit $rc)"

@@ -37,6 +37,12 @@
 | 태그 마운트 | `hardware/tag_mount/square88_circle_connector_r20_c110.stl`: 비커가 서는 pad(R 20, 두께 2 mm)와 plate 중심 사이 110 mm. **태그는 인쇄 기준 아래 변이 bridge 쪽** (offset [0, −0.110, 0]). plate는 플래너에 장애물로 들어간다 |
 | 비커 | 50 × 50 × 70 mm (beaker1 모델은 파지 대역 때문에 60 mm) |
 
+**그리퍼 adapter flange (2026-09-29).** AG-95가 약 15 mm flange 위에 달려 있다. 로컬 URDF는
+`fr5.urdf.xacro gripper_flange` 기본값 0.015로, pour controller는 `grasp_depth` 0.285와 `hand_boxes` +15 mm로 반영했다.
+플래너 쪽은 논문 scene을 건드리지 않도록 `SDL_GRIPPER_FLANGE_M`(`record_transfer_real.sh` 기본 0.015)이 켜진
+실제 셀 run에서만 cuRobo URDF·sphere(`cutamp/robots/flange.py`)와 Isaac Sim 그리퍼(`task.py _apply_gripper_flange`)를
+15 mm 밀고, 점수와 RViz 경로도 `SCENE_ENV.txt`의 값을 쓴다.
+
 ## 2. 로컬 bringup 순서
 
 각 줄은 별도 터미널. ROS 환경은 `source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash`.
@@ -74,20 +80,31 @@ tag 0/1은 `vessel_detect.yaml`·`pour_vessel.yaml`과 겹치므로 **테이블�
 
 ```bash
 cd ~/sdl_ws/src/sdl_project
-scripts/real_cell/plan_remote.sh --perceive --beakers --material granular --grams 10 0 1 2 --home-via direct --replay
+scripts/real_cell/plan_remote.sh --perceive --beakers --recover beaker1 --material granular --grams 10 --home-via direct --replay 0 1 2
 ```
 
-(설탕이면 `granular`, 물이면 `liquid`. 뒤의 숫자는 플래닝 seed 목록.)
+(설탕이면 `granular`, 물이면 `liquid`. 뒤의 숫자는 플래닝 seed 목록. `--recover beaker1`은 standing 카메라가 값을
+주더라도 beaker1을 wrist로 다시 잰다.)
+
+**팔이 움직이기 전에 묻지 않는다** (2026-09-29, 저자 요청). recovery와 재생이 확인 없이 바로 시작된다.
+묻게 하려면 `--confirm`. **비커 위치는 perception으로만 얻는다** — `--beaker1/--beaker2/--receiver` 같은 직접 지정과
+기본 배치(예전 (0.584, −0.298), (0.36, −0.30))는 없앴고, `record_transfer_real.sh`도 `SDL_LAYOUT_XY`에 인식값이
+없으면 거부한다. riser·저울 위치는 가구라서 그대로다.
 
 단계별로 일어나는 일 — 진행 상태는 RViz 상태 줄(`~/real_cell_runs/STATUS`)에 나온다.
 
 1. **인식** — `measure_vessels.py`가 beaker1, beaker2의 pose를 모은다(side_1 + side_2 fusion). 비커 하나당
-   샘플 10개 이상, 퍼짐 5 mm / 방향 5° 이내일 때만 채택한다. 결과는 xy와 plate 방향(bearing).
-2. **occlusion recovery (못 본 비커가 있을 때만)** — 예: beaker1 안의 설탕이 side 카메라에서 태그를 가림.
-   `yes` 확인 뒤 `cho_task_manager occlusion_recovery`가 팔을 움직인다.
+   샘플 10개 이상, 퍼짐 5 mm / 방향 5° 이내일 때만 채택한다. 결과는 xy, 바닥 높이 z, plate 방향(bearing).
+   - **인식한 위치는 유지된다 (hold).** `pour_beakers.yaml`의 `hold_unseen: true`: 한 번 인식된 비커는 카메라가
+     놓쳐도 pose node가 마지막 pose를 같은 topic으로 계속 publish한다(RViz에서는 흐리게, `held, seen N s ago`).
+     카메라가 다시 재면 새 값으로 바뀌고, 재생에서 jaws가 beaker1을 잡은 직후 `<topic>/release`로 해제된다.
+     규칙: 로봇이 그 물체를 옮기지 않는 한 인식 위치를 유지한다(손으로 옮긴 것은 모른다). pose node를 재시작하면 사라진다.
+2. **occlusion recovery (못 본 비커, 또는 `--recover NAME`)** — 예: beaker1 안의 설탕이 side 카메라에서 태그를 가림.
+   `cho_task_manager occlusion_recovery`가 팔을 움직인다. 다시 잴 비커만 담은 sweep 표로 훑는다.
    - 경로: home(관절 직선 이동) → 공구 약 0.55 m 높이에서 손목 카메라를 아래로 향한 raster → home.
    - 설정: `vessel_table:=pour_beakers.yaml`, `sweep_config:=fr5_bench_beakers.yaml`.
-   - 그 사이 `measure_vessels.py --latch`가 손목 카메라가 태그를 잡는 순간 값을 받는다.
+   - 그 사이 `measure_vessels.py --latch --camera wrist --min-margin 55`가 **wrist가 직접 잰** pose만 받는다
+     (hold 값이나 side 카메라 단독 값은 버린다).
    - 로그: `~/real_cell_runs/live_logs/recovery_*.log`.
 3. **원격 플래닝** — 인식값을 `SDL_LAYOUT_XY`(beaker, beaker2), `SDL_TAG_PLATES`로 rci-pc에 보낸다.
    rci-pc에서는 `record_transfer_real.sh`(headless Isaac Sim + cuTAMP, seed마다 한 번)와
@@ -97,9 +114,17 @@ scripts/real_cell/plan_remote.sh --perceive --beakers --material granular --gram
      벗어난 궤적은 버린다. 재생용 cell layout(`*_cell.yaml`)도 만든다.
 4. **재생 전 검사** — `check_replay.py`가 재생 트리를 오프라인으로 만든다(명령 없음). 걸리는 것:
    layout gate, 붓기 splice, 속도 한계에 따른 시간 늘리기.
-5. **재생** — `yes` 확인 뒤 `trajectory_replay`를 실행한다. 궤적 중 `pouring` 구간은 재생하지 않는다.
+5. **재생** — `trajectory_replay`를 실행한다. 궤적 중 `pouring` 구간은 재생하지 않는다.
    그 구간은 `pouring_controller`가 저울 무게로 붓고(`--material`, `--grams`), 붓기 시작 자세로 돌아온 다음
    남은 궤적을 이어서 재생한다.
+   - **붓는 대상 위치는 인식값이다.** beaker2의 인식 바닥 중심 (x, y, z)에 높이 70 mm(`BEAKER2_HEIGHT_M`)를
+     더한 rim 중심을 `replay_pour_receiver:=x,y,z`로 넘기고, 트리가 Pour goal의 `receiver_rim_center`에 싣는다.
+     컨트롤러(`pour_geometry: measured`)는 이 값이 없는 goal을 거부하며, 설정 파일에는 받는 용기 위치가 없다
+     (`receiver_rim_center`를 설정에 넣으면 configure가 실패한다).
+   - RViz에는 이 rim이 자홍색 원(`pour target`)으로, 상태 줄에 `pour into the rim at (...)`로 나온다.
+   - **grasp marker도 인식값이다.** jaws가 닫힌 뒤 topic을 새로 읽지 않고, 플래닝에 쓴 beaker1 인식 바닥 중심을
+     `replay_pour_grasp_marker:=x,y,z`로 넘겨 그 자리의 관절값과 짝지운다. side 카메라가 나쁜 각도에서 따로 잰 값이
+     붓기 기하를 옮기지 않게 하기 위해서다.
 
 그 밖의 실행 방법:
 
@@ -109,8 +134,8 @@ scripts/real_cell/plan_remote.sh --attach <run_id>                              
 scripts/real_cell/measure_vessels.py beaker1 beaker2                                      # 인식만 확인
 ```
 
-옵션 요약: `--beaker1 X,Y` / `--beaker2 X,Y` / `--plate1 DEG` / `--plate2 DEG` (직접 지정), `--no-recover`,
-`--home-via moveit|direct` (moveit은 `bringup_real_moveit` 필요), `--flow-index F`, `--yes` (확인 생략, 비추천).
+옵션 요약: `--recover NAME`, `--no-recover`, `--plate1 DEG` / `--plate2 DEG` (plate 방향만 덮어씀),
+`--home-via moveit|direct` (moveit은 `bringup_real_moveit` 필요), `--flow-index F`, `--confirm` (움직이기 전에 묻기).
 전체는 `scripts/real_cell/plan_remote.sh -h`.
 
 ## 4. 안전장치 (거부 조건)
@@ -119,17 +144,18 @@ scripts/real_cell/measure_vessels.py beaker1 beaker2                            
 |---|---|
 | rci-pc 커밋 ≠ 로컬 HEAD | 궤적은 플래너·URDF·scene 코드에 의존 |
 | 두 비커 셀에 인식(또는 직접 지정) 위치가 없음 | 기본 배치로 대신 계획하지 않는다 |
-| beaker2가 pan 중심에서 15 mm 초과 | 컨트롤러가 받는 용기를 pan 중심으로 가정 (`BEAKER2_TOL_M`) |
+| beaker2가 pan 밖 (중심에서 x 또는 y로 40 mm 초과) | 저울 위에 있어야 무게를 잰다. 220 mm 튀면 태그가 plate에서 돌아간 것 (`BEAKER2_ON_PAN_M`) |
+| 붓기에 받는 용기 rim이 없음 | 트리 빌드에서 거부, 컨트롤러도 goal 거부 (`replay_pour_receiver`) |
 | 인식 샘플 부족·퍼짐 초과 | 움직이는 pose로 계획하지 않는다 |
 | 계획 위치 ≠ 요청 위치 (> 2 mm) | 요청이 플래너에 닿지 않은 것 |
 | 재생 트리 빌드 실패 | layout / splice / 속도 문제는 움직이기 전에 거부 |
-| 팔이 움직이는 모든 단계 | 터미널에서 `yes` (recovery, 재생) |
+| 팔이 움직이는 단계 | 묻지 않는다(저자 요청). `--confirm`이면 터미널에서 `yes` |
+| 인식값 없는 비커 | 직접 지정·기본 배치 없음: `--perceive` 필수, 원격 `record_transfer_real.sh`도 거부 |
 
 ## 5. 남은 문제 / 주의
 
-- **컨트롤러의 받는 용기 위치**: `controllers.yaml`의 `receiver_rim_center`는 [0.520, 0.320, 0.180]으로 고정돼 있고
-  인식값을 쓰지 않는다. 인식으로 추정한 beaker2 rim은 약 (0.513, 0.328, 0.158)이라, 컨트롤러가 rim을 22 mm 높게 안다
-  (더 높은 곳에서 붓는 쪽이라 안전). 자로 잰 값으로 바꾸고 bringup을 재시작해야 한다.
+- **beaker2 높이**: 인식한 beaker2 바닥 z는 약 0.087 m로, 모델(벤치 −0.013 + pan 0.090 + 패드 0.002 = 0.079)보다
+  8 mm 높다. rim은 인식값을 쓰므로 붓는 높이가 그만큼 높아지는 쪽(안전)이다. 원인(저울 높이 또는 태그 z 편향)은 미확인.
 - **side_1 지연**: side_1 AprilTag 처리가 CPU를 많이 쓰고, pose node가 한 코어를 100% 쓴다. side_1 샘플이
   "stale" 또는 TF extrapolation으로 버려지는 일이 잦다. 태그가 한쪽 카메라에만 보이면 인식이 끊긴다
   (그때 recovery가 돈다).

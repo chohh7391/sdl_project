@@ -5,9 +5,9 @@
                        [--max-bearing-spread-deg 5]
     measure_vessels.py beaker2=/perception/object_pose/some_other_topic
 
-Prints one line per vessel, ``NAME X Y BEARING_DEG`` (base_link metres and
-degrees), on stdout and everything else on stderr, so plan_remote.sh --perceive
-can read the result.
+Prints one line per vessel, ``NAME X Y Z BEARING_DEG`` (base_link metres and
+degrees; Z is the vessel's bottom), on stdout and everything else on stderr, so
+plan_remote.sh --perceive can read the result.
 
 The poses come from cho_object_pose (the AprilTag pose node), which already
 applies each tag's mount offset: its xy IS the vessel centre, and on the
@@ -15,9 +15,17 @@ two-beaker cell's tables (cho_task_manager config/perception/pour_beakers.yaml)
 its z is the tag's height, which is level with the vessel's bottom. BEARING is
 the direction from the vessel's axis to its tag, i.e. which way the mount's
 plate points: the tables put the vessel along the tag's own -y as printed, so
-the tag lies along +y of the heading frame the pose node publishes. Checked
-against the raw tag transform on the bench (tag 0, side_1): predicted and
-measured tag positions agreed to 0.1 mm.
+the tag lies along +y of the tag's heading.
+
+The heading is read from the body the pose node draws for the vessel
+(/perception/object_markers), NOT from the published pose. The pose carries a
+GRASP orientation, whose yaw is folded into (-90, 90] deg because a gripper
+does not care which way round it holds a vessel -- so a tag near +-90 deg of
+yaw comes out as either, and the plate bearing flips by 180 deg from one
+camera to the next (seen 2026-09-29: side_1 178.5 deg, the wrist 0.5 deg, for
+a plate on the robot's side). The drawn body is oriented by the UNFOLDED
+heading the offset is applied in. Without markers it falls back to the pose,
+and says the bearing is then only known modulo 180 deg.
 
 Default topics:
   beaker1  /perception/object_pose/held_beaker   the beaker that is held and
@@ -36,6 +44,13 @@ printed either way, so a caller can tell which ones to go and look for.
 the wrist camera dwells over it: each vessel is reported as soon as its last
 --min-samples poses agree within the same limits, and the wait ends when every
 vessel has latched or after --seconds.
+
+--camera CAM counts only the poses published while CAM itself measures the tag
+(the pose node's /perception/object_visibility says CAM is OK for that vessel,
+at --min-margin or better). The pose node goes on publishing a vessel it cannot
+see -- the pose it last measured, held while nothing moves it -- and the standing
+cameras may still publish one of their own; a recovery that is re-measuring the
+vessel with the wrist camera wants neither, only what the wrist saw.
 """
 import argparse
 import math
@@ -45,6 +60,15 @@ import time
 import rclpy
 from geometry_msgs.msg import PoseStamped
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+from visualization_msgs.msg import Marker, MarkerArray
+
+MARKER_TOPIC = "/perception/object_markers"
+#: A drawn body older than this does not describe the pose just in.
+MARKER_FRESH_S = 0.5
+
+VISIBILITY_TOPIC = "/perception/object_visibility"
+#: A visibility snapshot older than this says nothing about the pose just in.
+VISIBILITY_FRESH_S = 0.5
 
 DEFAULT_TOPICS = {
     "beaker1": "/perception/object_pose/held_beaker",
@@ -81,6 +105,10 @@ def main():
     ap.add_argument("--latch", action="store_true",
                     help="report each vessel once its last --min-samples poses agree; "
                          "wait up to --seconds for all of them")
+    ap.add_argument("--camera", default="",
+                    help="count only poses published while this camera measures the tag")
+    ap.add_argument("--min-margin", type=float, default=0.0,
+                    help="with --camera: the decode margin that camera must have")
     a = ap.parse_args()
 
     topics = {}
@@ -97,19 +125,62 @@ def main():
     frames = {name: set() for name in topics}
     qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
 
+    # name -> (monotonic time, whether --camera measured it) from the pose
+    # node's visibility snapshots; only read with --camera.
+    measured_by = {}
+    # name -> (monotonic time, unfolded tag heading [rad]) from the body the
+    # pose node draws for the vessel, published with every pose.
+    heading = {}
+    folded = set()
+
+    def on_markers(msg):
+        drawn = [m for m in msg.markers if m.ns == "object_pose"]
+        for body in drawn:
+            if body.type == Marker.TEXT_VIEW_FACING:
+                continue
+            label = next((m for m in drawn if m.id == body.id + 1
+                          and m.type == Marker.TEXT_VIEW_FACING), None)
+            name = label.text.split(" ")[0] if label is not None else None
+            if name in topics:
+                q = body.pose.orientation
+                heading[name] = (time.monotonic(), 2.0 * math.atan2(q.z, q.w))
+
+    def on_visibility(msg):
+        for entry in msg.objects:
+            if entry.name not in topics:
+                continue
+            ok = any(view.camera == a.camera and view.state == view.STATE_OK
+                     and view.decision_margin >= a.min_margin for view in entry.cameras)
+            measured_by[entry.name] = (time.monotonic(), ok and entry.publishing)
+
     def callback(name):
         def on_pose(msg):
+            if a.camera:
+                seen = measured_by.get(name)
+                if seen is None or time.monotonic() - seen[0] > VISIBILITY_FRESH_S or not seen[1]:
+                    return
             frames[name].add(msg.header.frame_id)
-            q = msg.pose.orientation
-            # The published frame's x axis in the base plane, and the heading
-            # frame's +y (z up), along which the tag lies from the vessel.
-            ax, ay = 1.0 - 2.0 * (q.y * q.y + q.z * q.z), 2.0 * (q.x * q.y + q.w * q.z)
+            seen = heading.get(name)
+            if seen is not None and time.monotonic() - seen[0] <= MARKER_FRESH_S:
+                ax, ay = math.cos(seen[1]), math.sin(seen[1])
+            else:
+                # The grasp orientation: its x axis carries the FOLDED yaw.
+                folded.add(name)
+                q = msg.pose.orientation
+                ax, ay = 1.0 - 2.0 * (q.y * q.y + q.z * q.z), 2.0 * (q.x * q.y + q.w * q.z)
+            # The heading's +y (z up), along which the tag lies from the vessel.
             samples[name].append((msg.pose.position.x, msg.pose.position.y,
                                   msg.pose.position.z, -ay, ax))
         return on_pose
 
-    subs = [node.create_subscription(PoseStamped, topic, callback(name), qos)
-            for name, topic in topics.items()]
+    # Subscribed before the poses, so the first pose already has its body.
+    subs = [node.create_subscription(MarkerArray, MARKER_TOPIC, on_markers, QoSProfile(depth=10))]
+    subs += [node.create_subscription(PoseStamped, topic, callback(name), qos)
+             for name, topic in topics.items()]
+    if a.camera:
+        from cho_interfaces.msg import ObjectVisibilityArray
+        subs.append(node.create_subscription(ObjectVisibilityArray, VISIBILITY_TOPIC,
+                                             on_visibility, QoSProfile(depth=1)))
     # DDS discovery alone can take a couple of seconds, and a window that opens
     # before it finishes reports a vessel as unseen. Open it once every topic has
     # a publisher, or after DISCOVERY_S whatever the state.
@@ -162,6 +233,10 @@ def main():
         print("%s: (%.4f, %.4f) from %d poses on %s, spread %.1f mm; base at z=%.4f; tag plate "
               "at bearing %.1f deg (+-%.1f), %.0f deg from straight away from the robot"
               % (name, mx, my, len(pts), topic, spread, mz, bearing, bspread, off), file=sys.stderr)
+        if name in folded:
+            print("%s: WARNING no drawn body on %s for some poses; their plate bearing is the "
+                  "folded grasp yaw's, known only modulo 180 deg" % (name, MARKER_TOPIC),
+                  file=sys.stderr)
         if spread > a.max_spread_mm or bspread > a.max_bearing_spread_deg:
             print("%s: spread %.1f mm / %.1f deg exceeds %.1f mm / %.1f deg; not reporting a pose "
                   "that moves" % (name, spread, bspread, a.max_spread_mm, a.max_bearing_spread_deg),
@@ -172,7 +247,7 @@ def main():
             print("%s: WARNING its tag plate points back toward the robot, where the arm comes "
                   "from; the planner routes around it, but turn it away if the plan fails"
                   % name, file=sys.stderr)
-        out.append("%s %.4f %.4f %.1f" % (name, mx, my, bearing))
+        out.append("%s %.4f %.4f %.4f %.1f" % (name, mx, my, mz, bearing))
     if out:
         print("\n".join(out))
     return 0 if ok else 1
