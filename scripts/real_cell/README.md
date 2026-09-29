@@ -140,8 +140,9 @@ scripts/real_cell/measure_vessels.py beaker1 beaker2                            
   실제 붓기는 컨트롤러가 한다. 이 기준 때문에 버려지는 seed가 있다.
 - **sweep 표**: `fr5_bench_beakers.yaml`은 리그에서 검증된 `fr5_bench.yaml`과 waypoint가 같고 이름만 다르다
   (2026-09-29에 다시 풀면 waypoint 36개, 2개 도달 불가로 결과가 달라서 새로 푼 값은 쓰지 않았다).
-- **저장소 반영**: `cho_robot_project` 쪽 변경(`d435.launch.py` `stream:=both`, task manager `vessel_table`,
-  `pour_beakers.yaml`, `fr5_bench_beakers.yaml`)은 그 저장소에서 따로 커밋해야 한다.
+- **저장소 반영**: 이 흐름이 쓰는 `cho_robot_project` 변경은 그 저장소 `main`에 있다 — `3829cd9`
+  (`d435.launch.py` `stream:=both`), `108cae3` (`pour_beakers.yaml`, recovery `vessel_table`,
+  `fr5_bench_beakers.yaml`).
 
 ## 6. 문제 해결
 
