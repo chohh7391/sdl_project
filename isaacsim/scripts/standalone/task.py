@@ -79,6 +79,18 @@ def _TARGET_SRC():
     return target_vessel()
 
 
+def _TAG_PLATE_SRC():
+    """Tag-mount plate geometry and bearings (envs.constants TAG_PLATE_*)."""
+    import sys as _sys, os as _os
+    _src = _os.path.abspath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "..", "..", "..", "TAMP", "tamp", "src"))
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from envs import constants as _c
+    return _c.TAG_PLATE_DIMS_M, _c.TAG_PLATE_OFFSET_M, _c.TAG_PLATE_OF, _c.tag_plate_bearings()
+
+
 def _FOOTPRINT_SRC(name):
     """Vessel dims for the class-body footprint table (see Task._vessel_dims)."""
     import sys as _sys, os as _os
@@ -309,6 +321,43 @@ class Task(ABC, BaseTask):
               % (dims, p[0], p[1], dz + dims[2] + beaker_h / 2.0,
                  dz + beaker_h / 2.0))
 
+    def _apply_tag_plates(self):
+        """Lay each beaker's tag plate beside it: the two-beaker cell only.
+
+        Every beaker there stands on the pad of a tag mount (envs.constants
+        TAG_PLATE_*), whose plate lies 110 mm from the vessel's axis, level with
+        its base, along the bearing SDL_TAG_PLATES gives (measured from the tag's
+        heading), or straight away from the robot when it gives none. Runs after
+        the riser and the scale rig have set every vessel's final height, so the
+        plate follows the vessel's own base rather than a separate number.
+        """
+        self._tag_plates = {}
+        if getattr(self, "target_vessel", "flask") != "beaker2":
+            return
+        dims, offset, plate_of, bearings = _TAG_PLATE_SRC()
+        for vessel in ("beaker", "beaker2"):
+            p = self.default_positions[vessel]
+            if vessel in bearings:
+                bearing = math.radians(bearings[vessel])
+                how = "measured"
+            else:
+                bearing = math.atan2(float(p[1]), float(p[0]))
+                how = "away from the robot"
+            base_z = float(p[2]) - float(_FOOTPRINT_SRC(vessel)[2]) / 2.0
+            name = plate_of[vessel]
+            half = bearing / 2.0
+            self._tag_plates[name] = dict(
+                dims=list(dims),
+                position=np.array([p[0] + offset * math.cos(bearing),
+                                   p[1] + offset * math.sin(bearing),
+                                   base_z - dims[2] / 2.0]),
+                orientation=np.array([math.cos(half), 0.0, 0.0, math.sin(half)]),
+            )
+            self.default_positions[name] = self._tag_plates[name]["position"]
+            self.default_orientations[name] = self._tag_plates[name]["orientation"]
+            print("[Task] %s's tag plate at bearing %.1fdeg (%s), %.0f mm from its axis"
+                  % (vessel, math.degrees(bearing), how, offset * 1e3))
+
     def _print_effective_layout(self):
         """Print the layout as it FINALLY stands, in the canonical format.
 
@@ -344,6 +393,11 @@ class Task(ABC, BaseTask):
             yaw = math.degrees(2.0 * math.atan2(float(q[3]), float(q[0])))
             print("[Task]   %-8s xy=(%.4f,%.4f) yaw=%.1fdeg dims=%s"
                   % ("scale", p[0], p[1], yaw, self._scale_pose["dims"]))
+        for name, plate in sorted(getattr(self, "_tag_plates", {}).items()):
+            p, q = plate["position"], plate["orientation"]
+            yaw = math.degrees(2.0 * math.atan2(float(q[3]), float(q[0])))
+            print("[Task]   %-8s xy=(%.4f,%.4f) yaw=%.1fdeg dims=%s"
+                  % (name, p[0], p[1], yaw, plate["dims"]))
 
     def _apply_scale_rig(self):
         """Stand the pour target on the real cell's electronic balance.
@@ -419,6 +473,7 @@ class Task(ABC, BaseTask):
         spec = os.environ.get("SDL_LAYOUT_XY", "").strip()
         if not spec:
             self._apply_beaker_riser()
+            self._apply_tag_plates()
             self._print_effective_layout()
             return
         for item in spec.split(";"):
@@ -449,6 +504,7 @@ class Task(ABC, BaseTask):
                   % (name, nums[0], nums[1], z,
                      " yaw=%.1fdeg" % nums[2] if len(nums) == 3 else ""))
         self._apply_beaker_riser()
+        self._apply_tag_plates()
         self._print_effective_layout()
 
     # In-plane bounding radius (circumscribed, = half-diagonal) of each movable's
@@ -1059,6 +1115,13 @@ class Task(ABC, BaseTask):
             )
             self.scene.add(self.riser_prim)
             print("[Task] riser prim at /World/riser")
+        for name, plate in sorted(getattr(self, "_tag_plates", {}).items()):
+            self.scene.add(create_box_static(
+                prim_path="/World/%s" % name, name=name,
+                position=plate["position"], orientation=plate["orientation"],
+                dims=plate["dims"], color=(0.15, 0.15, 0.15),
+            ))
+            print("[Task] tag plate prim at /World/%s" % name)
 
         # spawn gripper visual
         gripper_visual_asset_path = os.path.join(ASSET_PATH, "robot", "dcp_description", "usd", "gripper_visual")

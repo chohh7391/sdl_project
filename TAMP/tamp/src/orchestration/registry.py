@@ -115,15 +115,18 @@ _ENVIRONMENTS = {
     ),
     # The same real cell with a second BEAKER on the balance instead of the
     # flask: pour from "beaker" (the rig's beaker 1, on its riser) into
-    # "beaker2", which stands at the centre of the balance pan. The simulator
-    # has to be started with SDL_TARGET_VESSEL=beaker2 to spawn it; set_tamp_env
-    # refuses an entity the simulator does not report, so a mismatch fails
-    # rather than planning against a vessel at the origin.
+    # "beaker2", which stands at the centre of the balance pan. Each beaker
+    # stands on a tag mount whose plate is an obstacle at the height of its
+    # base (tag_beaker, tag_beaker2). The simulator has to be started with
+    # SDL_TARGET_VESSEL=beaker2 to spawn them; set_tamp_env refuses an entity
+    # the simulator does not report, so a mismatch fails rather than planning
+    # against an object at the origin.
     "transfer_real_beakers": EnvironmentSpec(
         "transfer_real_beakers",
-        ("beaker", "beaker2", "magnet", "stirrer", "scale", "riser"),
+        ("beaker", "beaker2", "magnet", "stirrer", "scale", "riser",
+         "tag_beaker", "tag_beaker2"),
         ("beaker", "beaker2"),
-        ("table", "stirrer", "magnet", "scale", "riser"),
+        ("table", "stirrer", "magnet", "scale", "riser", "tag_beaker", "tag_beaker2"),
         ("pour_region", "goal_region"),
     ),
     "stir": EnvironmentSpec(

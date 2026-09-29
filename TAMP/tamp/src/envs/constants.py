@@ -250,3 +250,41 @@ def beaker_riser_dims():
     if BEAKER_RISER_M <= 0.0:
         return None
     return [BEAKER_RISER_XY_M, BEAKER_RISER_XY_M, BEAKER_RISER_M]
+
+# --- AprilTag mounts of the two-beaker cell -----------------------------------
+# Each beaker stands on the round pad of hardware/tag_mount/
+# square88_circle_connector_r20_c110.stl: a 2 mm sheet whose 88 mm square tag
+# plate sits 110 mm from the pad centre, i.e. from the vessel's axis, level with
+# the vessel's bottom. The pad's 2 mm is carried by the support heights the scene
+# is given (riser, balance top); the PLATE is an obstacle of its own, because it
+# sticks out 66-154 mm from the axis at the height of the vessel's base -- which a
+# level side grasp's wrist, reaching ~58 mm below the grasp frame, comes down to.
+#
+# Which way each plate points is measured: the pose node reports the tag's
+# heading, and the plate lies along it (scripts/real_cell/measure_vessels.py).
+# SDL_TAG_PLATES="beaker:<deg>;beaker2:<deg>" gives the bearing of each plate
+# from its vessel's axis in the base frame; a vessel it does not name gets the
+# bearing straight away from the robot, which is how the mounts are meant to be
+# set down.
+TAG_PLATE_DIMS_M = [0.088, 0.088, 0.002]
+TAG_PLATE_OFFSET_M = 0.110
+#: Planner/simulator entity name of each vessel's plate.
+TAG_PLATE_OF = {"beaker": "tag_beaker", "beaker2": "tag_beaker2"}
+
+
+def tag_plate_bearings():
+    """{vessel: bearing_deg} from SDL_TAG_PLATES (only the vessels it names)."""
+    out = {}
+    for item in _os.environ.get("SDL_TAG_PLATES", "").split(";"):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            name, deg = item.split(":", 1)
+            out[name.strip()] = float(deg)
+        except ValueError:
+            raise ValueError("SDL_TAG_PLATES entry %r is not vessel:bearing_deg" % item)
+        if name.strip() not in TAG_PLATE_OF:
+            raise ValueError("SDL_TAG_PLATES names %r, not one of %s"
+                             % (name.strip(), sorted(TAG_PLATE_OF)))
+    return out

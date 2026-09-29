@@ -2,20 +2,28 @@
 """Measure where vessels stand on the real cell, from this machine's cameras.
 
     measure_vessels.py beaker1 beaker2 [--seconds 4] [--min-samples 10] [--max-spread-mm 5]
+                       [--max-bearing-spread-deg 5]
     measure_vessels.py beaker2=/perception/object_pose/some_other_topic
 
-Prints one line per vessel, ``NAME X Y`` in base_link metres, on stdout and
-everything else on stderr, so plan_remote.sh --perceive can read the result.
+Prints one line per vessel, ``NAME X Y BEARING_DEG`` (base_link metres and
+degrees), on stdout and everything else on stderr, so plan_remote.sh --perceive
+can read the result.
 
 The poses come from cho_object_pose (the AprilTag pose node), which already
-applies each tag's mount offset: its xy IS the vessel centre. Only x and y are
-taken -- the z it reports is a standoff above the bench, not the vessel -- which
-is also all the planner's measured layout uses (SDL_LAYOUT_XY).
+applies each tag's mount offset: its xy IS the vessel centre, and on the
+two-beaker cell's tables (cho_task_manager config/perception/pour_beakers.yaml)
+its z is the tag's height, which is level with the vessel's bottom. BEARING is
+the direction from the vessel's axis to its tag, i.e. which way the mount's
+plate points: the tables put the vessel along the tag's own -y as printed, so
+the tag lies along +y of the heading frame the pose node publishes. Checked
+against the raw tag transform on the bench (tag 0, side_1): predicted and
+measured tag positions agreed to 0.1 mm.
 
 Default topics:
-  beaker1  /perception/object_pose/held_beaker   pour_vessel.yaml's tag 0: the
-           beaker that is held and poured, so the same pose node serves the
-           replay's pour marker and this measurement
+  beaker1  /perception/object_pose/held_beaker   the beaker that is held and
+           poured: the pouring controller reads its marker from this topic
+           (controllers.yaml vessel_pose_topic), so the table publishes the
+           source beaker's tag there and one pose node serves both
   beaker2  /perception/object_pose/beaker2
 
 A vessel is reported only if it gave --min-samples poses within --seconds, all
@@ -52,6 +60,7 @@ def main():
     ap.add_argument("--seconds", type=float, default=4.0)
     ap.add_argument("--min-samples", type=int, default=10)
     ap.add_argument("--max-spread-mm", type=float, default=5.0)
+    ap.add_argument("--max-bearing-spread-deg", type=float, default=5.0)
     a = ap.parse_args()
 
     topics = {}
@@ -71,7 +80,12 @@ def main():
     def callback(name):
         def on_pose(msg):
             frames[name].add(msg.header.frame_id)
-            samples[name].append((msg.pose.position.x, msg.pose.position.y))
+            q = msg.pose.orientation
+            # The published frame's x axis in the base plane, and the heading
+            # frame's +y (z up), along which the tag lies from the vessel.
+            ax, ay = 1.0 - 2.0 * (q.y * q.y + q.z * q.z), 2.0 * (q.x * q.y + q.w * q.z)
+            samples[name].append((msg.pose.position.x, msg.pose.position.y,
+                                  msg.pose.position.z, -ay, ax))
         return on_pose
 
     subs = [node.create_subscription(PoseStamped, topic, callback(name), qos)
@@ -108,15 +122,27 @@ def main():
             ok = False
             continue
         mx, my = median([p[0] for p in pts]), median([p[1] for p in pts])
-        spread = max(math.hypot(x - mx, y - my) for x, y in pts) * 1e3
-        print("%s: (%.4f, %.4f) from %d poses on %s, spread %.1f mm"
-              % (name, mx, my, len(pts), topic, spread), file=sys.stderr)
-        if spread > a.max_spread_mm:
-            print("%s: spread %.1f mm exceeds %.1f mm; not reporting a pose that moves"
-                  % (name, spread, a.max_spread_mm), file=sys.stderr)
+        mz = median([p[2] for p in pts])
+        spread = max(math.hypot(p[0] - mx, p[1] - my) for p in pts) * 1e3
+        bearing = math.degrees(math.atan2(sum(p[4] for p in pts), sum(p[3] for p in pts)))
+        bspread = max(abs((math.degrees(math.atan2(p[4], p[3])) - bearing + 180.0) % 360.0 - 180.0)
+                      for p in pts)
+        outward = math.degrees(math.atan2(my, mx))
+        off = (bearing - outward + 180.0) % 360.0 - 180.0
+        print("%s: (%.4f, %.4f) from %d poses on %s, spread %.1f mm; base at z=%.4f; tag plate "
+              "at bearing %.1f deg (+-%.1f), %.0f deg from straight away from the robot"
+              % (name, mx, my, len(pts), topic, spread, mz, bearing, bspread, off), file=sys.stderr)
+        if spread > a.max_spread_mm or bspread > a.max_bearing_spread_deg:
+            print("%s: spread %.1f mm / %.1f deg exceeds %.1f mm / %.1f deg; not reporting a pose "
+                  "that moves" % (name, spread, bspread, a.max_spread_mm, a.max_bearing_spread_deg),
+                  file=sys.stderr)
             ok = False
             continue
-        out.append("%s %.4f %.4f" % (name, mx, my))
+        if abs(off) > 90.0:
+            print("%s: WARNING its tag plate points back toward the robot, where the arm comes "
+                  "from; the planner routes around it, but turn it away if the plan fails"
+                  % name, file=sys.stderr)
+        out.append("%s %.4f %.4f %.1f" % (name, mx, my, bearing))
     if not ok:
         return 1
     print("\n".join(out))

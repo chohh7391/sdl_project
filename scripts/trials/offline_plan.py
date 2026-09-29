@@ -32,7 +32,7 @@ lay = {}
 for m in re.finditer(r"\[Task\]\s+(beaker2|beaker|flask|magnet|box|stirrer)\s+xy=\(([-\d.]+),([-\d.]+)\)\s+"
                      r"yaw=([-\d.]+)deg\s+z=([-\d.]+)", txt):
     lay[m.group(1)] = [float(m.group(i)) for i in (2, 3, 5, 4)]   # x, y, z, yaw
-for m in re.finditer(r"\[Task\]\s+(scale|riser)\s+xy=\(([-\d.]+),([-\d.]+)\)\s+yaw=([-\d.]+)deg\s+"
+for m in re.finditer(r"\[Task\]\s+(scale|riser|tag_beaker2|tag_beaker)\s+xy=\(([-\d.]+),([-\d.]+)\)\s+yaw=([-\d.]+)deg\s+"
                      r"dims=\[([-\d.,\s]+)\]", txt):
     dims = [float(v) for v in m.group(5).split(",")]
     dz = float(os.environ.get("SDL_TABLE_Z_M", "0"))

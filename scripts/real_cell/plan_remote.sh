@@ -27,9 +27,13 @@
 #                   planned against: beaker2 is fixed at the pan centre, and a
 #                   measurement more than BEAKER2_TOL_M (default 0.015) off it
 #                   refuses the run -- re-centre the beaker, or move --pan.
-#   --perceive      measure beaker1 (and beaker2) with THIS machine's cameras, from
-#                   /perception/object_pose/beaker1|beaker2 (measure_vessels.py);
-#                   needs the pose node running on the beakers table
+#   --plate1 DEG, --plate2 DEG
+#                   two-beaker cell: the bearing (base frame, from the vessel's
+#                   axis) of each beaker's tag-mount plate, an obstacle beside
+#                   its base -> SDL_TAG_PLATES. Unset: straight away from the robot.
+#   --perceive      measure beaker1 and beaker2, with their plate bearings, with
+#                   THIS machine's cameras (measure_vessels.py); needs the pose
+#                   node running on cho_task_manager's pour_beakers.yaml
 # Omitted positions take record_transfer_real.sh's defaults, and the check below
 # compares against those.
 #
@@ -55,7 +59,7 @@
 #   BEAKER2_TOL_M    how far a measured beaker2 may sit off the pan centre (0.015)
 #   ALLOW_COMMIT_MISMATCH=1   plan on a remote checkout that is not this HEAD
 # Forwarded to the remote when set here: SDL_TABLE_Z_M SDL_BEAKER_RISER_M
-#   SDL_GRASP_BETA_MIN_DEG SDL_GRASP_BETA_MAX_DEG SDL_GRASP_H_FRAC PLAN_TIMEOUT
+#   SDL_BEAKER_RISER_XY_M SDL_SCALE_TOP_M SDL_GRASP_BETA_MIN_DEG SDL_GRASP_BETA_MAX_DEG SDL_GRASP_H_FRAC PLAN_TIMEOUT
 #   CUDA_VISIBLE_DEVICES
 #
 # Real-cell only, like record_transfer_real.sh: never a source of paper numbers.
@@ -74,7 +78,8 @@ die() { echo "plan_remote: $*" >&2; exit 1; }
 q() { printf '%q ' "$@"; }
 rpath() { case "$1" in /*) echo "$1" ;; *) echo "\$HOME/$1" ;; esac; }  # expanded remotely
 
-BEAKER="" FLASK="" BEAKER2="" TARGET=flask PERCEIVE=0 MATERIAL="" GRAMS="" FLOW="" HOME_VIA=moveit
+BEAKER="" FLASK="" BEAKER2="" PLATE1="" PLATE2="" TARGET=flask PERCEIVE=0
+MATERIAL="" GRAMS="" FLOW="" HOME_VIA=moveit
 MODE=new STAMP="" REPLAY=0 YES=0 SEEDS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -82,6 +87,8 @@ while [[ $# -gt 0 ]]; do
     --flask|--pan)      FLASK="${2:?$1 X,Y}"; shift 2 ;;
     --beaker2)  BEAKER2="${2:?--beaker2 X,Y}"; TARGET=beaker2; shift 2 ;;
     --beakers)  TARGET=beaker2; shift ;;
+    --plate1)   PLATE1="${2:?--plate1 DEG}"; TARGET=beaker2; shift 2 ;;
+    --plate2)   PLATE2="${2:?--plate2 DEG}"; TARGET=beaker2; shift 2 ;;
     --perceive) PERCEIVE=1; shift ;;
     --material) MATERIAL="${2:?--material liquid|granular}"; shift 2 ;;
     --grams)    GRAMS="${2:?--grams G}"; shift 2 ;;
@@ -113,16 +120,24 @@ if [[ $MODE == new && $PERCEIVE == 1 ]]; then
   measured="$(set +u; source /opt/ros/humble/setup.bash && source "$CHO_WS/install/setup.bash" &&
               python3 "$ROOT/scripts/real_cell/measure_vessels.py" "${names[@]}")" \
     || die "perception did not give a stable pose for every vessel (see above)"
-  while read -r name x y; do
+  while read -r name x y bearing; do
     case "$name" in
-      beaker1) [[ -z "$BEAKER" ]] || die "--perceive and --beaker both give beaker1"; BEAKER="$x,$y" ;;
-      beaker2) [[ -z "$BEAKER2" ]] || die "--perceive and --beaker2 both give beaker2"; BEAKER2="$x,$y" ;;
+      beaker1) [[ -z "$BEAKER" ]] || die "--perceive and --beaker both give beaker1"
+               BEAKER="$x,$y"; [[ -n "$PLATE1" ]] || PLATE1="$bearing" ;;
+      beaker2) [[ -z "$BEAKER2" ]] || die "--perceive and --beaker2 both give beaker2"
+               BEAKER2="$x,$y"; [[ -n "$PLATE2" ]] || PLATE2="$bearing" ;;
     esac
   done <<< "$measured"
 fi
 for v in "$BEAKER" "$FLASK" "$BEAKER2"; do
   [[ -z "$v" || "$v" =~ ^-?[0-9.]+,-?[0-9.]+$ ]] || die "position must be X,Y in metres: $v"
 done
+for v in "$PLATE1" "$PLATE2"; do
+  [[ -z "$v" || "$v" =~ ^-?[0-9.]+$ ]] || die "a plate bearing is degrees: $v"
+done
+plates=""
+[[ -n "$PLATE1" ]] && plates="beaker:$PLATE1"
+[[ -n "$PLATE2" ]] && plates="${plates:+$plates;}beaker2:$PLATE2"
 if [[ -n "$BEAKER2" ]]; then
   # beaker2 is planned at the pan centre; the measurement only has to agree.
   pan="${FLASK:-0.520,0.320}"   # record_transfer_real.sh's default pan
@@ -162,7 +177,9 @@ $dirty" >&2
   [[ -n "$BEAKER" ]] && envs+=("SDL_LAYOUT_XY=beaker:$BEAKER")
   [[ -n "$FLASK" ]] && envs+=("SDL_SCALE_PAN_XY=$FLASK")
   [[ $TARGET == beaker2 ]] && envs+=("SDL_TARGET_VESSEL=beaker2")
-  for k in SDL_TABLE_Z_M SDL_BEAKER_RISER_M SDL_GRASP_BETA_MIN_DEG SDL_GRASP_BETA_MAX_DEG \
+  [[ -n "$plates" ]] && envs+=("SDL_TAG_PLATES=$plates")
+  for k in SDL_TABLE_Z_M SDL_BEAKER_RISER_M SDL_BEAKER_RISER_XY_M SDL_SCALE_TOP_M \
+           SDL_GRASP_BETA_MIN_DEG SDL_GRASP_BETA_MAX_DEG \
            SDL_GRASP_H_FRAC PLAN_TIMEOUT CUDA_VISIBLE_DEVICES; do
     [[ -n "${!k:-}" ]] && envs+=("$k=${!k}")
   done
@@ -229,7 +246,7 @@ def read_env(name):
         return {}
     return dict(l.rstrip("\n").split("=", 1) for l in open(path) if "=" in l)
 env, asked = read_env("SCENE_ENV.txt"), read_env("REQUEST.env")
-for k in ("SDL_LAYOUT_XY", "SDL_SCALE_PAN_XY", "SDL_TARGET_VESSEL"):
+for k in ("SDL_LAYOUT_XY", "SDL_SCALE_PAN_XY", "SDL_TARGET_VESSEL", "SDL_TAG_PLATES"):
     if k in asked and env.get(k) != asked[k]:
         sys.exit("the remote ran with %s=%r, but %r was asked for" % (k, env.get(k), asked[k]))
 # The pour target stands at the pan centre: the flask, or beaker2 in the
@@ -282,7 +299,7 @@ META="${CSV%.csv}.meta.json"; CELL="${CSV%.csv}_cell.yaml"
 echo
 echo "=== ready: $CSV"
 echo "the physical objects must stand here (base_link, m):"
-awk '/^  [a-z]/ { keep = /^  (beaker|beaker2|riser|flask|scale):/ } keep' "$CELL"
+awk '/^  [a-z]/ { keep = /^  (beaker|beaker2|riser|flask|scale|tag_beaker|tag_beaker2):/ } keep' "$CELL"
 LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=trajectory_replay robot_type:=fr5
         "replay_trajectory:=$CSV" "replay_meta:=$META" "replay_layout:=$CELL")
 if [[ -n "$MATERIAL" ]]; then

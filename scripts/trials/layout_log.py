@@ -15,7 +15,7 @@ HOME = re.compile(r"\[Task\]\s+home_arm\(rad\) = \[([-\d.,\s]+)\]")
 # up or the vessels are at the wrong height, so they are recovered too. One
 # pattern for both: they are printed identically and naming them separately is
 # how the riser came to be missing from a delivered file.
-FURNITURE = re.compile(r"\[Task\]\s+(scale|riser)\s+xy=\(([-\d.]+),\s*([-\d.]+)\)\s+"
+FURNITURE = re.compile(r"\[Task\]\s+(scale|riser|tag_beaker2|tag_beaker)\s+xy=\(([-\d.]+),\s*([-\d.]+)\)\s+"
                        r"yaw=([-\d.]+)deg\s+dims=\[([-\d.,\s]+)\]")
 
 

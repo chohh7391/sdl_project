@@ -19,7 +19,9 @@
 #
 # SDL_TARGET_VESSEL=beaker2 records the two-beaker variant of the same cell: the
 # flask is replaced by a second beaker standing at the centre of the balance pan
-# (SDL_SCALE_PAN_XY), and the task becomes transfer_real_beakers.
+# (SDL_SCALE_PAN_XY), and the task becomes transfer_real_beakers. Both beakers
+# stand on tag mounts (hardware/tag_mount): 2 mm pads, and a plate beside each
+# at the bearing SDL_TAG_PLATES gives.
 #
 # Why the rig differs from the paper's scene: the level side grasp puts the
 # wrist body ~58 mm below the grasp point, so a vessel standing on the bench
@@ -39,6 +41,15 @@ export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-100}" RMW_IMPLEMENTATION="${RMW_IMPLEMENT
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 export SDL_GLASSWARE="${SDL_GLASSWARE:-real}"
 export SDL_TABLE_Z_M="${SDL_TABLE_Z_M:--0.013}"
+if [[ "${SDL_TARGET_VESSEL:-flask}" == beaker2 ]]; then
+  # The two-beaker cell's beakers stand on the 2 mm pads of their tag mounts
+  # (hardware/tag_mount): the riser's top and the balance's top are each 2 mm
+  # higher to the vessel than the bare box and pan. The riser's footprint stays
+  # the 50 mm box. The plates are placed by the simulator (SDL_TAG_PLATES).
+  export SDL_BEAKER_RISER_M="${SDL_BEAKER_RISER_M:-0.052}"
+  export SDL_BEAKER_RISER_XY_M="${SDL_BEAKER_RISER_XY_M:-0.050}"
+  export SDL_SCALE_TOP_M="${SDL_SCALE_TOP_M:-0.092}"
+fi
 export SDL_BEAKER_RISER_M="${SDL_BEAKER_RISER_M:-0.05}"
 export SDL_GRASP_BETA_MIN_DEG="${SDL_GRASP_BETA_MIN_DEG:-0}" SDL_GRASP_BETA_MAX_DEG="${SDL_GRASP_BETA_MAX_DEG:-10}"
 export SDL_GRASP_H_FRAC="${SDL_GRASP_H_FRAC:-0.0}"
