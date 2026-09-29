@@ -193,6 +193,25 @@ def scale_dims():
     return [SCALE_LONG_M, SCALE_SHORT_M, SCALE_TOP_M]
 
 
+def scale_body_bearing_deg():
+    """SDL_SCALE_BODY_BEARING_DEG, or None for the default orientation.
+
+    The bearing, in the base frame, from the pan centre towards the balance's
+    long end -- the end SCALE_PAN_FROM_FAR_M (140 mm) from the pan. Unset, the
+    balance faces the robot: that end points straight away from it. The
+    two-beaker cell's balance is instead square to the robot base with its pan at
+    the +x end, so its long end is towards -x: 180. Fixed by how the balance is
+    set down, not perceived.
+    """
+    spec = _os.environ.get("SDL_SCALE_BODY_BEARING_DEG", "").strip()
+    if not spec:
+        return None
+    try:
+        return float(spec)
+    except ValueError:
+        raise ValueError("SDL_SCALE_BODY_BEARING_DEG=%r is not a number" % spec)
+
+
 def scale_pose_from_pan(pan_xy):
     """Balance centre (x, y) and yaw [rad] that put its PAN at `pan_xy`.
 
@@ -207,6 +226,10 @@ def scale_pose_from_pan(pan_xy):
     if r < 1e-6:
         raise ValueError("the balance pan cannot be at the robot's own axis")
     ux, uy = px / r, py / r                      # robot -> pan, the long axis
+    bearing = scale_body_bearing_deg()
+    if bearing is not None:
+        # A balance set down square to the cell rather than facing the robot.
+        ux, uy = math.cos(math.radians(bearing)), math.sin(math.radians(bearing))
     near = SCALE_LONG_M - SCALE_PAN_FROM_FAR_M   # pan centre to the near end
     shift = (SCALE_PAN_FROM_FAR_M - near) / 2.0  # pan centre -> body centre
     return (px + shift * ux, py + shift * uy), math.atan2(uy, ux)
@@ -250,6 +273,24 @@ def beaker_riser_dims():
     if BEAKER_RISER_M <= 0.0:
         return None
     return [BEAKER_RISER_XY_M, BEAKER_RISER_XY_M, BEAKER_RISER_M]
+
+
+def riser_xy():
+    """SDL_RISER_XY="x,y": the riser's centre, for a riser that stays put.
+
+    Unset, the riser is a box just under the source vessel and follows it
+    wherever the vessel is placed. Set, it is a box of its own at this xy -- the
+    two-beaker cell's 200 x 200 mm block -- and the vessel stands wherever it was
+    measured on top of it.
+    """
+    spec = _os.environ.get("SDL_RISER_XY", "").strip()
+    if not spec:
+        return None
+    try:
+        x, y = (float(v) for v in spec.split(","))
+    except ValueError:
+        raise ValueError("SDL_RISER_XY=%r is not x,y" % spec)
+    return x, y
 
 # --- AprilTag mounts of the two-beaker cell -----------------------------------
 # Each beaker stands on the round pad of hardware/tag_mount/

@@ -106,6 +106,11 @@ class Monitor:
         try:
             mtime = os.path.getmtime(path)
         except OSError:
+            # No plan selected (plan_remote.sh has not chosen one, or it was
+            # cleared): take the last one off the screen rather than leave a
+            # stale plan that reads as if something were there.
+            if self.current is not None or self.current_mtime is None:
+                self.clear()
             return
         if mtime == self.current_mtime:
             return
@@ -116,6 +121,12 @@ class Monitor:
         except Exception as err:   # a half-written or foreign file must not kill the view
             self.plan_label = "could not show %s: %s" % (os.path.basename(base), err)
             self.node.get_logger().error(self.plan_label)
+
+    def clear(self):
+        self.pub_scene.publish(MarkerArray(markers=[Marker(action=Marker.DELETEALL)]))
+        self.pub_path.publish(MarkerArray(markers=[Marker(action=Marker.DELETEALL)]))
+        self.current, self.current_mtime, self.planned_xy = None, -1.0, {}
+        self.plan_label = "no plan selected (green bodies appear once plan_remote.sh has one)"
 
     def load(self, base):
         meta = json.load(open(base + ".meta.json"))
@@ -153,7 +164,7 @@ class Monitor:
                 self.planned_xy[name] = (x, y)
                 add(Marker.CYLINDER, "planned vessels", (x, y, z0 + h / 2.0), (dia, dia, h), 0.0, PLAN_RGBA)
                 add(Marker.TEXT_VIEW_FACING, "planned labels", (x, y, z0 + h + 0.04), (0, 0, 0.03),
-                    0.0, (0.6, 1.0, 0.6, 1.0), "%s (plan)" % LABEL[name])
+                    0.0, (0.6, 1.0, 0.6, 1.0), "%s PLAN" % LABEL[name])
             elif name in ("riser", "scale"):
                 d = entry["dims"]
                 add(Marker.CUBE, "planned furniture", (x, y, bench + d[2] / 2.0), d, yaw, (0.6, 0.6, 0.65, 0.35))
@@ -165,7 +176,8 @@ class Monitor:
         self.pub_scene.publish(MarkerArray(markers=markers))
         self.publish_path(base, meta, stamp)
         self.current = base
-        self.plan_label = "plan: %s / %s" % (os.path.basename(run_dir), os.path.basename(base))
+        self.plan_label = "PLAN (green, not perception): %s / %s" % (
+            os.path.basename(run_dir), os.path.basename(base))
         self.node.get_logger().info("showing %s" % base)
 
     def publish_path(self, base, meta, stamp):

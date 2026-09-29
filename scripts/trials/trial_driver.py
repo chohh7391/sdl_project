@@ -139,7 +139,10 @@ TASK_OUTCOMES = {
     # vessel the pour is measured against changes.
     "transfer_real_beakers": {
         "target": "beaker",
-        "goal_entity": "riser",
+        # Back where it STARTED: the block it stands on is 200 mm across, so its
+        # centre is not the vessel's place (envs/transfer.py return_to).
+        "goal_entity": None,
+        "goal_is_start": True,
         "half_xy": (0.015, 0.015),
         "require_pour": True,
         "aux": None,
@@ -337,6 +340,12 @@ class TaskOrchestrator(Node):
         # The goal may ride on a randomized entity (Stir's stirrer), so read it
         # from the scene rather than assuming the nominal layout.
         goal_xy = spec.get("goal_xy")
+        if spec.get("goal_is_start"):
+            start = getattr(self, "_target_start", None)
+            if start is None:
+                row["failure_reason"] = row["failure_reason"] or "start_pose_unavailable"
+                return
+            goal_xy = (start[0], start[1])
         if spec.get("goal_entity") is not None:
             goal_pose = self._get_pose(spec["goal_entity"])
             if goal_pose is None:
@@ -483,6 +492,7 @@ class TaskOrchestrator(Node):
         # column keeps its name for every earlier CSV; in transfer_real_beakers
         # it holds the pour target, beaker2, because there is no flask.
         row["beaker_xy"] = self._get_xy("beaker")
+        self._target_start = self._get_pose(outcome_spec["target"]) if outcome_spec else None
         row["flask_xy"] = self._get_xy(
             (outcome_spec or {}).get("pour_target") or "flask")
 

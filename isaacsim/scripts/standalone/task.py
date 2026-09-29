@@ -55,6 +55,18 @@ def _RISER_SRC():
     return beaker_riser_dims()
 
 
+def _RISER_XY_SRC():
+    """A riser's own fixed xy, or None when it follows the beaker (envs.constants)."""
+    import sys as _sys, os as _os
+    _src = _os.path.abspath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)),
+        "..", "..", "..", "TAMP", "tamp", "src"))
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from envs.constants import riser_xy
+    return riser_xy()
+
+
 def _SCALE_SRC():
     """Balance geometry from the same table the planner reads (envs.constants)."""
     import sys as _sys, os as _os
@@ -305,9 +317,20 @@ class Task(ABC, BaseTask):
             return
         dz = float(getattr(self, "_bench_dz", 0.0))
         p = self.default_positions["beaker"]
+        # A riser of its own (SDL_RISER_XY): the vessel stands wherever it was
+        # measured, which has to be ON the box -- a vessel planned beyond its
+        # edge would be planned standing on air, so that is refused.
+        fixed = _RISER_XY_SRC()
+        rx, ry = fixed if fixed is not None else (p[0], p[1])
+        if fixed is not None:
+            half = dims[0] / 2.0 - float(_FOOTPRINT_SRC("beaker")[0]) / 2.0
+            if abs(p[0] - rx) > half or abs(p[1] - ry) > half:
+                raise ValueError(
+                    "the beaker at (%.4f, %.4f) is not on the %.0f mm riser at (%.4f, %.4f)"
+                    % (p[0], p[1], dims[0] * 1e3, rx, ry))
         self._riser_pose = dict(
             dims=dims,
-            position=np.array([p[0], p[1], dz + dims[2] / 2.0]),
+            position=np.array([rx, ry, dz + dims[2] / 2.0]),
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
         )
         self.default_positions["riser"] = self._riser_pose["position"]
@@ -316,10 +339,10 @@ class Task(ABC, BaseTask):
         beaker_h = float(_FOOTPRINT_SRC("beaker")[2])
         self.default_positions["beaker"] = np.array(
             [p[0], p[1], dz + dims[2] + beaker_h / 2.0])
-        print("[Task] beaker riser %s at (%.4f, %.4f); beaker now at z=%.4f "
+        print("[Task] beaker riser %s at (%.4f, %.4f)%s; beaker at (%.4f, %.4f), z=%.4f "
               "(on the bench it would be %.4f)"
-              % (dims, p[0], p[1], dz + dims[2] + beaker_h / 2.0,
-                 dz + beaker_h / 2.0))
+              % (dims, rx, ry, " (fixed)" if fixed is not None else "", p[0], p[1],
+                 dz + dims[2] + beaker_h / 2.0, dz + beaker_h / 2.0))
 
     def _apply_tag_plates(self):
         """Lay each beaker's tag plate beside it: the two-beaker cell only.

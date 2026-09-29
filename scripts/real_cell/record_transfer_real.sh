@@ -42,13 +42,20 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 export SDL_GLASSWARE="${SDL_GLASSWARE:-real}"
 export SDL_TABLE_Z_M="${SDL_TABLE_Z_M:--0.013}"
 if [[ "${SDL_TARGET_VESSEL:-flask}" == beaker2 ]]; then
-  # The two-beaker cell's beakers stand on the 2 mm pads of their tag mounts
-  # (hardware/tag_mount): the riser's top and the balance's top are each 2 mm
-  # higher to the vessel than the bare box and pan. The riser's footprint stays
-  # the 50 mm box. The plates are placed by the simulator (SDL_TAG_PLATES).
-  export SDL_BEAKER_RISER_M="${SDL_BEAKER_RISER_M:-0.052}"
-  export SDL_BEAKER_RISER_XY_M="${SDL_BEAKER_RISER_XY_M:-0.050}"
+  # The two-beaker cell (author, 2026-09-29):
+  #   beaker1  on a 200 x 200 x 70 mm block whose bottom centre is at base_link
+  #            (0.36, -0.30, -0.013), anywhere on its top (measured per run)
+  #   balance  square to the robot base, pan at its +x end: its long end, 140 mm
+  #            from the pan, is towards -x (SDL_SCALE_BODY_BEARING_DEG=180)
+  # Both beakers stand on the 2 mm pads of their tag mounts (hardware/tag_mount),
+  # so the block's and the balance's tops are 2 mm higher to the vessel than the
+  # bare surfaces. The plates are placed by the simulator (SDL_TAG_PLATES).
+  export SDL_BEAKER_RISER_M="${SDL_BEAKER_RISER_M:-0.072}"
+  export SDL_BEAKER_RISER_XY_M="${SDL_BEAKER_RISER_XY_M:-0.200}"
+  export SDL_RISER_XY="${SDL_RISER_XY:-0.360,-0.300}"
   export SDL_SCALE_TOP_M="${SDL_SCALE_TOP_M:-0.092}"
+  export SDL_SCALE_BODY_BEARING_DEG="${SDL_SCALE_BODY_BEARING_DEG:-180}"
+  export SDL_LAYOUT_XY="${SDL_LAYOUT_XY:-beaker:0.360,-0.300}"
 fi
 export SDL_BEAKER_RISER_M="${SDL_BEAKER_RISER_M:-0.05}"
 export SDL_GRASP_BETA_MIN_DEG="${SDL_GRASP_BETA_MIN_DEG:-0}" SDL_GRASP_BETA_MAX_DEG="${SDL_GRASP_BETA_MAX_DEG:-10}"

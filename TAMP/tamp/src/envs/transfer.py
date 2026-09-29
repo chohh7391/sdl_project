@@ -94,13 +94,14 @@ def load_transfer_env(
     if return_to is not None:
         # Put the source vessel BACK where it came from, on the thing it was
         # standing on, rather than on a patch of bench 0.35 m away. The support
-        # is that object's top, not the table's, and the xy is the object's own
-        # -- the riser is under the vessel by construction, so taking the xy
-        # from the riser and the xy from the vessel cannot disagree.
+        # is that object's top, not the table's. The xy is the VESSEL'S own: a
+        # riser just under the vessel shares it, but the two-beaker cell's
+        # 200 mm block does not -- the vessel stands anywhere on it -- and "back
+        # where it came from" is the vessel's spot, not the block's centre.
         support = entities[return_to]
         support_top = support.pose[2] + support.dims[2] / 2.0
         goal_region.pose = [
-            support.pose[0], support.pose[1],
+            float(from_vessel.pose[0]), float(from_vessel.pose[1]),
             support_top + PLANNER_Z_LIFT - goal_region.dims[2] / 2.0, *unit_quat,
         ]
         # Size the region from the ALLOWANCE wanted, not from the box: the
