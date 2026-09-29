@@ -323,11 +323,11 @@ class Task(ABC, BaseTask):
         fixed = _RISER_XY_SRC()
         rx, ry = fixed if fixed is not None else (p[0], p[1])
         if fixed is not None:
-            half = dims[0] / 2.0 - float(_FOOTPRINT_SRC("beaker")[0]) / 2.0
-            if abs(p[0] - rx) > half or abs(p[1] - ry) > half:
+            r = float(_FOOTPRINT_SRC("beaker")[0]) / 2.0
+            if abs(p[0] - rx) > dims[0] / 2.0 - r or abs(p[1] - ry) > dims[1] / 2.0 - r:
                 raise ValueError(
-                    "the beaker at (%.4f, %.4f) is not on the %.0f mm riser at (%.4f, %.4f)"
-                    % (p[0], p[1], dims[0] * 1e3, rx, ry))
+                    "the beaker at (%.4f, %.4f) is not on the %.0f x %.0f mm riser at (%.4f, %.4f)"
+                    % (p[0], p[1], dims[0] * 1e3, dims[1] * 1e3, rx, ry))
         self._riser_pose = dict(
             dims=dims,
             position=np.array([rx, ry, dz + dims[2] / 2.0]),

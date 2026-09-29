@@ -19,7 +19,7 @@
 #
 # Scene (base_link metres):
 #   --beaker X,Y    the source beaker, on its riser (--beaker1 is the same)  -> SDL_LAYOUT_XY
-#                   (two-beaker cell: anywhere on the 200 mm block at (0.36, -0.30))
+#                   (two-beaker cell: anywhere on the 200 x 70 mm bar at (0.36, -0.30))
 #   --pan X,Y       the balance pan centre the target stands on (--flask is the same)
 #                                                                            -> SDL_SCALE_PAN_XY
 #   --beakers       the two-beaker cell: a second beaker, beaker2, stands at the
@@ -60,7 +60,8 @@
 #   BEAKER2_TOL_M    how far a measured beaker2 may sit off the pan centre (0.015)
 #   ALLOW_COMMIT_MISMATCH=1   plan on a remote checkout that is not this HEAD
 # Forwarded to the remote when set here: SDL_TABLE_Z_M SDL_BEAKER_RISER_M
-#   SDL_BEAKER_RISER_XY_M SDL_RISER_XY SDL_SCALE_TOP_M SDL_SCALE_BODY_BEARING_DEG
+#   SDL_BEAKER_RISER_XY_M SDL_BEAKER_RISER_Y_M SDL_RISER_XY SDL_SCALE_TOP_M
+#   SDL_SCALE_BODY_BEARING_DEG
 #   SDL_GRASP_BETA_MIN_DEG SDL_GRASP_BETA_MAX_DEG SDL_GRASP_H_FRAC PLAN_TIMEOUT
 #   CUDA_VISIBLE_DEVICES
 #
@@ -188,7 +189,7 @@ $dirty" >&2
   [[ -n "$FLASK" ]] && envs+=("SDL_SCALE_PAN_XY=$FLASK")
   [[ $TARGET == beaker2 ]] && envs+=("SDL_TARGET_VESSEL=beaker2")
   [[ -n "$plates" ]] && envs+=("SDL_TAG_PLATES=$plates")
-  for k in SDL_TABLE_Z_M SDL_BEAKER_RISER_M SDL_BEAKER_RISER_XY_M SDL_RISER_XY \
+  for k in SDL_TABLE_Z_M SDL_BEAKER_RISER_M SDL_BEAKER_RISER_XY_M SDL_BEAKER_RISER_Y_M SDL_RISER_XY \
            SDL_SCALE_TOP_M SDL_SCALE_BODY_BEARING_DEG \
            SDL_GRASP_BETA_MIN_DEG SDL_GRASP_BETA_MAX_DEG \
            SDL_GRASP_H_FRAC PLAN_TIMEOUT CUDA_VISIBLE_DEVICES; do

@@ -266,13 +266,18 @@ TABLE_Z_OFFSET = float(_os.environ.get("SDL_TABLE_Z_M", "0.0"))
 BEAKER_RISER_M = float(_os.environ.get("SDL_BEAKER_RISER_M", "0.0"))
 BEAKER_RISER_XY_M = float(
     _os.environ.get("SDL_BEAKER_RISER_XY_M", "0.0")) or BEAKER_RISER_M
+# A riser that is not square: SDL_BEAKER_RISER_Y_M is its extent along base y,
+# SDL_BEAKER_RISER_XY_M then its extent along x. The two-beaker cell's riser is a
+# 200 mm (x) by 70 mm (y) bar.
+BEAKER_RISER_Y_M = float(
+    _os.environ.get("SDL_BEAKER_RISER_Y_M", "0.0")) or BEAKER_RISER_XY_M
 
 
 def beaker_riser_dims():
     """Outer cuboid dims of the riser, or None when the run has no riser."""
     if BEAKER_RISER_M <= 0.0:
         return None
-    return [BEAKER_RISER_XY_M, BEAKER_RISER_XY_M, BEAKER_RISER_M]
+    return [BEAKER_RISER_XY_M, BEAKER_RISER_Y_M, BEAKER_RISER_M]
 
 
 def riser_xy():
@@ -280,7 +285,7 @@ def riser_xy():
 
     Unset, the riser is a box just under the source vessel and follows it
     wherever the vessel is placed. Set, it is a box of its own at this xy -- the
-    two-beaker cell's 200 x 200 mm block -- and the vessel stands wherever it was
+    two-beaker cell's 200 x 70 mm bar -- and the vessel stands wherever it was
     measured on top of it.
     """
     spec = _os.environ.get("SDL_RISER_XY", "").strip()

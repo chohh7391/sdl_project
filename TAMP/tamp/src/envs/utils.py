@@ -7,7 +7,7 @@ from cutamp.envs import TAMPEnvironment
 from envs.constants import (PLANNER_Z_LIFT, vessel_dims, scale_dims,
                             scale_pose_from_pan, SCALE_TOP_M,
                             TABLE_Z_OFFSET, BEAKER_RISER_M,
-                            BEAKER_RISER_XY_M, TAG_PLATE_DIMS_M)
+                            BEAKER_RISER_XY_M, BEAKER_RISER_Y_M, TAG_PLATE_DIMS_M)
 from envs.transfer import load_transfer_env
 from envs.stir import load_stir_env
 from envs.default import load_default_env
@@ -49,7 +49,7 @@ ENTITIES = {
     # the simulator; the dims are 0 when the run has no riser, and the entity is
     # then simply not referenced by any environment.
     "riser": Cuboid(name="riser", pose=[0.0, 0.0, BEAKER_RISER_M / 2.0, *unit_quat],
-                    dims=[max(BEAKER_RISER_XY_M, 1e-3), max(BEAKER_RISER_XY_M, 1e-3),
+                    dims=[max(BEAKER_RISER_XY_M, 1e-3), max(BEAKER_RISER_Y_M, 1e-3),
                           max(BEAKER_RISER_M, 1e-3)], color=[90, 90, 90]),
     # The tag plates of the two-beaker cell's mounts (envs.constants
     # TAG_PLATE_*): static obstacles level with each beaker's base, posed by the
