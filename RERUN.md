@@ -147,6 +147,13 @@ SRC=home@<원래 머신 주소>:/home/home/sdl_ws/src/sdl_project
 | `third_party/LabUtopia/` | 111 MB | scene USD가 참조하는 자산. 업스트림 `github.com/Rui-li023/LabUtopia`에서 받을 수도 있지만 사용한 커밋이 기록돼 있지 않음 |
 | `LLM/llama/model/checkpoint/xdl_generator/checkpoint/` | 약 61 MB | 논문 XDL 생성기 수치를 낸 가중치. git에 있는 `xdl_llm/`과는 **다른 모델**임 (r=16 대 r=8) |
 | `experiments/pddlstream/downward/` (소스만) | 12 MB | Fast Downward. 업스트림은 `caelan/downward`의 서브모듈인데 커밋이 기록돼 있지 않음 |
+| `experiments/pddlstream/` 아래 추적 안 되는 나머지 | 약 460 MB | 기준선 러너가 import하는 `examples/pybullet/utils/motion`(motion_planners), `examples/pybullet/tamp`, 로봇 모델 등. 업스트림 PDDLStream 예제인데 커밋이 기록돼 있지 않음. 없으면 PDDLStream 단계가 시작하자마자 전부 `incomplete`로 끝남(2026-09-29) |
+
+rsync는 대상의 상위 폴더를 만들지 않으니 먼저 만듭니다.
+
+```bash
+mkdir -p third_party LLM/llama/model/checkpoint/xdl_generator experiments/pddlstream
+```
 
 ```bash
 rsync -a "$SRC/third_party/LabUtopia/" third_party/LabUtopia/
@@ -158,6 +165,12 @@ rsync -a "$SRC/LLM/llama/model/checkpoint/xdl_generator/checkpoint/" LLM/llama/m
 
 ```bash
 rsync -a --exclude builds "$SRC/experiments/pddlstream/downward/" experiments/pddlstream/downward/
+```
+
+나머지 PDDLStream 파일은 **이미 있는 파일을 덮어쓰지 않게** 옮깁니다. 추적되는 러너 코드는 git에서 온 것이 맞기 때문입니다. `.git*`은 빼야 중첩 저장소로 잡히지 않습니다. 사전 점검이 러너 import로 확인합니다.
+
+```bash
+rsync -a --ignore-existing --exclude '.git' --exclude '.gitmodules' --exclude '.gitignore' --exclude '__pycache__' --exclude '*.pyc' --exclude 'downward/builds' --exclude temp --exclude statistics --exclude visualizations --exclude .vscode --exclude .idea "$SRC/experiments/pddlstream/" experiments/pddlstream/
 ```
 
 XDL 생성기 가중치는 사전 점검이 sha256으로 확인합니다(`2cf8d597f2cc…`). 해시가 다르면 논문이 평가한 모델이 아닙니다. LLM 베이스 모델(`unsloth/llama-3.2-1b-bnb-4bit`)은 첫 실행 때 HuggingFace에서 자동으로 받습니다. 인터넷 연결이 필요합니다.
@@ -259,7 +272,9 @@ python3 _2026__IEEE_Access/revision/analysis/rerun_audit.py _2026__IEEE_Access/r
 scripts/rerun/run_all.sh
 ```
 
-감사는 **시행 단위**로 판정합니다. cuTAMP 시행의 구간은 직전 행이 기록된 시각부터 이번 행이 기록된 시각까지이고(한 배치 안에서 시행은 차례로 돕니다), 최대 15분으로 제한합니다. PDDLStream 시행은 자기 계획 시간이 구간입니다.
+감사는 **시행 단위**로 판정합니다. cuTAMP 시행의 구간은 그 시행이 시작된 시각(`run_trials.sh`가 `sim_seed<N>_<시각>.log` 파일명에 남김)부터 이번 행이 기록된 시각까지입니다. 로그가 없는 시행만 직전 행 기준(최대 15분)으로 대신합니다. PDDLStream 시행은 자기 계획 시간이 구간입니다.
+
+직전 행 기준은 2026-09-29까지 쓰던 방식인데 두 가지 문제가 있었습니다. 앞 시행의 정리 시간이 다음 시행에 들어갔고(종료 중인 시뮬레이터는 명령줄을 읽을 수 없어 외부 프로세스로 잡힙니다), `--drop-flagged` 뒤에는 지운 시행의 시간대가 다음 행으로 넘어가서 같은 옛 샘플이 재실행할 때마다 한 시드씩 옮겨 갔습니다.
 
 `results/`에는 다음이 들어갑니다.
 

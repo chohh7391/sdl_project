@@ -7,9 +7,9 @@
 Contamination is judged PER TRIAL, not per batch. Every trial row carries the
 time it was written; the GPU monitor samples every 30 s. A trial is flagged if
 any monitor sample inside its window saw a GPU process that is not part of the
-campaign. A cuTAMP trial's window runs from the previous row (trials run one
-after another and each row is written as its trial ends), capped at
-CUTAMP_TRIAL_WINDOW_S; a PDDLStream row's window is its own planning time.
+campaign. A cuTAMP trial's window runs from the trial's own start -- the time
+run_trials.sh stamps into its sim_seed<N>_<time>.log -- to its row; a
+PDDLStream row's window is its own planning time.
 
 --drop-flagged rewrites each CSV without its flagged rows (the original is kept
 as <name>.csv.flagged-<epoch>), after which re-running the campaign with the
@@ -24,6 +24,7 @@ import csv
 import datetime
 import glob
 import os
+import re
 import shutil
 import sys
 import time
@@ -50,17 +51,39 @@ def load_monitor(d):
     return samples
 
 
+def trial_starts(csv_path):
+    """{seed: [epoch, ...]}: when each trial of a cuTAMP batch began.
+
+    run_trials.sh names a trial's logs sim_seed<N>_<YYYYmmdd_HHMMSS>.log with the
+    time the trial began, before its simulator is launched and after the previous
+    trial's processes are gone. A re-run seed has one log per attempt.
+    """
+    name = os.path.splitext(os.path.basename(csv_path))[0]
+    logs = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(csv_path))), "logs", name)
+    starts = collections.defaultdict(list)
+    for f in glob.glob(os.path.join(logs, "sim_seed*_*.log")):
+        m = re.match(r"sim_seed(\d+)_(\d{8}_\d{6})\.log$", os.path.basename(f))
+        if m:
+            starts[int(m.group(1))].append(time.mktime(
+                datetime.datetime.strptime(m.group(2), "%Y%m%d_%H%M%S").timetuple()))
+    return starts
+
+
 def flagged_rows(path, samples, pddl):
     """Row indices whose window saw a foreign GPU process, with what was seen.
 
-    Trials in a batch run one after another and each row is written as its trial
-    ends, so a cuTAMP trial occupied the interval since the PREVIOUS row -- capped
-    at CUTAMP_TRIAL_WINDOW_S, which is what a gap between two sessions of a
-    resumed batch falls back to. A PDDLStream row's window is its own planning
-    time.
+    A cuTAMP trial occupied the interval from its own start (trial_starts) to its
+    row. Deriving the start from the PREVIOUS row, as this did until 2026-09-29,
+    put the previous trial's teardown into the next trial -- a simulator exiting
+    there reads as a foreign process, its command line being gone -- and after
+    --drop-flagged the next row inherited the dropped trial's whole interval, so
+    each drop-and-re-run moved the same old sample one seed on. Only a trial
+    without a log falls back to that rule, capped at CUTAMP_TRIAL_WINDOW_S. A
+    PDDLStream row's window is its own planning time.
     """
     out = []
     prev_t1 = None
+    starts = {} if pddl else trial_starts(path)
     for i, r in enumerate(csv.DictReader(open(path))):
         try:
             t1 = epoch_of(r["timestamp"])
@@ -72,9 +95,16 @@ def flagged_rows(path, samples, pddl):
             except ValueError:
                 t0 = t1 - 200
         else:
-            t0 = t1 - CUTAMP_TRIAL_WINDOW_S
-            if prev_t1 is not None and prev_t1 <= t1:
-                t0 = max(t0, prev_t1)
+            try:
+                own = [s for s in starts.get(int(r["seed"]), []) if s <= t1]
+            except ValueError:
+                own = []
+            if own:
+                t0 = max(own)
+            else:
+                t0 = t1 - CUTAMP_TRIAL_WINDOW_S
+                if prev_t1 is not None and prev_t1 <= t1:
+                    t0 = max(t0, prev_t1)
             prev_t1 = t1
         hits = [s for s in samples if t0 <= s[0] <= t1 and s[1] > 0]
         if hits:

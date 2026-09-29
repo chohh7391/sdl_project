@@ -133,6 +133,13 @@ fi
   && ok ".venv-pddl: pybullet" || bad ".venv-pddl with pybullet missing"
 [[ -x "$RR_ROOT/experiments/pddlstream/downward/builds/release/bin/downward" ]] \
   && ok "Fast Downward built" || bad "Fast Downward not built (experiments/pddlstream/downward/build.py)"
+# The runner imports untracked PDDLStream files (motion_planners, the upstream
+# examples); a clone lacks them, and without this check the whole baseline
+# stage fails in a second after cuTAMP's hours.
+( cd "$RR_ROOT/experiments/pddlstream" && PYTHONPATH=. "$RR_ROOT/.venv-pddl/bin/python" \
+    examples/pybullet/fr5_paired/run_paired_trials.py --help ) >/dev/null 2>&1 \
+  && ok "PDDLStream runner imports" \
+  || bad "PDDLStream runner does not import -- untracked PDDLStream files missing (RERUN.md section 3.6)"
 [[ -f "$RR_ANALYSIS/data/seed_layouts.json" ]] \
   && ok "seed_layouts.json (the 30 layouts PDDLStream shares with Isaac Sim)" || bad "seed_layouts.json missing"
 [[ -d "$RR_ROOT/third_party/LabUtopia" ]] \
