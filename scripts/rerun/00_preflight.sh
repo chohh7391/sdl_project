@@ -229,6 +229,7 @@ default_of() { grep -hoE "environ\.get\(\"$1\", \"[^\"]*\"\)" "$RR_ROOT"/TAMP/ta
   echo "| SDL_RECOVERY_SCAN | $(default_of SDL_RECOVERY_SCAN) | off: needs the wrist camera |"
   echo "| SDL_PLAN_HOLD_SIM | $(default_of SDL_PLAN_HOLD_SIM) | 09-28, the simulator stops stepping (physics + rendering) while cuTAMP plans |"
   echo "| SDL_UPRIGHT_TRANSPORT | $(default_of SDL_UPRIGHT_TRANSPORT) | upright bound on carry segments |"
+  echo "| SDL_UPRIGHT_TILT_TOL_DEG | $(default_of SDL_UPRIGHT_TILT_TOL_DEG) | 09-29, 15 -> 5 deg: the paper's theta_max for the held vessel's tilt from vertical |"
   echo "| SDL_TAG_MOUNT | $(default_of SDL_TAG_MOUNT) | 09-12, tags on a raised mount |"
   echo "| SDL_GLASSWARE | $(default_of SDL_GLASSWARE) | the paper's glassware |"
   echo

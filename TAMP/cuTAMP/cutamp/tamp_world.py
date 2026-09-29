@@ -238,6 +238,10 @@ class TAMPWorld:
         return motion_gen
 
 
+class InitialStateCollisionError(ValueError):
+    """The initial state itself is in collision: a property of the input, not of a planner draw."""
+
+
 def check_tamp_world_not_in_collision(world: TAMPWorld, collision_tol: float = 1e-6):
     """Check that the initial state of the movable objects are not in collision."""
     for obj in world.movables:
@@ -272,7 +276,7 @@ def check_tamp_world_not_in_collision(world: TAMPWorld, collision_tol: float = 1
                         details.append(f"{name} (max penetration {float(pen.max()) * 1000:.1f} mm)")
                 except Exception:
                     continue
-            raise ValueError(
+            raise InitialStateCollisionError(
                 f"Initial state in collision for object '{obj.name}' with cost {coll_cost}. "
                 f"Its pose is {[round(float(v), 4) for v in obj.pose]}, dims {getattr(obj, 'dims', None)}. "
                 f"Overlapping: {', '.join(details) if details else 'could not attribute (axis-aligned check only)'}"

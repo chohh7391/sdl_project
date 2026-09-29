@@ -30,6 +30,7 @@ from cutamp.scripts.utils import (
 )
 import logging
 from cutamp.cost_reduction import CostReducer
+from cutamp.tamp_world import InitialStateCollisionError
 
 from envs.utils import TAMPEnvManager
 from orchestration.planner_api import PlanningResult, with_explicit_pour_steps
@@ -237,6 +238,13 @@ class TAMP:
                     )
                     self.last_plan_error = e
                     self.total_num_satisfying = 0
+                    # The same world is handed to every attempt, so a start
+                    # state in collision stays in collision whatever the seed:
+                    # restarting only spins until the budget (1472 attempts in
+                    # 180 s on rtx5080_20261001c, perception seed 10).
+                    if isinstance(e, InitialStateCollisionError):
+                        self._log.error("not restarting: the initial state is in collision")
+                        break
 
                 if self.total_num_satisfying > 0:
                     success = True

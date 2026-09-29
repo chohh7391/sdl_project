@@ -50,22 +50,19 @@ import os as _os
 # Default ON; SDL_UPRIGHT_TRANSPORT=0 reverts to the old (unconstrained) behaviour
 # (kept as an env switch so the before/after tilt can be measured on the same build).
 ENFORCE_UPRIGHT_TRANSPORT = _os.environ.get("SDL_UPRIGHT_TRANSPORT", "1") != "0"
-# Rejection bound on the PLANNED carry tilt. Transfer carries an open vessel of
-# liquid, so the carry has to stay spill-free -- that is the premise of the task,
-# not a cosmetic bound. The value is derived from the modelled beaker's geometry
-# rather than picked: liquid spills once the (horizontal) free surface reaches the
-# downhill rim, i.e. tan(theta) = freeboard / radius. For the beaker cuTAMP plans
-# with (r = 0.025 m, H = 0.135 m):
-#     fill 50% -> 69.7 deg   67% -> 60.9 deg   90% -> 28.4 deg   95% -> 15.1 deg
-# 15 deg is therefore static-spill-safe up to a 95%-full beaker, with wide margin at
-# a normal fill, while being far looser than the paper's 5 deg -- so it does not cost
-# planning success (measured: the planner already produces carries <= 1.19 deg on all
-# 30 seeds; the 5 deg rejections only forced retries).
-# This is a static analysis of the modelled vessel, NOT a measurement: sloshing under
-# motion needs margin that only the physical pouring session can establish (PLAN.md
-# R3#2 / section 6). The realised tilt is always measured and reported separately as
-# max_transport_tilt_deg, so the paper quotes the measurement, not this bound.
-UPRIGHT_TILT_TOL_DEG = float(_os.environ.get("SDL_UPRIGHT_TILT_TOL_DEG", "15.0"))
+# Rejection bound on the PLANNED carry tilt: the angle between the held vessel's
+# axis and world vertical, over every carry segment. 5 deg is theta_max as the
+# paper states it (MoveHolding and Place, Section III); until 09-29 this was 15 deg,
+# a static-spill bound from the modelled beaker (tan(theta) = freeboard / radius:
+# 95% full -> 15.1 deg), and so looser than what the paper claimed the planner
+# enforces. At 15 deg, 55 of 57 planned Transfer carries on rtx5080_20261001c were
+# already <= 5 deg (median 0.23 deg); a carry above the bound is rejected and the
+# next cuRobo candidate or a restart is tried.
+# Neither value is a spill measurement: sloshing under motion needs margin that
+# only the physical pouring session can establish (PLAN.md R3#2 / section 6), and
+# the tilt the simulated arm actually reaches while tracking the plan is measured
+# separately as max_transport_tilt_deg -- the paper quotes that, not this bound.
+UPRIGHT_TILT_TOL_DEG = float(_os.environ.get("SDL_UPRIGHT_TILT_TOL_DEG", "5.0"))
 
 
 def _make_linear_approach_metric(device):
