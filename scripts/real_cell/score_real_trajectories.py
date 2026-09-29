@@ -72,6 +72,26 @@ def grasp_offset_from_urdf(urdf=URDF):
     return M @ np.array([0.0, 0.0, 0.0, 1.0])
 
 
+#: How far inside the target's mouth radius the lip has to land. 2 mm is what
+#: the flask's long-standing 17 mm criterion leaves inside its 19 mm radius.
+LIP_MARGIN_MM = 2.0
+
+
+def target_mouth_radius_mm(env, target):
+    """The pour target's clear opening, from the glassware the run used."""
+    sys.path.insert(0, os.path.join(ROOT, "TAMP", "tamp", "src"))
+    saved = os.environ.get("SDL_GLASSWARE")
+    os.environ["SDL_GLASSWARE"] = env.get("SDL_GLASSWARE", "legacy") or "legacy"
+    try:
+        from envs.constants import mouth_dia
+        return mouth_dia(target) * 1000.0 / 2.0
+    finally:
+        if saved is None:
+            os.environ.pop("SDL_GLASSWARE", None)
+        else:
+            os.environ["SDL_GLASSWARE"] = saved
+
+
 def scene_env(run_dir):
     env = {}
     p = os.path.join(run_dir, "SCENE_ENV.txt")
@@ -91,13 +111,19 @@ def main():
                     help="REAL beaker height [m] (measured 70 mm; the model is shorter)")
     ap.add_argument("--max-eef", type=float, default=10.5)
     ap.add_argument("--min-rim", type=float, default=10.0, help="[mm]")
-    ap.add_argument("--max-lip", type=float, default=17.0, help="[mm] ~ the flask mouth radius")
+    ap.add_argument("--max-lip", type=float, default=None,
+                    help="[mm] default: the pour target's mouth radius less LIP_MARGIN_MM "
+                         "(17 for the flask's 38 mm mouth, 20 for beaker2's 44 mm)")
     ap.add_argument("--min-tilt", type=float, default=53.0,
                     help="[deg] peak pour tilt; below ~53 deg a half-full beaker does not pour")
     ap.add_argument("--export", action="store_true")
     a = ap.parse_args()
 
     env = scene_env(a.run_dir)
+    target = env.get("SDL_TARGET_VESSEL", "flask") or "flask"
+    if a.max_lip is None:
+        a.max_lip = target_mouth_radius_mm(env, target) - LIP_MARGIN_MM
+    print("pour target %s: lip error must stay under %.1f mm" % (target, a.max_lip))
     bench = float(env.get("SDL_TABLE_Z_M", "0") or 0)
     riser = float(env.get("SDL_BEAKER_RISER_M", "0") or 0)
     base_z = bench + riser                       # the beaker's base, world z
@@ -191,7 +217,6 @@ def main():
                         "--sim-log-dir", os.path.join(a.run_dir, "logs")], check=True,
                        stdout=subprocess.DEVNULL)
         lay = json.load(open(base + ".meta.json")).get("layout_the_trajectory_assumes") or {}
-        target = env.get("SDL_TARGET_VESSEL", "flask") or "flask"
         missing = [k for k in ("beaker", target, "scale", "riser") if k not in lay]
         print("exported %s%s" % (base + ".csv", "  META MISSING %s" % missing if missing else ""))
     return 0
