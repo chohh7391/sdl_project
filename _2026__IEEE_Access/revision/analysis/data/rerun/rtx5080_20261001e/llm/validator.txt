@@ -1,0 +1,50 @@
+gold protocols the validator accepts: 91/100
+benchmark: 20 valid + 160 invalid = 180 samples (seed 0)
+  capacity_violation: 1 mutations fired another class's check and were discarded
+  cross_contamination: 1 mutations did NOT invalidate and were discarded
+     e.g. from label 51: ethanol into flask_B, which holds water
+
+confusion matrix (positive = validator passes):
+  TP 20   FN 0      (valid samples: 20)
+  FP 0   TN 160      (invalid samples: 160)
+  accuracy 100.0%  Wilson 95% CI [97.9, 100.0]
+
+per-class recall on injected errors:
+  capacity_violation       20/20 = 100.0%  [83.9, 100.0]
+  cross_contamination      20/20 = 100.0%  [83.9, 100.0]
+  device_placement         20/20 = 100.0%  [83.9, 100.0]
+  missing_attribute        20/20 = 100.0%  [83.9, 100.0]
+  nonexistent_object       20/20 = 100.0%  [83.9, 100.0]
+  precondition_violation   20/20 = 100.0%  [83.9, 100.0]
+  undefined_attribute      20/20 = 100.0%  [83.9, 100.0]
+  undefined_tag            20/20 = 100.0%  [83.9, 100.0]
+
+reason the validator gave, per injected class:
+  capacity_violation       x8   Add overfills beaker_A
+  capacity_violation       x12  Add overfills beaker_B
+  cross_contamination      x20  Contamination
+  device_placement         x20  Device placement conflict
+  missing_attribute        x4   Invalid reagent
+  missing_attribute        x1   Invalid temperature
+  missing_attribute        x3   Invalid vessel in Add
+  missing_attribute        x2   Invalid vessel in CleanVessel
+  missing_attribute        x1   Invalid vessel in Stir
+  missing_attribute        x2   Invalid vessel in Transfer
+  missing_attribute        x7   Invalid volume
+  nonexistent_object       x2   Invalid object in Move
+  nonexistent_object       x3   Invalid place in Move
+  nonexistent_object       x10  Invalid vessel in Add
+  nonexistent_object       x2   Invalid vessel in CleanVessel
+  nonexistent_object       x2   Invalid vessel in Stir
+  nonexistent_object       x1   Invalid vessel in Transfer
+  precondition_violation   x6   Cannot HeatChill empty vessel
+  precondition_violation   x9   Cannot Stir empty vessel
+  precondition_violation   x5   Cannot Transfer from empty vessel
+  undefined_attribute      x14  Invalid attribute in Add
+  undefined_attribute      x2   Invalid attribute in CleanVessel
+  undefined_attribute      x1   Invalid attribute in HeatChill
+  undefined_attribute      x2   Invalid attribute in Move
+  undefined_attribute      x1   Invalid attribute in Stir
+  undefined_tag            x20  Invalid tag
+
+wrote /home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001e/llm/validator_benchmark.json
