@@ -39,6 +39,11 @@
 #   --grams G                    -> replay_pour_grams
 #   --flow-index F               -> replay_pour_flow_index, 0 (water, dry sugar) .. 1
 # Without --material the recorded pour is replayed as recorded, weighing nothing.
+#   --home-via moveit|direct     how the arm is taken to the recording's start pose:
+#                                moveit (default, collision-checked) needs
+#                                bringup_real_moveit; direct is a straight joint move
+# Before anything moves, check_replay.py builds the replay tree offline, so a
+# layout mismatch or a pour that cannot be handed over is refused up front.
 #
 # Env:
 #   SDL_PLAN_HOST    ssh destination (default 100.95.230.128; set User in ~/.ssh/config)
@@ -69,7 +74,7 @@ die() { echo "plan_remote: $*" >&2; exit 1; }
 q() { printf '%q ' "$@"; }
 rpath() { case "$1" in /*) echo "$1" ;; *) echo "\$HOME/$1" ;; esac; }  # expanded remotely
 
-BEAKER="" FLASK="" BEAKER2="" TARGET=flask PERCEIVE=0 MATERIAL="" GRAMS="" FLOW=""
+BEAKER="" FLASK="" BEAKER2="" TARGET=flask PERCEIVE=0 MATERIAL="" GRAMS="" FLOW="" HOME_VIA=moveit
 MODE=new STAMP="" REPLAY=0 YES=0 SEEDS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -81,6 +86,8 @@ while [[ $# -gt 0 ]]; do
     --material) MATERIAL="${2:?--material liquid|granular}"; shift 2 ;;
     --grams)    GRAMS="${2:?--grams G}"; shift 2 ;;
     --flow-index) FLOW="${2:?--flow-index F}"; shift 2 ;;
+    --home-via) HOME_VIA="${2:?--home-via moveit|direct}"; shift 2
+                [[ $HOME_VIA == moveit || $HOME_VIA == direct ]] || die "--home-via must be moveit or direct" ;;
     --attach) MODE=attach STAMP="${2:?--attach RUN_ID}"; shift 2 ;;
     --fetch)  MODE=fetch  STAMP="${2:?--fetch RUN_ID}"; shift 2 ;;
     --replay) REPLAY=1; shift ;;
@@ -285,10 +292,17 @@ if [[ -n "$MATERIAL" ]]; then
 else
   echo "pour: replayed as recorded (no --material), nothing is weighed"
 fi
-LAUNCH+=(${REPLAY_ARGS:-})
+LAUNCH+=("home_via:=$HOME_VIA" ${REPLAY_ARGS:-})
+# Build the replay tree here, without ticking it: whatever cho_task_manager
+# refuses at build time (layout gate, pour splice, velocity limits) is refused
+# before anyone is asked to stand back from the arm.
+check=(python3 "$ROOT/scripts/real_cell/check_replay.py" "${CSV%.csv}" --home-via "$HOME_VIA")
+[[ -n "$MATERIAL" ]] && check+=(--grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}")
+(set +u; source /opt/ros/humble/setup.bash && source "$CHO_WS/install/setup.bash" && cd /tmp && "${check[@]}") \
+  || die "the replay tree does not build for this trajectory (see above); nothing moved"
 echo
-echo "with the real bringup running on joint_trajectory_controller (bringup_real_moveit, or"
-echo "bringup_real_robot plus REPLAY_ARGS=home_via:=direct), the scale relay and the pose node:"
+echo "with the real bringup running (home_via:=moveit needs bringup_real_moveit; on"
+echo "bringup_real_robot use --home-via direct), the scale relay and the pose node:"
 echo "  $(q "${LAUNCH[@]}")"
 [[ $REPLAY == 1 ]] || exit 0
 
