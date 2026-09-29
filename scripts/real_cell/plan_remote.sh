@@ -74,9 +74,16 @@ CHO_WS="${CHO_WS:-$HOME/ros2_ws}"
 MATCH_TOL_M=0.002
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
 
-die() { echo "plan_remote: $*" >&2; exit 1; }
 q() { printf '%q ' "$@"; }
 rpath() { case "$1" in /*) echo "$1" ;; *) echo "\$HOME/$1" ;; esac; }  # expanded remotely
+# The stage this script is at, for monitor.sh's rviz status line (RUNS/STATUS),
+# written whole and renamed so the monitor never reads half a line.
+LOCAL_RUNS="$(eval echo "$(rpath "$RUNS")")"
+status() {
+  mkdir -p "$LOCAL_RUNS" && printf '%s  %s\n' "$(date +%H:%M:%S)" "$*" > "$LOCAL_RUNS/STATUS.tmp" \
+    && mv -f "$LOCAL_RUNS/STATUS.tmp" "$LOCAL_RUNS/STATUS"
+}
+die() { echo "plan_remote: $*" >&2; status "STOPPED: ${1%%$'\n'*}"; exit 1; }
 
 BEAKER="" FLASK="" BEAKER2="" PLATE1="" PLATE2="" TARGET=flask PERCEIVE=0
 MATERIAL="" GRAMS="" FLOW="" HOME_VIA=moveit
@@ -117,6 +124,7 @@ esac
 if [[ $MODE == new && $PERCEIVE == 1 ]]; then
   names=(beaker1); [[ $TARGET == beaker2 ]] && names+=(beaker2)
   echo "=== measuring ${names[*]} with this machine's cameras"
+  status "measuring ${names[*]} with the cameras"
   measured="$(set +u; source /opt/ros/humble/setup.bash && source "$CHO_WS/install/setup.bash" &&
               python3 "$ROOT/scripts/real_cell/measure_vessels.py" "${names[@]}")" \
     || die "perception did not give a stable pose for every vessel (see above)"
@@ -185,6 +193,7 @@ $dirty" >&2
   done
   STAMP="$(date +%Y%m%d-%H%M%S)"
   echo "=== planning on $HOST, run $STAMP, seeds ${SEEDS[*]}: ${envs[*]:-(record_transfer_real.sh defaults)}"
+  status "planning on $HOST (Isaac Sim + cuTAMP), run $STAMP, seeds ${SEEDS[*]}"
   # The quoted heredoc is the remote script; its arguments are quoted with %q
   # because ssh joins its command line into one string for the remote shell.
   "${SSH[@]}" "$HOST" "bash -s -- $(q "$(rpath "$ROOT_R")" "$(rpath "$RUNS/$STAMP")" "${envs[@]}" -- "${SEEDS[@]}")" <<'REMOTE' \
@@ -215,6 +224,7 @@ if [[ $MODE != fetch ]]; then
   hint="$0 --attach $STAMP"; [[ $REPLAY == 1 ]] && hint+=" --replay"
   trap 'echo; echo "detached; the remote run continues. Re-join with: $hint" >&2; exit 130' INT
   echo "=== following $HOST:$RUNS/$STAMP/remote.log (Ctrl-C only detaches; the run goes on)"
+  status "planning on $HOST, run $STAMP: following its log"
   "${SSH[@]}" "$HOST" "run=$RUN_R; [ -e \$run/PID ] || { echo 'no such run' >&2; exit 3; }
     tail -n +1 -F \$run/remote.log 2>/dev/null & t=\$!
     while [ ! -e \$run/EXIT ] && kill -0 \$(cat \$run/PID) 2>/dev/null; do sleep 2; done
@@ -235,6 +245,7 @@ done
 compgen -G "$LOCAL/deliver/*.csv" >/dev/null || die "no trajectory was accepted; the score table is in $LOCAL/remote.log:
 $(grep -A40 '^seed ' "$LOCAL/remote.log" 2>/dev/null | head -40)"
 
+status "fetched run $STAMP; checking the trajectories against the request"
 BEST="$(python3 - "$LOCAL" "$MATCH_TOL_M" <<'PY'
 """Check each meta against the positions the run was asked to plan for, and write
 the cell layout the replay gate compares it with."""
@@ -321,7 +332,10 @@ echo
 echo "with the real bringup running (home_via:=moveit needs bringup_real_moveit; on"
 echo "bringup_real_robot use --home-via direct), the scale relay and the pose node:"
 echo "  $(q "${LAUNCH[@]}")"
-[[ $REPLAY == 1 ]] || exit 0
+# The trajectory monitor.sh shows from here on.
+printf '%s\n' "${CSV%.csv}" > "$LOCAL_RUNS/CURRENT.tmp" && mv -f "$LOCAL_RUNS/CURRENT.tmp" "$LOCAL_RUNS/CURRENT"
+status "ready: run $STAMP seed $BEST checked; waiting for the replay to be confirmed"
+[[ $REPLAY == 1 ]] || { status "ready: run $STAMP seed $BEST (not replayed)"; exit 0; }
 
 if [[ $YES != 1 ]]; then
   [[ -t 0 ]] || die "--replay moves the arm; confirm interactively or pass --yes"
@@ -332,4 +346,8 @@ fi
 set +u
 source /opt/ros/humble/setup.bash
 source "$CHO_WS/install/setup.bash"
-exec "${LAUNCH[@]}"
+status "REPLAYING run $STAMP seed $BEST on the FR5${MATERIAL:+, pouring $GRAMS g of $MATERIAL by weight}"
+"${LAUNCH[@]}"
+rc=$?
+status "replay of run $STAMP seed $BEST ended (exit $rc)"
+exit $rc
