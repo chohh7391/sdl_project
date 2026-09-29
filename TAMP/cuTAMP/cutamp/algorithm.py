@@ -9,7 +9,9 @@
 
 """Core cuTAMP algorithm implementation."""
 
+import copy
 import logging
+import re
 from datetime import datetime
 from typing import List, Union, Optional, Tuple
 from unittest.mock import Mock
@@ -98,6 +100,112 @@ def get_best_particle(
     best_idx = indices[satisfying_mask][best_satisfying_idx]
     best_particle = {k: v[best_idx].detach().clone() for k, v in particles.items()}
     return best_particle
+
+
+def get_candidate_particles(
+    plan_info: dict, config: TAMPConfiguration, constraint_checker: ConstraintChecker, cost_reducer: CostReducer
+) -> List[dict]:
+    """The satisfying particles cuRobo is tried on, in the order it tries them.
+
+    The first is get_best_particle's: the satisfying particle with the lowest soft cost. The others
+    follow in order of soft cost, up to config.num_curobo_candidates in all, skipping any particle
+    whose configurations all lie within config.curobo_candidate_min_dist of a candidate already
+    taken: a near-copy of a particle cuRobo could not plan fails the same way.
+    """
+    particles, rollout_fn, cost_fn = plan_info["particles"], plan_info["rollout_fn"], plan_info["cost_fn"]
+    with torch.no_grad():
+        rollout = rollout_fn(particles)
+        cost_dict = cost_fn(rollout)
+
+    satisfying_mask = constraint_checker.get_mask(cost_dict, verbose=False)
+    if not satisfying_mask.any():
+        raise RuntimeError("No satisfying particles found")
+
+    soft_costs = cost_reducer.soft_costs(cost_dict)
+    satisfying_costs = soft_costs[satisfying_mask]
+    indices = torch.arange(config.num_particles, device=satisfying_costs.device)
+    satisfying = indices[satisfying_mask]
+    chosen = [int(satisfying[satisfying_costs.argmin()])]  # exactly get_best_particle's choice
+    if config.num_curobo_candidates > 1:
+        order = satisfying[torch.sort(satisfying_costs, stable=True).indices].tolist()
+        conf_keys = sorted(k for k in particles if re.fullmatch(r"q\d+", k) and k != "q0")
+        confs = None
+        if conf_keys and config.curobo_candidate_min_dist > 0:
+            confs = torch.cat(
+                [particles[k].detach().reshape(config.num_particles, -1) for k in conf_keys], dim=1
+            ).cpu()
+        for idx in order:
+            if len(chosen) >= config.num_curobo_candidates:
+                break
+            if idx in chosen:
+                continue
+            if confs is not None:
+                dist = (confs[chosen] - confs[idx]).abs().amax(dim=1)
+                if bool((dist < config.curobo_candidate_min_dist).any()):
+                    continue
+            chosen.append(idx)
+    return [{k: v[idx].detach().clone() for k, v in particles.items()} for idx in chosen]
+
+
+def solve_curobo_candidates(
+    plan_info: dict,
+    candidates: List[dict],
+    world: TAMPWorld,
+    config: TAMPConfiguration,
+    timer: TorchTimer,
+    visualizer,
+):
+    """Motion plan the first candidate cuRobo can turn into full trajectories.
+
+    A satisfying particle meets every constraint at its waypoints, but the segments between them
+    (retract, approach, the straight grasp) are only planned here. One of them failing used to end
+    the optimization's result outright: the server restarted from scratch -- about 8 s of
+    optimization for Transfer -- while the same result held hundreds of other satisfying particles.
+
+    The candidates share one warmed-up motion generator. A candidate that fails part-way leaves its
+    state behind: the carried object attached to the robot and disabled as an obstacle, and placed
+    objects moved, both in the collision world and in the environment, whose obstacle objects that
+    world shares (a placed vessel's new pose is written back into them). So before each further
+    candidate the environment's poses are restored, the collision world is reloaded from them, and
+    the attachment is dropped.
+    """
+    if len(candidates) == 1:
+        return solve_curobo(plan_info, candidates[0], world, config, timer, visualizer)
+
+    obstacles = list({id(o): o for o in list(world.env.movables) + list(world.env.statics)}.values())
+    initial_poses = [(o, copy.deepcopy(o.pose)) for o in obstacles]
+    motion_gen = world.get_motion_gen(collision_activation_distance=config.world_activation_distance)
+    world_cfg = motion_gen.world_model
+    kinematics = motion_gen.robot_cfg.kinematics.kinematics_config
+    attached_spheres = kinematics.get_link_spheres("attached_object").clone()
+    if config.warmup_motion_gen:
+        with timer.time("curobo_motion_gen_warmup", log_callback=_log.debug):
+            motion_gen.warmup()
+
+    error = None
+    for i, particle in enumerate(candidates):
+        if i > 0:
+            for obj, pose in initial_poses:
+                obj.pose = copy.deepcopy(pose)
+                if hasattr(obj, "old_get_bounding_spheres"):
+                    obj.get_bounding_spheres = obj.old_get_bounding_spheres
+                    del obj.old_get_bounding_spheres
+            # As built, not detach_object_from_robot's zeros, so the generator
+            # matches a freshly built one exactly.
+            kinematics.update_link_spheres("attached_object", attached_spheres.clone())
+            motion_gen.update_world(world_cfg)
+        try:
+            plan = solve_curobo(plan_info, particle, world, config, timer, visualizer, motion_gen=motion_gen)
+        except (RuntimeError, ValueError) as e:
+            # A GPU fault or a missing feature is not a property of the particle.
+            if isinstance(e, NotImplementedError) or "CUDA" in str(e):
+                raise
+            _log.warning(f"[curobo] candidate {i + 1}/{len(candidates)} failed: {e}")
+            error = e
+            continue
+        _log.info(f"[curobo] candidate {i + 1}/{len(candidates)} gave a full motion plan")
+        return plan
+    raise error
 
 
 def sample_plan_skeleton(
@@ -376,7 +484,8 @@ def run_cutamp(
                 should_break = True
             exp_logger.log_dict(f"optimization/opt_{opt_iter:04d}", metrics)
             if has_satisfying:
-                best_particle = get_best_particle(plan_info, config, constraint_checker, cost_reducer)
+                candidates = get_candidate_particles(plan_info, config, constraint_checker, cost_reducer)
+                best_particle = candidates[0]
         else:
             # This is the parallelized sampling baseline
             assert config.approach == "sampling"
@@ -490,9 +599,12 @@ def run_cutamp(
         if has_satisfying:
             found_solution = True
             if config.curobo_plan:
-                curobo_plan = solve_curobo(
+                # The sampling baseline keeps its single best particle.
+                if config.approach != "optimization":
+                    candidates = [best_particle]
+                curobo_plan = solve_curobo_candidates(
                     plan_info,
-                    best_particle,
+                    candidates,
                     world,
                     config,
                     timer,

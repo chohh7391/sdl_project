@@ -9,8 +9,10 @@
 # interrupted campaign still holds complete repetitions of every task.
 #
 # Resumable: re-running skips complete batches and fills in the missing seeds of
-# a partial one. PLAN_TIMEOUT is generous on purpose -- the full time to
-# solution is recorded and budgets are applied as censoring in the analysis.
+# a partial one. The planner restarts until the largest declared budget; the
+# attempt running when it ends is allowed to finish, so PLAN_TIMEOUT is
+# generous on purpose -- the full time to solution is recorded and budgets are
+# applied as censoring in the analysis.
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 rr_scene_guard
 [[ -f "$RR_OUT/COMMIT" ]] || rr_die "run 00_preflight.sh first"
@@ -19,6 +21,9 @@ rr_scene_guard
 
 OUTC="$RR_OUT/cutamp"; mkdir -p "$OUTC"
 REPS="${RERUN_REPS:-3}"
+# cuTAMP plans until the LARGEST declared budget: it restarts until it finds a
+# plan or runs out, and the smaller budgets are censoring of the same run.
+MAXB="$(tr ',' '\n' < "$RR_OUT/BUDGETS" | sort -n | tail -1)"
 rr_monitor_start
 
 run_batch() {   # task robot state_source rep
@@ -31,7 +36,7 @@ run_batch() {   # task robot state_source rep
   [[ -z "$foreign" ]] || rr_die "another process is on the GPU, not starting $name: $foreign"
   rr_batch_begin "$name"
   SDL_STATE_SOURCE="$src" PLANNER_SEED_OFFSET="$((rep * 1000))" CSV="$csv" \
-    TASK="$task" ROBOT="$robot" LOGDIR="$logs" PLAN_TIMEOUT="${RERUN_PLAN_TIMEOUT:-600}" \
+    TASK="$task" ROBOT="$robot" LOGDIR="$logs" PLAN_TIMEOUT="${RERUN_PLAN_TIMEOUT:-600}" PLAN_BUDGET_S="$MAXB" \
     bash "$RR_ROOT/scripts/run_trials.sh" $missing > "$RR_OUT/logs/${name}.out" 2>&1
   local status=done
   rr_check_complete "$csv" 30 || status=incomplete

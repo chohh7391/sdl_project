@@ -50,9 +50,13 @@ class TorchTimer:
 
     @contextmanager
     def time(self, metric: str, log_callback=None):
+        # Stop the metric even when the block raises: a timer left running makes
+        # the next time(metric) on this instance fail with "already started".
         self.start(metric)
-        yield
-        duration = self.stop(metric)
+        try:
+            yield
+        finally:
+            duration = self.stop(metric)
         if log_callback is not None:
             log_callback(f"{metric} took {duration:.2f}s")
 

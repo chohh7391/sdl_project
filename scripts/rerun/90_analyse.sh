@@ -15,6 +15,9 @@ python3 "$A/planner_comparison.py" --cutamp "$RR_OUT/cutamp" --pddlstream "$RR_O
   --budgets "$BUDGETS" --out "$RES/planner.md" > /dev/null 2> "$RES/planner.err" \
   || echo "planner comparison failed: $(cat "$RES/planner.err")" > "$RES/planner.md"
 
+python3 "$A/planner_attempts.py" "$RR_OUT" --out "$RES/attempts.md" > /dev/null 2>&1 \
+  || echo "attempt report failed" > "$RES/attempts.md"
+
 for csv in "$RR_OUT"/cutamp/*.csv; do
   [[ -f "$csv" ]] || continue
   python3 "$A/summarize_trials.py" "$csv" --budget "$MAXB" > "$RES/trials_$(basename "$csv" .csv).txt" 2>&1
@@ -66,6 +69,8 @@ L="$RR_OUT/llm"
   cat "$RES/audit.md"
   echo; echo "---"; echo
   sed 's/^# /## /' "$RES/planner.md"
+  echo; echo "---"; echo
+  sed 's/^# /## /; s/^## /### /' "$RES/attempts.md"
   echo; echo "---"; echo
   echo "## End-to-end Transfer: 정답 상태 vs 인식 상태"
   sed 's/^# /### /' "$RES/state_source.md"

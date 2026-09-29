@@ -77,6 +77,12 @@ class TAMPConfiguration:
     enable_traj: bool = False
     # Motion plan with cuRobo after optimization
     curobo_plan: bool = False
+    # Satisfying particles handed to cuRobo, lowest soft cost first, before the optimization's
+    # result is given up (optimization approach only). 1 is upstream cuTAMP: the best particle alone.
+    num_curobo_candidates: int = 1
+    # A further candidate must differ from every candidate already tried by at least this much [rad]
+    # in some joint of some configuration; one closer than that fails the same way.
+    curobo_candidate_min_dist: float = 0.1
     # For slowing down cuRobo motion plans (0.5 is safe on the real robot)
     time_dilation_factor: Optional[float] = None
     # Whether to warmup IK solver
@@ -114,6 +120,10 @@ def validate_tamp_config(config: TAMPConfiguration):
         raise ValueError(f"Invalid approach: {config.approach}")
     if config.num_resampling_attempts < 0:
         raise ValueError(f"num_resampling_attempts must be non-negative, not {config.num_resampling_attempts}")
+    if config.num_curobo_candidates < 1:
+        raise ValueError(f"num_curobo_candidates must be at least 1, not {config.num_curobo_candidates}")
+    if config.curobo_candidate_min_dist < 0:
+        raise ValueError(f"curobo_candidate_min_dist must be non-negative, not {config.curobo_candidate_min_dist}")
 
     # Optimization hyperparams
     if config.num_opt_steps <= 0:

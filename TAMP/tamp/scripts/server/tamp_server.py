@@ -103,6 +103,12 @@ class TAMP:
         self.total_num_satisfying = None
 
         self.max_attempts = 3
+        # With a planning budget [s] the planner restarts until a plan is found
+        # or the budget is spent, instead of stopping after max_attempts. An
+        # attempt is only started inside the budget and nothing else depends on
+        # it, so what has happened by any time t is the same for every budget
+        # >= t: one run at the largest budget is censored at the smaller ones.
+        self.plan_budget_s = float(os.environ.get("SDL_PLAN_BUDGET_S", "0") or 0)
 
         self.cmd_js_names = ["j1", "j2", "j3", "j4", "j5", "j6"]
         self.has_planned = False
@@ -187,8 +193,13 @@ class TAMP:
         attempts_used = 0
         success = False
 
+        if self.plan_budget_s > 0:
+            limit = "within %.0f s" % self.plan_budget_s
+        else:
+            limit = "of %d" % self.max_attempts
         if self.env is not None:
-            for _ in range(self.max_attempts):
+            while (time.time() - start_time < self.plan_budget_s if self.plan_budget_s > 0
+                   else attempts_used < self.max_attempts):
 
                 attempts_used += 1
 
@@ -221,8 +232,8 @@ class TAMP:
                     # trajectory in solve_curobo) are diagnosable. Retry behaviour
                     # is preserved by the enclosing loop.
                     self._log.exception(
-                        "run_cutamp raised on attempt %d/%d for env '%s'",
-                        attempts_used, self.max_attempts, self.current_env_name,
+                        "run_cutamp raised on attempt %d (%s) for env '%s'",
+                        attempts_used, limit, self.current_env_name,
                     )
                     self.last_plan_error = e
                     self.total_num_satisfying = 0
@@ -1107,6 +1118,8 @@ class TAMPServer(Node):
             enable_experiment_logging=request.enable_experiment_logging,
             time_dilation_factor=request.time_dilation_factor,
             rr_spawn=request.rr_spawn,
+            num_curobo_candidates=CUROBO_CANDIDATES,
+            curobo_candidate_min_dist=CUROBO_CANDIDATE_MIN_DIST_RAD,
         )
         validate_tamp_config(config)
 
@@ -1766,6 +1779,19 @@ class TAMPServer(Node):
         self.current_plan_step += 1
         
 
+# Satisfying particles cuRobo is tried on before an optimization's result is
+# given up, and how far apart [rad] they must be (cutamp.algorithm.
+# get_candidate_particles). Both were declared before the first campaign that
+# used them and not tuned on its layouts. Eight: a candidate cuRobo cannot plan
+# costs 0.5-1.0 s (offline, RTX 5080) against ~8 s of particle optimization
+# that a restart repeats, so trying all eight stays near the price of one
+# restart. 0.1 rad (~6 deg) in some joint of some configuration: a judgement,
+# not a measurement, to keep near-copies of a failed particle from using up the
+# eight. set_tamp_cfg_cb sends them too, since its request does not carry them.
+CUROBO_CANDIDATES = 8
+CUROBO_CANDIDATE_MIN_DIST_RAD = 0.1
+
+
 def default_config():
     """The planner settings every run of this server uses.
 
@@ -1792,6 +1818,8 @@ def default_config():
         viz_robot_mesh=False,
         enable_experiment_logging=False,
         time_dilation_factor=0.5,
+        num_curobo_candidates=CUROBO_CANDIDATES,
+        curobo_candidate_min_dist=CUROBO_CANDIDATE_MIN_DIST_RAD,
     )
 
 

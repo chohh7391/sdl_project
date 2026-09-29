@@ -10,7 +10,7 @@
 """Solving motions with cuRobo."""
 
 import logging
-from typing import List
+from typing import List, Optional
 
 import math
 import torch
@@ -18,7 +18,7 @@ from curobo.geom.sphere_fit import SphereFitType
 from curobo.geom.types import Sphere
 from curobo.types.math import Pose
 from curobo.types.state import JointState
-from curobo.wrap.reacher.motion_gen import MotionGenPlanConfig
+from curobo.wrap.reacher.motion_gen import MotionGen, MotionGenPlanConfig
 
 from cutamp.utils.common import APPROACH_RETREAT_M, Particles, action_6dof_to_mat4x4, action_4dof_to_mat4x4
 from cutamp.config import TAMPConfiguration
@@ -330,16 +330,21 @@ def solve_curobo(
     timer: TorchTimer,
     visualizer: Visualizer,
     timeline: str = "curobo",
+    motion_gen: Optional[MotionGen] = None,
 ):
     """
     Solve for full motion plan given a plan skeleton and optimized particles.
     Note that visualization adds non-trivial overhead.
+
+    `motion_gen`, if given, is an already warmed-up generator whose world is the
+    initial one; otherwise one is built and warmed up here.
     """
     plan_skeleton = plan_info["plan_skeleton"]
-    motion_gen = world.get_motion_gen(collision_activation_distance=config.world_activation_distance)
-    if config.warmup_motion_gen:
-        with timer.time("curobo_motion_gen_warmup", log_callback=_log.debug):
-            motion_gen.warmup()
+    if motion_gen is None:
+        motion_gen = world.get_motion_gen(collision_activation_distance=config.world_activation_distance)
+        if config.warmup_motion_gen:
+            with timer.time("curobo_motion_gen_warmup", log_callback=_log.debug):
+                motion_gen.warmup()
 
     plan_config = MotionGenPlanConfig(
         timeout=0.5, enable_finetune_trajopt=False, time_dilation_factor=config.time_dilation_factor

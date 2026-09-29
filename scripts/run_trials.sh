@@ -74,10 +74,16 @@ PLANNER_SEED_OFFSET="${PLANNER_SEED_OFFSET:-0}"
 # under a shared GPU is not a latency result.
 PLAN_TIMEOUT="${PLAN_TIMEOUT:-240}"
 
+# Planning budget [s] handed to tamp_server as SDL_PLAN_BUDGET_S: with one the
+# planner keeps restarting until it finds a plan or the budget is spent; empty
+# keeps its fixed three attempts. PLAN_TIMEOUT has to exceed it, because the
+# attempt running when the budget ends is allowed to finish.
+PLAN_BUDGET_S="${PLAN_BUDGET_S:-}"
+
 SEEDS=("$@")
 if [[ ${#SEEDS[@]} -eq 0 ]]; then SEEDS=(0 1 2 3 4); fi
 
-echo "=== run_trials.sh: task=$TASK robot=$ROBOT seeds=[${SEEDS[*]}] domain=$ROS_DOMAIN_ID state=$STATE_SOURCE csv=$CSV ==="
+echo "=== run_trials.sh: task=$TASK robot=$ROBOT seeds=[${SEEDS[*]}] domain=$ROS_DOMAIN_ID state=$STATE_SOURCE plan_budget=${PLAN_BUDGET_S:-none} csv=$CSV ==="
 
 # Wait until $1 (a log file) contains regex $2, up to $3 seconds. Returns 0/1.
 wait_for() {
@@ -183,7 +189,7 @@ for seed in "${SEEDS[@]}"; do
   # SDL_PLANNER_SEED makes cuTAMP's particle initialisation reproducible for
   # this layout; without it the same seed can plan differently between runs.
   ROS_DOMAIN_ID="$ROS_DOMAIN_ID" SDL_USE_SOURCE=1 SDL_STATE_SOURCE="$STATE_SOURCE" \
-    SDL_PLANNER_SEED="$((seed + PLANNER_SEED_OFFSET))" \
+    SDL_PLANNER_SEED="$((seed + PLANNER_SEED_OFFSET))" SDL_PLAN_BUDGET_S="$PLAN_BUDGET_S" \
     setsid bash "$TAMP_SH" >"$TAMP_LOG" 2>&1 &
   TAMP_PGID=$!
   echo "[seed $seed] tamp pgid=$TAMP_PGID; waiting for server ready (<= ${TAMP_READY_TIMEOUT}s)"

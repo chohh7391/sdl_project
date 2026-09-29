@@ -211,7 +211,8 @@ default_of() { grep -hoE "environ\.get\(\"$1\", \"[^\"]*\"\)" "$RR_ROOT"/TAMP/ta
   echo "| cuRobo | $CUROBO |"
   echo "| declared budgets | $(cat "$RR_OUT/BUDGETS") s |"
   echo "| cuTAMP repetitions | ${RERUN_REPS:-3} x 30 layouts per task |"
-  echo "| PDDLStream | ${RERUN_PDDL_STREAMS:-5} planner seeds x 30 layouts, max ${RERUN_PDDL_MAX_TIME:-180} s |"
+  echo "| cuTAMP planning | restarts until the largest budget (SDL_PLAN_BUDGET_S=$MAXB, set per trial by 10_cutamp.sh); up to $(grep -oE '^CUROBO_CANDIDATES = [0-9]+' "$RR_ROOT/TAMP/tamp/scripts/server/tamp_server.py" | grep -oE '[0-9]+$') satisfying particles tried in cuRobo per optimization, >= $(grep -oE '^CUROBO_CANDIDATE_MIN_DIST_RAD = [0-9.]+' "$RR_ROOT/TAMP/tamp/scripts/server/tamp_server.py" | grep -oE '[0-9.]+$') rad apart |"
+  echo "| PDDLStream | ${RERUN_PDDL_STREAMS:-5} planner seeds x 30 layouts, max ${RERUN_PDDL_MAX_TIME:-180} s; stock adaptive algorithm, one solve() per trial, no restart |"
   echo "| GPU exclusive at start | yes (pre-flight found no other compute process) |"
   echo
   echo "## Behaviour switches, at their code defaults (no SDL_* variable was set)"
@@ -245,7 +246,7 @@ if [[ $SMOKE -eq 1 ]]; then
   mkdir -p "$RR_OUT/smoke"
   rm -f "$RR_OUT/smoke/transfer_smoke.csv"
   SDL_STATE_SOURCE=ground_truth CSV="$RR_OUT/smoke/transfer_smoke.csv" TASK=transfer \
-    ROBOT=fr5_ag95 LOGDIR="$RR_OUT/logs/smoke" PLAN_TIMEOUT=600 \
+    ROBOT=fr5_ag95 LOGDIR="$RR_OUT/logs/smoke" PLAN_TIMEOUT=600 PLAN_BUDGET_S="$MAXB" \
     bash "$RR_ROOT/scripts/run_trials.sh" 0 > "$RR_OUT/logs/smoke.out" 2>&1
   python3 "$RR_ANALYSIS/summarize_trials.py" "$RR_OUT/smoke/transfer_smoke.csv" --budget 600 2>&1 \
     | grep -E "task success|planning success|time \[s\]"
