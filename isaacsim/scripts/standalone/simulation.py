@@ -76,9 +76,11 @@ class Simulation(Node):
 
         self.simulation_app.update()
 
-        # initialize camera
-        for i in range(2):
-            self.initialize_camera(self.task.cameras[i])
+        # initialize camera -- every one the task built, the wrist camera too:
+        # it has the same D435 intrinsics, and left uninitialised it renders
+        # with Isaac's default aperture instead of the K its camera_info states.
+        for camera in self.task.cameras:
+            self.initialize_camera(camera)
         
         self.robot = self.world.scene.get_object("fr5")
         if self.robot is None:
@@ -118,9 +120,16 @@ class Simulation(Node):
         else:
             print("[Sim] SDL_CAMERAS=0: rendered cameras disabled")
         self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-        # TF for every camera, including the wrist one, so perception can
-        # transform its detections into base_link like the fixed cameras'.
-        target_prim_paths = list(camera_paths)
+        # TF for the cameras that stand in the cell. A camera ON the arm is left
+        # out: after a tool change rebuilds the world, ROS2PublishTransformTree
+        # crashes the simulator (segfault on the first /tf subscriber) with a
+        # target inside the robot, and a wrist camera's transform is the arm's
+        # forward kinematics plus a fixed mount anyway. perception_manager's
+        # launch publishes it that way -- robot_state_publisher on the joint
+        # states, then the mount from config/wrist_camera.yaml -- as the real
+        # cell does.
+        target_prim_paths = [p for p in camera_paths
+                             if not p.startswith(ROBOT_STAGE_PATH + "/")]
         self.tf_graph = self.create_tf_graph(
             target_prim_paths=target_prim_paths,
             parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
@@ -901,7 +910,41 @@ class Simulation(Node):
             self.timer.cancel()
             self.world.stop()
 
+            # A camera on the arm is a prim under the robot that the scene
+            # registry does not own, so world.clear() leaves it -- and with it
+            # /World/Robot -- on the stage. The rebuilt robot then gets a unique
+            # name (/World/Robot_1), the wrist camera is re-created on the dead
+            # /World/Robot, and the TF graph's base_link is gone (the simulator
+            # segfaulted on the next /tf subscriber). Remove it first.
+            # The camera graph's render products hold the camera prims, so the
+            # graph goes first; it is rebuilt below.
+            from isaacsim.core.utils.prims import delete_prim, is_prim_path_valid
+            if is_prim_path_valid("/ActionGraph/MultiCameraData"):
+                delete_prim("/ActionGraph/MultiCameraData")
+            self.camera_data_graph = None
+            self.simulation_app.update()
+            # The wrist camera's sensor object keeps its render product and
+            # data callbacks alive and re-authors its prim on the next update,
+            # which re-creates /World/Robot/wrist3_link before the new robot is
+            # added. Destroy it, then its prim.
+            for cam, cam_path in zip(list(getattr(self.task, "cameras", [])),
+                                     list(getattr(self.task, "camera_prim_paths", []))):
+                if cam_path.startswith(ROBOT_STAGE_PATH + "/"):
+                    try:
+                        cam.destroy()
+                    except Exception as exc:
+                        self.get_logger().warning("destroying %s: %s" % (cam_path, exc))
+                    if is_prim_path_valid(cam_path):
+                        delete_prim(cam_path)
+
             self.world.clear()
+            # Whatever still holds the old robot's path (the wrist camera's
+            # render product keeps an over on it), clear the path itself so the
+            # rebuilt robot is /World/Robot again.
+            if is_prim_path_valid(ROBOT_STAGE_PATH):
+                self.get_logger().info(
+                    "tool change: %s outlived world.clear(); deleting it" % ROBOT_STAGE_PATH)
+                delete_prim(ROBOT_STAGE_PATH)
 
             self.simulation_app.update()
             
@@ -914,8 +957,8 @@ class Simulation(Node):
             self.simulation_app.update()
 
             # initialize camera
-            for i in range(2):
-                self.initialize_camera(self.task.cameras[i])
+            for camera in self.task.cameras:
+                self.initialize_camera(camera)
 
             self.robot = self.world.scene.get_object("fr5")
             
@@ -925,15 +968,23 @@ class Simulation(Node):
 
             self.world.initialize_physics()
 
-            # action graphs
-            camera_paths = ["/World/camera_1", "/World/camera_2"]
-            camera_names = ["camera_1", "camera_2"]
-            self.camera_data_graph = self.create_ros_camera_graph(
-            camera_paths=camera_paths, camera_names=camera_names,
-            width=self.task.camera_info.width, height=self.task.camera_info.height)
-            self.og.Controller.evaluate_sync(self.camera_data_graph)
+            # action graphs -- from the cameras the task rebuilt, as at start-up.
+            # This used to name camera_1 and camera_2 outright, so the wrist
+            # camera, which the rebuilt robot carries again, lost its images
+            # and its TF at the first tool change (every trial starts with one)
+            # and SDL_CAMERAS=0 was ignored.
+            camera_paths = list(self.task.camera_prim_paths)
+            camera_names = list(self.task.camera_names)
+            self.camera_data_graph = None
+            if os.environ.get("SDL_CAMERAS", "1").strip() != "0":
+                self.camera_data_graph = self.create_ros_camera_graph(
+                    camera_paths=camera_paths, camera_names=camera_names,
+                    width=self.task.camera_info.width,
+                    height=self.task.camera_info.height)
+                self.og.Controller.evaluate_sync(self.camera_data_graph)
             self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-            target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
+            target_prim_paths = [p for p in camera_paths
+                                 if not p.startswith(ROBOT_STAGE_PATH + "/")]
             self.tf_graph = self.create_tf_graph(
                 target_prim_paths=target_prim_paths,
                 parent_prim_path=ROBOT_STAGE_PATH + "/base_link",

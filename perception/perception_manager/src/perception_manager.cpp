@@ -21,6 +21,41 @@ PerceptionManager::PerceptionManager() : Node("perception_manager")
                     camera_frames_.size(), joined.c_str());
     }
 
+    priority_cameras_ = this->declare_parameter<std::vector<std::string>>(
+        "priority_cameras", std::vector<std::string>{"camera_3"});
+    max_obs_age_s_ = this->declare_parameter<double>("max_observation_age_s", 0.5);
+    // The newest image each camera has produced, from its camera_info (same
+    // stamp as the image). A detection is current only if it is this recent in
+    // its OWN camera's clock: tf2 keeps a tag's last transform indefinitely, so
+    // a camera that stopped seeing a tag would otherwise keep contributing its
+    // old view, stamped by fusion with the newest observation's time.
+    for (const auto& cam : camera_frames_) {
+        camera_info_subs_.push_back(this->create_subscription<sensor_msgs::msg::CameraInfo>(
+            "/" + cam + "/camera_info", rclcpp::SensorDataQoS(),
+            [this, cam](const sensor_msgs::msg::CameraInfo::SharedPtr msg) {
+                rclcpp::Time t(msg->header.stamp);
+                // The simulator's clock starts again from zero when it rebuilds
+                // its world (the tool change every trial begins with). tf2 then
+                // discards the new transforms as data from the past and keeps
+                // answering with the old ones, so start over. clear() keeps the
+                // static transforms (the wrist camera's mount).
+                for (const auto& kv : latest_image_stamp_) {
+                    if ((kv.second - t).seconds() > 1.0) {
+                        RCLCPP_WARN(this->get_logger(),
+                            "%s clock went back %.1f s -> %.1f s (simulator rebuilt); clearing TF",
+                            cam.c_str(), kv.second.seconds(), t.seconds());
+                        tf_buffer_->clear();
+                        latest_image_stamp_.clear();
+                        break;
+                    }
+                }
+                auto it = latest_image_stamp_.find(cam);
+                if (it == latest_image_stamp_.end() || t > it->second) {
+                    latest_image_stamp_[cam] = t;
+                }
+            }));
+    }
+
     target_objects_ = {"beaker", "flask"};
     object_tag_map_["beaker"] = "beaker_tag";
     object_tag_map_["flask"] = "flask_tag";
@@ -95,28 +130,33 @@ void PerceptionManager::process_fusion_tf() {
         std::string tag_id = object_tag_map_[obj_name];
         auto& obj = objects_[obj_name];
 
-        // Collect one observation per camera that can see the tag right now.
+        // Collect one CURRENT observation per camera that can see the tag. Each
+        // detector publishes its tags as <camera>_<tag> (apriltag.launch.py), so
+        // this lookup is that camera's own detection and no other's.
         obj.observations.clear();
         for (const auto& cam : camera_frames_) {
+            const std::string cam_tag = cam + "_" + tag_id;
             try {
                 if (!tf_buffer_->canTransform("base_link", cam, tf2::TimePointZero) ||
-                    !tf_buffer_->canTransform(cam, tag_id, tf2::TimePointZero)) {
+                    !tf_buffer_->canTransform(cam, cam_tag, tf2::TimePointZero)) {
                     continue;
                 }
-                auto cam_to_tag = tf_buffer_->lookupTransform(cam, tag_id, tf2::TimePointZero);
+                auto cam_to_tag = tf_buffer_->lookupTransform(cam, cam_tag, tf2::TimePointZero);
+                auto newest = latest_image_stamp_.find(cam);
+                if (newest == latest_image_stamp_.end() ||
+                    (newest->second - rclcpp::Time(cam_to_tag.header.stamp)).seconds() > max_obs_age_s_) {
+                    continue;
+                }
 
                 // base_link->camera AT THE INSTANT THE TAG WAS SEEN, not the
                 // latest one. For the two fixed cell cameras the transform is
                 // constant and the two are the same lookup. For a camera on
-                // the wrist they are not: the recovery scan (L2) detects tags
-                // while the arm is sweeping, so composing an older detection
-                // with the arm's newest pose displaces the object by roughly
-                // (wrist speed) x (detection latency) -- tens of millimetres
-                // at scan speed, against a fused error budget whose median is
-                // 2.4 mm. Falls back to the latest transform when the buffer
-                // cannot answer at that stamp (a static publisher outside the
-                // cache window), which restores the previous behaviour rather
-                // than dropping the observation.
+                // the wrist they are not: the recovery scan detects tags while
+                // the arm is moving, so composing an older detection with the
+                // arm's newest pose displaces the object by roughly (wrist
+                // speed) x (detection latency). Falls back to the latest
+                // transform when the buffer cannot answer at that stamp (a
+                // static publisher outside the cache window).
                 geometry_msgs::msg::TransformStamped base_to_cam;
                 try {
                     base_to_cam = tf_buffer_->lookupTransform(
@@ -147,93 +187,111 @@ void PerceptionManager::process_fusion_tf() {
             }
         }
 
-        // --- Data Fusion & Offset Application ---
-
-        geometry_msgs::msg::TransformStamped final_tf_msg;
-        bool has_valid_data = !obj.observations.empty();
-
-        // 1. Tag 위치 융합 (Tag Pose Fusion)
-        // Range-weighted over however many cameras saw the tag: a nearer view
-        // is a better one, so each is weighted by 1/d^2. Rotation is blended by
-        // successive slerp with the running weight, which for two cameras is
-        // exactly q1.slerp(q2, w2/(w1+w2)) -- the two-camera result is bit for
-        // bit what it was before this became a loop.
-        if (obj.observations.size() == 1) {
-            final_tf_msg = obj.observations.front().pose_in_base;
-        } else if (obj.observations.size() > 1) {
-            const double eps = 1e-6;
-            std::vector<double> w;
-            double w_sum = 0.0;
-            for (const auto& ob : obj.observations) {
-                double wi = 1.0 / (ob.distance * ob.distance + eps);
-                w.push_back(wi);
-                w_sum += wi;
-            }
-
-            // 시간: 가장 최신 관측 사용
-            rclcpp::Time newest(obj.observations.front().pose_in_base.header.stamp);
-            for (const auto& ob : obj.observations) {
-                rclcpp::Time t(ob.pose_in_base.header.stamp);
-                if (t > newest) { newest = t; }
-            }
-            final_tf_msg.header.stamp = newest;
-
-            double x = 0.0, y = 0.0, z = 0.0;
-            for (size_t i = 0; i < obj.observations.size(); ++i) {
-                const auto& tr = obj.observations[i].pose_in_base.transform.translation;
-                const double wi = w[i] / w_sum;
-                x += tr.x * wi;
-                y += tr.y * wi;
-                z += tr.z * wi;
-            }
-            final_tf_msg.transform.translation.x = x;
-            final_tf_msg.transform.translation.y = y;
-            final_tf_msg.transform.translation.z = z;
-
-            tf2::Quaternion q_fused;
-            tf2::fromMsg(obj.observations.front().pose_in_base.transform.rotation, q_fused);
-            double w_run = w[0];
-            for (size_t i = 1; i < obj.observations.size(); ++i) {
-                tf2::Quaternion qi;
-                tf2::fromMsg(obj.observations[i].pose_in_base.transform.rotation, qi);
-                q_fused = q_fused.slerp(qi, w[i] / (w_run + w[i]));
-                w_run += w[i];
-            }
-            final_tf_msg.transform.rotation = tf2::toMsg(q_fused);
+        // Split by trust. A priority camera (the wrist camera) that sees the tag
+        // right now REPLACES the fixed cameras in the object's own frame rather
+        // than being blended with them: from the recovery scan it looks at the
+        // tag from a fraction of the fixed cameras' range, which is the view to
+        // believe. Both halves are also published on their own, so a consumer
+        // can ask what the fixed cameras alone say (the pre-execution check).
+        std::vector<CameraObservation> fixed, wrist;
+        for (const auto& ob : obj.observations) {
+            const bool prio = std::find(priority_cameras_.begin(), priority_cameras_.end(),
+                                        ob.camera) != priority_cameras_.end();
+            (prio ? wrist : fixed).push_back(ob);
         }
-
-        // 2. 실제 Object 위치로 오프셋 적용 (Offset Application)
-        if (has_valid_data) {
-            // 2-1. 융합된 Tag 위치를 TF2 객체로 변환
-            tf2::Transform t_tag_fused;
-            tf2::fromMsg(final_tf_msg.transform, t_tag_fused);
-
-            // 2-2. Tag -> Object. Per object, because the plate sits a vessel
-            // half-height below the vessel's centre and the two vessels differ
-            // (see tag_to_object_). The z term was previously 0, which left
-            // every reported object pose a half-height too low.
-            tf2::Transform t_tag_to_obj;
-            t_tag_to_obj.setIdentity();
-            auto offset_it = tag_to_object_.find(obj_name);
-            if (offset_it == tag_to_object_.end()) {
-                RCLCPP_WARN_ONCE(this->get_logger(),
-                    "No tag->object offset for '%s'; reporting the TAG pose as the object pose.",
-                    obj_name.c_str());
-            } else {
-                t_tag_to_obj.setOrigin(offset_it->second);
-            }
-
-            // 2-3. 최종 Object 위치 계산
-            tf2::Transform t_object_final = t_tag_fused * t_tag_to_obj;
-
-            // 2-4. 결과 저장
-            final_tf_msg.transform = tf2::toMsg(t_object_final);
-            final_tf_msg.header.frame_id = "base_link";
-            final_tf_msg.child_frame_id = obj_name; // 이제 이것은 Tag가 아닌 Object 중심입니다.
-            
-            obj.processed_data = final_tf_msg;
+        obj.processed.clear();
+        geometry_msgs::msg::TransformStamped out;
+        if (fuse(obj_name, fixed, out)) {
+            out.child_frame_id = obj_name + "_fixed";
+            obj.processed["_fixed"] = out;
+        }
+        if (fuse(obj_name, wrist, out)) {
+            out.child_frame_id = obj_name + "_wrist";
+            obj.processed["_wrist"] = out;
+        }
+        if (fuse(obj_name, wrist.empty() ? fixed : wrist, out)) {
+            out.child_frame_id = obj_name;
+            obj.processed[""] = out;
         }
     }
+}
+
+bool PerceptionManager::fuse(const std::string& obj_name,
+                             const std::vector<CameraObservation>& obs,
+                             geometry_msgs::msg::TransformStamped& out) {
+    if (obs.empty()) {
+        return false;
+    }
+    geometry_msgs::msg::TransformStamped final_tf_msg;
+
+    // 1. Tag 위치 융합 (Tag Pose Fusion)
+    // Range-weighted over however many cameras saw the tag: a nearer view is a
+    // better one, so each is weighted by 1/d^2. Rotation is blended by
+    // successive slerp with the running weight, which for two cameras is
+    // exactly q1.slerp(q2, w2/(w1+w2)).
+    if (obs.size() == 1) {
+        final_tf_msg = obs.front().pose_in_base;
+    } else {
+        const double eps = 1e-6;
+        std::vector<double> w;
+        double w_sum = 0.0;
+        for (const auto& ob : obs) {
+            double wi = 1.0 / (ob.distance * ob.distance + eps);
+            w.push_back(wi);
+            w_sum += wi;
+        }
+
+        // 시간: 가장 최신 관측 사용
+        rclcpp::Time newest(obs.front().pose_in_base.header.stamp);
+        for (const auto& ob : obs) {
+            rclcpp::Time t(ob.pose_in_base.header.stamp);
+            if (t > newest) { newest = t; }
+        }
+        final_tf_msg.header.stamp = newest;
+
+        double x = 0.0, y = 0.0, z = 0.0;
+        for (size_t i = 0; i < obs.size(); ++i) {
+            const auto& tr = obs[i].pose_in_base.transform.translation;
+            const double wi = w[i] / w_sum;
+            x += tr.x * wi;
+            y += tr.y * wi;
+            z += tr.z * wi;
+        }
+        final_tf_msg.transform.translation.x = x;
+        final_tf_msg.transform.translation.y = y;
+        final_tf_msg.transform.translation.z = z;
+
+        tf2::Quaternion q_fused;
+        tf2::fromMsg(obs.front().pose_in_base.transform.rotation, q_fused);
+        double w_run = w[0];
+        for (size_t i = 1; i < obs.size(); ++i) {
+            tf2::Quaternion qi;
+            tf2::fromMsg(obs[i].pose_in_base.transform.rotation, qi);
+            q_fused = q_fused.slerp(qi, w[i] / (w_run + w[i]));
+            w_run += w[i];
+        }
+        final_tf_msg.transform.rotation = tf2::toMsg(q_fused);
+    }
+
+    // 2. 실제 Object 위치로 오프셋 적용 (Offset Application): tag -> object,
+    // per object, because the plate sits above the vessel's centre by an
+    // amount that differs between the two vessels (see tag_to_object_).
+    tf2::Transform t_tag_fused;
+    tf2::fromMsg(final_tf_msg.transform, t_tag_fused);
+    tf2::Transform t_tag_to_obj;
+    t_tag_to_obj.setIdentity();
+    auto offset_it = tag_to_object_.find(obj_name);
+    if (offset_it == tag_to_object_.end()) {
+        RCLCPP_WARN_ONCE(this->get_logger(),
+            "No tag->object offset for '%s'; reporting the TAG pose as the object pose.",
+            obj_name.c_str());
+    } else {
+        t_tag_to_obj.setOrigin(offset_it->second);
+    }
+    final_tf_msg.transform = tf2::toMsg(t_tag_fused * t_tag_to_obj);
+    final_tf_msg.header.frame_id = "base_link";
+    out = final_tf_msg;
+    return true;
 }
 
 // ==========================================
@@ -272,13 +330,8 @@ void PerceptionManager::process_raw_scale() {
 // ==========================================
 void PerceptionManager::publish_processed_tf() {
     for (const auto& obj_name : target_objects_) {
-        auto& obj = objects_[obj_name];
-
-        if (!obj.observations.empty()) {
-            if (obj.processed_data.header.frame_id.empty()) {
-                obj.processed_data.header.frame_id = "base_link";
-            }
-            tf_broadcaster_->sendTransform(obj.processed_data);
+        for (const auto& kv : objects_[obj_name].processed) {
+            tf_broadcaster_->sendTransform(kv.second);
         }
     }
 }

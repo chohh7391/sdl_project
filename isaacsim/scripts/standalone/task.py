@@ -1070,44 +1070,59 @@ class Task(ABC, BaseTask):
         self.create_gripper_stand()
 
 
-    #: A camera carried on the arm. Off by default: the recovery ladder's scan
-    #: rung (tamp_server RECOVERY_SCAN) sweeps the arm to move a viewpoint, and
-    #: with only the two FIXED cell cameras that sweep observes exactly what it
-    #: started with. This is the camera that makes the sweep mean something.
-    WRIST_CAMERA = os.environ.get("SDL_WRIST_CAMERA", "0") == "1"
-    #: Where the camera sits in wrist3_link's own frame, and which way it looks.
-    #: Measured from the asset rather than guessed: in fr5_ag95.usd the wrist's
-    #: children sit at local (0, 0, +0.100) for the flange and (0, 0, +0.300)
-    #: for grasp_frame, so the tool axis is the wrist's +Z -- which points at
-    #: the bench whenever the arm is posed to grasp. A USD camera looks along
-    #: its own -Z, so turning it 180 deg about X aims it down the tool axis.
-    #: The mount is offset sideways so it looks past the gripper rather than
-    #: through it.
-    WRIST_CAMERA_XYZ = [
-        float(v) for v in os.environ.get(
-            "SDL_WRIST_CAMERA_XYZ", "0.06,0.0,0.05").split(",")
-    ]
-    #: Local orientation (w, x, y, z) = 180 deg about X.
+    #: A camera carried on the arm, in the paper's scene since 09-30. The two
+    #: FIXED cell cameras cannot see a tag another object covers, and the
+    #: recovery scan (tamp_server RECOVERY_SCAN) moves this camera to a view
+    #: that does. SDL_WRIST_CAMERA=0 removes it.
+    WRIST_CAMERA = os.environ.get("SDL_WRIST_CAMERA", "1") == "1"
+    #: Where the camera sits on wrist3_link and which way it looks, from
+    #: perception/perception_manager/config/wrist_camera.yaml -- the D435's
+    #: optical frame on the printed mount, which the perception launch publishes
+    #: as the wrist3_link -> camera_3 transform, so the rendered view and the
+    #: transform its detections go through cannot disagree. The camera prim
+    #: carries no collider, so the robot's collision model is unchanged.
     #:
-    #: `Camera.__init__` forwards `orientation` to `set_local_pose`, i.e. it is
-    #: the RAW USD prim rotation with no camera-axes conversion (the axes
-    #: arguments only exist on the get/set_world_pose methods). A USD camera
-    #: images along its own -Z, so the local rotation has to map -Z_cam onto
-    #: +Z_wrist: Rx(180 deg) = diag(1, -1, -1) sends (0,0,-1) to (0,0,+1).
-    #: Identity would point the camera at -Z_wrist -- backwards, up into the
-    #: wrist -- which is what produced the first all-black frame.
-    #:
-    #: An earlier note here claimed the 180 deg mount had been measured and gave
-    #: an all-infinity depth image. That test aimed the camera at scene-setup
-    #: time, before `world.reset()` poses the arm, with the wrist parked at
-    #: (-0.82, -0.10, 0.05) behind the base: it moved two variables at once and
-    #: says nothing about the mount. Use SDL_WRIST_CAMERA_PROBE=1 to print the
-    #: optical axis in world coordinates at the home pose instead of inferring
-    #: the mount from a picture.
-    WRIST_CAMERA_QUAT = [
-        float(v) for v in os.environ.get(
-            "SDL_WRIST_CAMERA_QUAT", "0.0,1.0,0.0,0.0").split(",")
-    ]
+    #: `Camera.__init__` hands `orientation` to `set_local_pose` with its
+    #: default camera_axes="world": the rotation is read in Isaac's "world"
+    #: camera axes, +X along the view and +Z up, not as the raw USD prim
+    #: rotation. (Taking it as raw -- Rx(188 deg) -- turned the camera to look
+    #: along wrist3's +X, sideways, instead of down the tool axis: measured as a
+    #: horizontal optical axis at the home pose while the tool axis points at the
+    #: bench.) So the optical frame (x right, y down, z along the view) becomes
+    #: X = z, Y = -x, Z = -y. SDL_WRIST_CAMERA_XYZ / SDL_WRIST_CAMERA_QUAT
+    #: (in those world camera axes, w first) override it.
+    @staticmethod
+    def _wrist_camera_mount():
+        import yaml
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..",
+                            "perception", "perception_manager", "config", "wrist_camera.yaml")
+        with open(path) as fh:
+            m = yaml.safe_load(fh)
+        r, p, y = [float(v) for v in m["rpy"]]
+        cr, sr, cp, sp, cy, sy = (math.cos(r), math.sin(r), math.cos(p), math.sin(p),
+                                  math.cos(y), math.sin(y))
+        R_opt = np.array([[cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr],
+                          [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr],
+                          [-sp, cp * sr, cp * cr]])
+        R = R_opt @ np.array([[0.0, -1.0, 0.0], [0.0, 0.0, -1.0], [1.0, 0.0, 0.0]])
+        # rotation matrix -> (w, x, y, z), branching on the largest component
+        tr = R[0, 0] + R[1, 1] + R[2, 2]
+        if tr > 0.0:
+            k = 2.0 * math.sqrt(1.0 + tr)
+            q = [0.25 * k, (R[2, 1] - R[1, 2]) / k, (R[0, 2] - R[2, 0]) / k, (R[1, 0] - R[0, 1]) / k]
+        elif R[0, 0] >= R[1, 1] and R[0, 0] >= R[2, 2]:
+            k = 2.0 * math.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2])
+            q = [(R[2, 1] - R[1, 2]) / k, 0.25 * k, (R[0, 1] + R[1, 0]) / k, (R[0, 2] + R[2, 0]) / k]
+        elif R[1, 1] >= R[2, 2]:
+            k = 2.0 * math.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2])
+            q = [(R[0, 2] - R[2, 0]) / k, (R[0, 1] + R[1, 0]) / k, 0.25 * k, (R[1, 2] + R[2, 1]) / k]
+        else:
+            k = 2.0 * math.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1])
+            q = [(R[1, 0] - R[0, 1]) / k, (R[0, 2] + R[2, 0]) / k, (R[1, 2] + R[2, 1]) / k, 0.25 * k]
+        return [float(v) for v in m["xyz"]], [float(v) for v in q]
+
+    WRIST_CAMERA_XYZ = None
+    WRIST_CAMERA_QUAT = None
     #: Print the wrist camera's measured world-frame optical axis after the arm
     #: reaches its home pose, instead of guessing from a rendered frame.
     WRIST_CAMERA_PROBE = os.environ.get("SDL_WRIST_CAMERA_PROBE", "0") == "1"
@@ -1146,11 +1161,20 @@ class Task(ABC, BaseTask):
         look-at there would freeze a local transform derived from a pose the
         arm is never in while it works.
         """
+        xyz, quat = self._wrist_camera_mount()
+        if os.environ.get("SDL_WRIST_CAMERA_XYZ"):
+            xyz = [float(v) for v in os.environ["SDL_WRIST_CAMERA_XYZ"].split(",")]
+        if os.environ.get("SDL_WRIST_CAMERA_QUAT"):
+            quat = [float(v) for v in os.environ["SDL_WRIST_CAMERA_QUAT"].split(",")]
+        self.WRIST_CAMERA_XYZ, self.WRIST_CAMERA_QUAT = xyz, quat
         wrist_path = self._robot_prim_path + "/wrist3_link"
         if not is_prim_path_valid(wrist_path):
             print("[Task] wrist camera: %s does not exist; skipping" % wrist_path)
             return
-        cam_path = wrist_path + "/wrist_camera"
+        # Named like the frame its images carry: the TF tree names a prim's
+        # frame after the prim, and the AprilTag detector hangs its tag frames
+        # off the image's frame_id, so the two have to be the same string.
+        cam_path = wrist_path + "/camera_3"
         camera = Camera(
             prim_path=cam_path,
             frequency=30,
@@ -1161,8 +1185,8 @@ class Task(ABC, BaseTask):
         self.cameras.append(camera)
         self.camera_prim_paths.append(cam_path)
         self.camera_names.append("camera_3")
-        print("[Task] wrist camera at %s, local xyz=%s looking down the tool "
-              "axis (+Z of the wrist)" % (cam_path, self.WRIST_CAMERA_XYZ))
+        print("[Task] wrist camera mounted: %s, local xyz=%s quat(wxyz)=%s"
+              % (cam_path, self.WRIST_CAMERA_XYZ, self.WRIST_CAMERA_QUAT))
 
     def create_gripper_stand(self):
         asset_path = os.path.join(ASSET_PATH, "lab", "texture", "propile.jpg")

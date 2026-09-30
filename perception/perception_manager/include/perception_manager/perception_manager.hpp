@@ -13,6 +13,7 @@
 #include <tf2_ros/transform_broadcaster.h> 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/wrench.hpp>
+#include <sensor_msgs/msg/camera_info.hpp>
 #include <std_msgs/msg/float32.hpp> // Float32로 변경됨
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Transform.h>
@@ -34,8 +35,11 @@ struct ObjectData
     //! itself. With two cameras the arithmetic below is unchanged.
     std::vector<CameraObservation> observations;
 
-    // 최종 가공된 데이터 (Offset 적용 후)
-    geometry_msgs::msg::TransformStamped processed_data; 
+    // 최종 가공된 데이터 (Offset 적용 후), one per published frame: "" is the
+    // object's own frame (priority cameras override the rest), "_fixed" the
+    // non-priority cameras alone and "_wrist" the priority cameras alone. A
+    // variant with no fresh observation this cycle is absent.
+    std::map<std::string, geometry_msgs::msg::TransformStamped> processed;
 };
 
 struct FTData { geometry_msgs::msg::Wrench raw_data; geometry_msgs::msg::Wrench processed_data; };
@@ -77,6 +81,17 @@ private:
     //! Camera frames to fuse, in no particular order. Declared as a ROS
     //! parameter so a camera can be added from configuration rather than code.
     std::vector<std::string> camera_frames_;
+    //! Cameras whose fresh observations REPLACE the others' (the wrist camera):
+    //! a close view from the recovery scan is trusted over the fixed cells'.
+    std::vector<std::string> priority_cameras_;
+    //! An observation older than this, measured against the newest image its
+    //! own camera has produced, is not a current view and is not fused [s].
+    double max_obs_age_s_ = 0.5;
+    std::map<std::string, rclcpp::Time> latest_image_stamp_;
+    std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr> camera_info_subs_;
+    //! Fuse *obs* (range-weighted) and apply the tag->object offset. False if empty.
+    bool fuse(const std::string& obj_name, const std::vector<CameraObservation>& obs,
+              geometry_msgs::msg::TransformStamped& out);
     std::vector<std::string> target_objects_;
     std::map<std::string, std::string> object_tag_map_;
     // Translation from each object's TAG frame to the object's own frame, in the
