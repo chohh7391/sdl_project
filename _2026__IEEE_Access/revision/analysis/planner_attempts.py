@@ -12,6 +12,16 @@ written) and counts, per task and state source:
               first candidate of the successful attempt (1 = the best one,
               i.e. what the planner did before candidates were added)
 
+and, for PDDLStream, from its own CSV (pddlstream/pddlstream_<task>_5streams.csv,
+rows written with restarts):
+
+  attempts    solve() calls (the first plus restarts with fresh samples)
+  first       whether the first call alone solved it -- the verdict a run
+              without restarts would have drawn at that stream
+
+and, when the tag also holds a run without restarts (pddlstream_no_restart/),
+how many layouts that run solved.
+
 Planning time is the driver's wall clock from the CSV. Nothing here is a
 success rate: planner_comparison.py reports those, censored at the budgets.
 """
@@ -55,6 +65,52 @@ def parse(path):
     return attempts, won, failed
 
 
+ATTEMPT_BINS = ((1, 1), (2, 2), (3, 9), (10, 10 ** 9))
+
+
+def _bin(lo, hi):
+    return str(lo) if lo == hi else ("%d+" % lo if hi >= 10 ** 9 else "%d-%d" % (lo, hi))
+
+
+def pddl_section(campaign):
+    out = []
+    d = os.path.join(campaign, "pddlstream")
+    for f in sorted(glob.glob(os.path.join(d, "pddlstream_*_5streams.csv"))):
+        task = os.path.basename(f).split("_")[1]
+        rows = list(csv.DictReader(open(f)))
+        if not rows or "attempts" not in rows[0]:
+            continue
+        ok = lambda r: str(r["plan_success"]).strip() in ("1", "True", "true")
+        restart = sorted({r.get("restart", "") for r in rows})
+        out.append("\n## pddlstream, %s (%d trials, restart %s)\n" % (task, len(rows), "/".join(restart)))
+        out.append("| attempts | planned | not planned | solved-only time min / median / max [s] |")
+        out.append("|---|---|---|---|")
+        for lo, hi in ATTEMPT_BINS:
+            sub = [r for r in rows if lo <= int(r["attempts"] or 0) <= hi]
+            if not sub:
+                continue
+            ts = sorted(float(r["planning_time_s"]) for r in sub if ok(r))
+            span = "%.1f / %.1f / %.1f" % (ts[0], statistics.median(ts), ts[-1]) if ts else "--"
+            out.append("| %s | %d | %d | %s |" % (_bin(lo, hi), sum(ok(r) for r in sub),
+                                                 sum(not ok(r) for r in sub), span))
+        first = sum(str(r.get("first_attempt_success")).strip() == "1" for r in rows)
+        out.append("\nsolved by the first solve() alone: %d/%d; solved only after a restart: %d"
+                   % (first, len(rows), sum(ok(r) for r in rows) - first))
+        reasons = collections.Counter(r["failure_reason"].split(":")[0] for r in rows if not ok(r))
+        if reasons:
+            out.append("not planned, by reason: " + ", ".join("%s %d" % kv for kv in sorted(reasons.items())))
+        ref = os.path.join(campaign, "pddlstream_no_restart", os.path.basename(f))
+        if os.path.exists(ref):
+            rr = list(csv.DictReader(open(ref)))
+            out.append("the same tag's run without restarts (pddlstream_no_restart/): %d/%d planned"
+                       % (sum(ok(r) for r in rr), len(rr)))
+    if out:
+        out.insert(0, "\n# PDDLStream planning calls: restarts\n\nPer trial, from its CSV. "
+                      "`attempts` = solve() calls within the limit; each restart puts the scene back "
+                      "and draws a fresh sample stream.\n")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("campaign")
@@ -93,6 +149,7 @@ def main():
             out.append("\nsuccessful attempt planned with candidate: " + ", ".join(
                 "%d: %d" % (k, v) for k, v in sorted(won.items())))
         out.append("candidates cuRobo could not plan, all trials: %d" % sum(x[3] for x in rows))
+    out += pddl_section(a.campaign)
     text = "\n".join(out) + "\n"
     sys.stdout.write(text)
     if a.out:

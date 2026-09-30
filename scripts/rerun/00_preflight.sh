@@ -218,7 +218,7 @@ default_of() { grep -hoE "environ\.get\(\"$1\", \"[^\"]*\"\)" "$RR_ROOT"/TAMP/ta
   echo "| declared budgets | $(cat "$RR_OUT/BUDGETS") s |"
   echo "| cuTAMP repetitions | ${RERUN_REPS:-3} x 30 layouts per task |"
   echo "| cuTAMP planning | restarts until the largest budget (SDL_PLAN_BUDGET_S=$MAXB, set per trial by 10_cutamp.sh); up to $(grep -oE '^CUROBO_CANDIDATES = [0-9]+' "$RR_ROOT/TAMP/tamp/scripts/server/tamp_server.py" | grep -oE '[0-9]+$') satisfying particles tried in cuRobo per optimization, >= $(grep -oE '^CUROBO_CANDIDATE_MIN_DIST_RAD = [0-9.]+' "$RR_ROOT/TAMP/tamp/scripts/server/tamp_server.py" | grep -oE '[0-9.]+$') rad apart |"
-  echo "| PDDLStream | ${RERUN_PDDL_STREAMS:-5} planner seeds x 30 layouts, max ${RERUN_PDDL_MAX_TIME:-180} s; stock adaptive algorithm, one solve() per trial, no restart |"
+  echo "| PDDLStream | ${RERUN_PDDL_STREAMS:-5} planner seeds x 30 layouts, max ${RERUN_PDDL_MAX_TIME:-180} s; $([[ "${RERUN_PDDL_RESTART:-1}" == 1 ]] && echo 'adaptive algorithm, restarted with fresh samples until the limit is spent (RERUN_PDDL_RESTART=1)' || echo 'adaptive algorithm, one solve() per trial, no restart (RERUN_PDDL_RESTART=0)') |"
   echo "| GPU exclusive at start | yes (pre-flight found no other compute process) |"
   echo
   echo "## Behaviour switches, at their code defaults (no SDL_* variable was set)"

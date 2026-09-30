@@ -188,6 +188,7 @@ XDL 생성기 가중치는 사전 점검이 sha256으로 확인합니다(`2cf8d5
 | `RERUN_REPS` | `3` | cuTAMP 반복 횟수 (레이아웃 30개씩) |
 | `RERUN_PDDL_STREAMS` | `5` | PDDLStream 플래너 시드 개수 |
 | `RERUN_PDDL_MAX_TIME` | `180` | PDDLStream 시간 제한 [s]. `RERUN_BUDGETS`의 최댓값 이상이어야 함 (사전 점검이 확인) |
+| `RERUN_PDDL_RESTART` | `1` | `1`: 시간 제한 안에서 새 샘플로 재시작. `0`: 시행당 `solve()` 한 번 |
 | `RERUN_PLAN_TIMEOUT` | `600` | 드라이버가 cuTAMP를 기다리는 시간. 전체 풀이 시간을 기록하려고 넉넉하게 잡음. 예산은 분석에서 검열로 적용 |
 | `RERUN_PERCEPTION` | `0` | `1`이면 선택 단계 3(인식 정확도)도 실행 |
 | `RERUN_EXPECT_GPU` | `5080` | GPU 이름에 이 문자열이 없으면 경고 |
@@ -232,7 +233,13 @@ XDL 생성기 가중치는 사전 점검이 sha256으로 확인합니다(`2cf8d5
 - **시뮬레이터 시각 되감김:** 공구 교체 뒤 시각이 0으로 돌아가면 TF 버퍼가 새 변환을 버렸습니다. 이제 두 노드가 버퍼를 비웁니다.
 - **wrist 태그 크기:** 0.080 m를 씁니다. 고정 카메라의 0.0781은 먼 거리의 검출 편향을 보정한 값이라, 가까이서 쓰면 거리를 2.4 % 짧게 잡습니다.
 
-PDDLStream은 원래 러너 그대로입니다(adaptive 알고리즘, 시행당 `solve()` 한 번, 재시작 없음). 두 플래너의 재시도 조건이 다르다는 점은 원고에 그대로 밝혀야 합니다.
+PDDLStream도 같은 방식으로 재시작합니다(2026-09-30).
+- adaptive 알고리즘은 예산을 다 쓰기 전에도, 뽑은 샘플이 바닥나면 "계획 없음"을 돌려줍니다. `20261001e`에서 Transfer 실패 10건 중 6건, Stir 실패 5건 전부가 10 s 안에 이렇게 끝났습니다.
+- 이제 러너(`run_paired_trials.py`)는 장면을 시드의 초기 상태로 되돌리고, 새 샘플 스트림으로 남은 시간만큼 `solve()`를 다시 부릅니다. 시간 제한(180 s)을 다 쓸 때까지 반복합니다. cuTAMP가 실패한 라운드를 새 시드로 다시 돌리는 것과 같은 조건입니다.
+- 첫 `solve()`는 전과 같은 스트림을 씁니다. `first_attempt_success` 열이 재시작 없는 판정입니다. 다만 PDDLStream은 같은 시드에서도 실행마다 판정이 달라서(`PYTHONHASHSEED`를 고정해도 마찬가지), 이 열이 예전 캠페인 행과 일치하지는 않습니다.
+- 플래너 예외는 재시작하지 않고 `planner_error`로 남깁니다.
+- `RERUN_PDDL_RESTART=0`이면 예전처럼 시행당 `solve()` 한 번입니다(`20261001c`, `20261001e`).
+- 기준선만 나중 커밋에서 다시 잴 때는 `RERUN_ALLOW_COMMIT_CHANGE=1`로 같은 태그에 씁니다. 태그 커밋 이후 기준선·캠페인 스크립트·분석 외의 파일이 바뀌었으면 거부합니다. 그 커밋은 `PDDL_COMMIT`와 `RUN_INFO.md` 끝에 남습니다.
 
 폭 기준 **도구 선택 규칙**(09-14, `tool_rule.py`)은 실행 경로에 연결된 스위치가 아니라 분석 결과입니다. 시뮬레이션 시행은 작업마다 로봇을 고정하므로 영향이 없고, LLM 단계가 이 규칙을 같은 정답 라벨과 대조한 결과를 따로 냅니다. 원고에 "학습 대신 계산"으로 쓸지는 저자 결정입니다.
 
@@ -348,7 +355,7 @@ git push origin revision-access
 |---|---|---|
 | RUN_INFO: GPU, CPU, Isaac Sim 버전, torch, 커밋 | §IV-A4 (`sec:4.1.4`), 부록 A. 지금 `\nd{4.2.0}`, `\nd{RTX 4090}` 자리 | R1#3 "Common conditions", R1#8 |
 | `planner.md` 성공률·CI·McNemar·RMST, 예산별 | Table 5 (`tab:tamp_comparison`), §IV-C (`sec:4.3`), KM 그림 | R1#4 전체, R1#3의 기준선 문단 |
-| `planner.md` PDDLStream 실패 유형과 성공분 시간 | §IV-C | R1#3 "early termination" 논거. 실측으로는 조기 종료가 0건이고 실패가 전부 예산 소진이라 **논거 자체를 교체**해야 함 |
+| `planner.md` PDDLStream 실패 유형과 성공분 시간, `attempts.md` 재시작 횟수 | §IV-C | R1#3 "early termination" 논거. 재시작을 넣은 뒤로는 조기 종료가 시행을 끝내지 않으므로 실패는 예산 소진뿐이라 **논거 자체를 교체**해야 함 |
 | `state_source.md` | 인식 기반 end-to-end. §IV-E (`sec:4.5`), 그리고 PLAN.md §5.1에 따라 렌더 인식 기반으로 재작성할 §IV-F (`sec:4.6`) | R1#1 "Influence on planning success", R2#2 |
 | `trials_*.txt` 작업 성공 (정답 상태) | Table 9 (`tab:end_to_end`), §IV-E | R1#2의 실행 성공 해석 |
 | `llm.md` XDL 필드별 정확도 | Table 2 (`tab:xdl_generation`), §IV-B1 | R1#5 |

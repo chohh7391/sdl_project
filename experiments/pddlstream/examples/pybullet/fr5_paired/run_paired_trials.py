@@ -21,6 +21,9 @@ PyBullet allows, the scene cuTAMP planned in:
                        goal_region), the goal_region a 0.1 m square at
                        (0.35, -0.35) -- structurally cuTAMP's transfer goal
   same budget          --max-time, to be set to cuTAMP's planning budget
+  same restarts        a failed solve() is restarted with fresh samples
+                       until the budget is spent, as cuTAMP's harness restarts
+                       a failed round (see RESTART_STREAM_STRIDE)
 
 What still differs is inherent to the baseline and belongs in the write-up:
 PyBullet against Isaac Sim for collision and stability, and PDDLStream's
@@ -55,7 +58,8 @@ from examples.pybullet.fr5_obstacle.stir import (
 from examples.pybullet.utils.pybullet_tools.utils import (
     connect, disconnect, load_pybullet, load_model, set_pose, get_pose, Pose,
     Point, Euler, stable_z, HideOutput, FR5_AG95_URDF, BLOCK_URDF,
-    SMALL_BLOCK_URDF, SINK_URDF, set_joint_positions, get_movable_joints)
+    SMALL_BLOCK_URDF, SINK_URDF, set_joint_positions, get_movable_joints,
+    save_state, restore_state)
 
 # Per-task tool, matching what each task is evaluated with in the Isaac
 # harness (content/configs/xdl/tool_map.yml, mirrored in run_trials.sh):
@@ -265,6 +269,49 @@ def build_world(layout, opt):
             "beaker": beaker, "flask": flask, "obstacles": others}
 
 
+# Restarts. The adaptive algorithm returns "no plan" not only at the budget but
+# also early, once the samples it drew are exhausted -- in 20261001e 6 of the
+# 10 Transfer failures and all 5 Stir failures ended in under 10 s of a 180 s
+# budget. cuTAMP's harness restarts a failed round with fresh samples until the
+# budget is spent (tamp_server, SDL_PLAN_BUDGET_S), so the baseline does the
+# same: the scene is put back to the seed's initial state, the sampler gets
+# the next stream, and solve() gets what is left of the budget. The first
+# attempt keeps the stream a single run always had, so first_attempt_success
+# is the no-restart verdict. A planner exception is not retried: it is a
+# defect, not an unlucky draw, and is recorded as one.
+RESTART_STREAM_STRIDE = 1000003     # prime; attempt k of (planner seed, layout)
+                                    # never reuses another pair's stream
+
+
+def _seed_sampler(value):
+    # PDDLStream draws from the global `random`; numpy for the pose samplers
+    random.seed(value)
+    try:
+        import numpy as _np
+        _np.random.seed(value % (2 ** 32))
+    except ImportError:
+        pass
+
+
+def _make_problem(task, layout, opt):
+    """(world, a function building the PDDLStream problem from its current state)."""
+    if task == "transfer" and opt.get("variant"):
+        w = build_world(layout, opt)
+        return w, lambda: transfer_problem(
+            robot=w["robot"], movable=[w["beaker"]],
+            pour_target=w["flask"], goal_surface=w["goal_region"],
+            stackable_surfaces=[w["goal_region"]], teleport=False,
+            sample_pour_poses=True)
+    w = build_world_task(layout, task)
+    if task == "transfer":
+        return w, lambda: transfer_problem(
+            robot=w["robot"], movable=[w["acted"]["beaker"]],
+            pour_target=w["extra"]["flask"], goal_surface=w["goal"],
+            stackable_surfaces=[w["goal"]], teleport=False,
+            sample_pour_poses=True)
+    return w, lambda: build_problem(task, w)
+
+
 def run_seed(layout, max_time, max_iterations, opt):
     task = opt["task"]
     # Seed the sampler from the layout's own seed. PDDLStream draws from the
@@ -273,50 +320,49 @@ def run_seed(layout, max_time, max_iterations, opt):
     # dedicated 60 s run solved 18/30 where the 180 s run censored at 60 s
     # solved 19/30. With it, the same seed gives the same verdict.
     _ps = opt.get("planner_seed", 0) * 100003 + layout["seed"]
-    random.seed(_ps)
-    try:
-        import numpy as _np
-        _np.random.seed(_ps % (2 ** 32))
-    except ImportError:
-        pass
+    _seed_sampler(_ps)
     row = {"seed": layout["seed"], "plan_success": 0,
            "planning_time_s": float("nan"), "failure_reason": "",
-           "beaker_xy": "", "flask_xy": ""}
+           "beaker_xy": "", "flask_xy": "", "attempts": 0,
+           "first_attempt_success": 0,
+           "first_attempt_time_s": float("nan")}
     objs = layout["objects"]
     row["beaker_xy"] = "%.4f;%.4f" % tuple(objs["beaker"]["xy"])
     row["flask_xy"] = "%.4f;%.4f" % tuple(objs["flask"]["xy"])
     connect(use_gui=False)
     try:
-        if task == "transfer" and opt.get("variant"):
-            w = build_world(layout, opt)
-            problem = transfer_problem(
-                robot=w["robot"], movable=[w["beaker"]],
-                pour_target=w["flask"], goal_surface=w["goal_region"],
-                stackable_surfaces=[w["goal_region"]], teleport=False,
-                sample_pour_poses=True)
-        elif task == "transfer":
-            w = build_world_task(layout, task)
-            problem = transfer_problem(
-                robot=w["robot"], movable=[w["acted"]["beaker"]],
-                pour_target=w["extra"]["flask"], goal_surface=w["goal"],
-                stackable_surfaces=[w["goal"]], teleport=False,
-                sample_pour_poses=True)
-        else:
-            w = build_world_task(layout, task)
-            problem = build_problem(task, w)
+        w, make = _make_problem(task, layout, opt)
+        initial = save_state()
+        problem = make()
         t0 = time.perf_counter()
-        try:
-            solution = solve(problem, algorithm="adaptive", unit_costs=True,
-                             success_cost=INF, max_time=max_time,
-                             max_iterations=max_iterations, verbose=False)
-            row["plan_success"] = int(solution[0] is not None)
-            if not row["plan_success"]:
-                row["failure_reason"] = "no_plan_within_budget"
-        except Exception as exc:            # a planner crash is a failure, and
-            row["plan_success"] = 0          # the reason is recorded, not hidden
-            row["failure_reason"] = "planner_error: %s" % (
-                str(exc).replace("\n", " ")[:160],)
-        row["planning_time_s"] = time.perf_counter() - t0
+        while True:
+            if row["attempts"]:
+                restore_state(initial)
+                _seed_sampler(_ps + row["attempts"] * RESTART_STREAM_STRIDE)
+                problem = make()
+            left = max_time - (time.perf_counter() - t0)
+            try:
+                solution = solve(problem, algorithm="adaptive", unit_costs=True,
+                                 success_cost=INF, max_time=left,
+                                 max_iterations=max_iterations, verbose=False)
+                row["plan_success"] = int(solution[0] is not None)
+                row["failure_reason"] = ("" if row["plan_success"]
+                                         else "no_plan_within_budget")
+                crashed = False
+            except Exception as exc:        # a planner crash is a failure, and
+                row["plan_success"] = 0      # the reason is recorded, not hidden
+                row["failure_reason"] = "planner_error: %s" % (
+                    str(exc).replace("\n", " ")[:160],)
+                crashed = True
+            row["attempts"] += 1
+            elapsed = time.perf_counter() - t0
+            if row["attempts"] == 1:
+                row["first_attempt_success"] = row["plan_success"]
+                row["first_attempt_time_s"] = elapsed
+            if (row["plan_success"] or crashed or not opt.get("restart", True)
+                    or elapsed >= max_time):
+                break
+        row["planning_time_s"] = elapsed
         return row
     finally:
         disconnect()
@@ -337,6 +383,9 @@ def main():
     ap.add_argument("--planner-seed", type=int, default=0,
                     help="repetition index; changes the sampler's stream while "
                          "keeping the layout fixed")
+    ap.add_argument("--no-restart", action="store_true",
+                    help="one solve() per layout, as the runner did before "
+                         "restarts (20261001c/e); see RESTART_STREAM_STRIDE")
     ap.add_argument("--variant", action="store_true",
                     help="transfer only: use the switchable bisection scene "
                          "below instead of the matched one")
@@ -351,7 +400,7 @@ def main():
                     help="use the shared home instead of the seed's home")
     a = ap.parse_args()
     opt = {"task": a.task, "variant": a.variant,
-           "planner_seed": a.planner_seed,
+           "planner_seed": a.planner_seed, "restart": not a.no_restart,
            "table": a.table, "goal": a.goal, "geometry": a.geometry,
            "obstacles": a.obstacles, "robot_z": a.robot_z,
            "seeded_home": not a.nominal_home}
@@ -361,14 +410,23 @@ def main():
     if a.seeds:
         want = {int(v) for v in a.seeds.replace(",", " ").split()}
         layouts = [l for l in layouts if l["seed"] in want]
-    print("pddlstream baseline: task=%s %d seeds, budget %.0f s, tool=%s"
+    print("pddlstream baseline: task=%s %d seeds, budget %.0f s, tool=%s, %s"
           % (a.task, len(layouts), a.max_time,
-             os.path.basename(TASK_URDF[a.task])))
+             os.path.basename(TASK_URDF[a.task]),
+             "one solve per layout" if a.no_restart
+             else "restarts until the budget is spent"))
 
     fields = ["timestamp", "seed", "task", "planner", "robot", "plan_success",
               "planning_time_s", "failure_reason", "beaker_xy", "flask_xy",
-              "max_time_s", "planner_seed"]
+              "max_time_s", "planner_seed", "restart", "attempts",
+              "first_attempt_success", "first_attempt_time_s"]
     new = not os.path.exists(a.csv) or os.path.getsize(a.csv) == 0
+    if not new:
+        # rows are appended; a file started with the other column set would
+        # come out misaligned
+        have = next(csv.reader(open(a.csv)))
+        if have != fields:
+            sys.exit("%s has columns %s; write to a new file" % (a.csv, have))
     os.makedirs(os.path.dirname(os.path.abspath(a.csv)) or ".", exist_ok=True)
     with open(a.csv, "a") as fh:
         wr = csv.DictWriter(fh, fieldnames=fields)
@@ -381,12 +439,13 @@ def main():
                         "robot": os.path.basename(
                             TASK_URDF[a.task]).replace(".urdf", ""),
                         "max_time_s": a.max_time,
-                        "planner_seed": a.planner_seed})
+                        "planner_seed": a.planner_seed,
+                        "restart": int(opt["restart"])})
             wr.writerow(row)
             fh.flush()
-            print("seed %-3d success=%d time=%.2fs %s"
+            print("seed %-3d success=%d time=%.2fs attempts=%d %s"
                   % (row["seed"], row["plan_success"], row["planning_time_s"],
-                     row["failure_reason"]))
+                     row["attempts"], row["failure_reason"]))
     print("wrote", a.csv)
 
 
