@@ -70,7 +70,8 @@ fi
 echo "-- scene (must be the paper's, not the real cell's)"
 rr_conda_sdl
 SCENE_OUT="$(cd "$RR_ROOT" && PYTHONPATH="$RR_ROOT/TAMP/tamp/src:$RR_ROOT/TAMP/cuTAMP" python - <<'PY' 2>&1
-import math
+import math, os, yaml
+root = os.getcwd()
 from envs.constants import (glassware_set, vessel_dims, TABLE_Z_OFFSET,
                             BEAKER_RISER_M, vessel_height_override)
 from envs.utils import ENTITIES
@@ -87,6 +88,9 @@ checks = [
     ("grasp beta min [deg]", round(math.degrees(samplers.BETA_MIN), 6), 0.0),
     ("grasp beta max [deg]", round(math.degrees(samplers.BETA_MAX), 6), 18.0),
     ("grasp height bias", samplers.GRASP_H_FRAC, 0.0),
+    ("wrist camera", os.environ.get("SDL_WRIST_CAMERA", "1") == "1", True),
+    ("wrist camera mount", [round(v, 5) for v in yaml.safe_load(open(os.path.join(
+        root, "perception/perception_manager/config/wrist_camera.yaml")))["xyz"]], [0.0, 0.05038, 0.22]),
     ("transfer entities", get_environment_spec("transfer").entities, ("beaker", "flask", "magnet")),
     ("transfer statics", get_environment_spec("transfer").statics,
      ("table", "goal_region", "stirrer", "magnet")),
@@ -225,8 +229,10 @@ default_of() { grep -hoE "environ\.get\(\"$1\", \"[^\"]*\"\)" "$RR_ROOT"/TAMP/ta
   echo "|---|---|---|"
   echo "| SDL_POUR_CONTINUATIONS | $(default_of SDL_POUR_CONTINUATIONS) | 09-14, re-seeded pour-path continuation |"
   echo "| SDL_RECOVERY | $(default_of SDL_RECOVERY) | 09-16, wait for a re-detection before a missed tag fails |"
-  echo "| SDL_RECOVERY_RETREAT | $(default_of SDL_RECOVERY_RETREAT) | 09-16, retreat to home and look again |"
-  echo "| SDL_RECOVERY_SCAN | $(default_of SDL_RECOVERY_SCAN) | off: needs the wrist camera |"
+  echo "| SDL_RECOVERY_RETREAT | $(default_of SDL_RECOVERY_RETREAT) | 09-16, retreat to home and look again; off since 09-30 (never moved; the scan replaces it) |"
+  echo "| SDL_RECOVERY_SCAN | $(default_of SDL_RECOVERY_SCAN) | 09-30, carry the wrist camera over six viewpoints until it sees the tag; latch that pose |"
+  echo "| SDL_WRIST_CAMERA | $(default_of SDL_WRIST_CAMERA) | 09-30, D435 on the wrist (perception_manager config/wrist_camera.yaml) |"
+  echo "| SDL_VERIFY_BEFORE_EXECUTION | $(default_of SDL_VERIFY_BEFORE_EXECUTION) | 09-30, fixed cameras look again after planning; a vessel > $(default_of SDL_VERIFY_TOL_M) m off is re-planned once |"
   echo "| SDL_PLAN_HOLD_SIM | $(default_of SDL_PLAN_HOLD_SIM) | 09-28, the simulator stops stepping (physics + rendering) while cuTAMP plans |"
   echo "| SDL_UPRIGHT_TRANSPORT | $(default_of SDL_UPRIGHT_TRANSPORT) | upright bound on carry segments |"
   echo "| SDL_UPRIGHT_TILT_TOL_DEG | $(default_of SDL_UPRIGHT_TILT_TOL_DEG) | 09-29, 15 -> 5 deg: the paper's theta_max for the held vessel's tilt from vertical |"

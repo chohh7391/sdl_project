@@ -62,7 +62,7 @@ class _Tamp:
         self._plan = plan
         self.planned = []
 
-    def motion_plan_js(self, q_init, q_des):
+    def motion_plan_js(self, q_init, q_des, env=None):
         self.planned.append((list(q_init), list(q_des)))
         return self._plan() if callable(self._plan) else self._plan
 
@@ -75,7 +75,7 @@ class _Server:
     """
 
     def __init__(self, looks=(), available=None, holding=False, tamp=None,
-                 plant_ok=True, publish_raises=None):
+                 plant_ok=True, publish_raises=None, wrist=None):
         self.node = tamp_server.TAMPServer.__new__(tamp_server.TAMPServer)
         self.logger = _Logger()
         self.looks = list(looks)          # scripted _perception_pose results
@@ -88,6 +88,8 @@ class _Server:
         self.sessions = []                # _start_execution / _finish_execution
         self.plant_ok = plant_ok
         self.publish_raises = publish_raises
+        # A predicate (entity, server) -> does the wrist camera see it now.
+        self.wrist = wrist
 
         n = self.node
         n.tamp = tamp if tamp is not None else _Tamp()
@@ -95,6 +97,11 @@ class _Server:
         n._recovery_attempts = 0
         n.get_logger = lambda: self.logger
         n._perception_pose = self._perception_pose
+        n._observe = self._observe
+        n._sensor_now = 0.0
+        n._scan_cache = {}
+        n._loc_info = {}
+        n._pending_entities = []
         n._arm_q = lambda: [0.0] * 6
         n._start_execution = self._start_execution
         n._finish_execution = lambda success: self.sessions.append(
@@ -109,15 +116,24 @@ class _Server:
         n.RECOVERY_RETREAT = True
         n.RECOVERY_SCAN = False
         n.RECOVERY_SCAN_S = 1.0
+        n.RECOVERY_DWELL_S = 0.02
+        n.RECOVERY_LATCH_S = 0.01
         n.RECOVERY_HOME = list(HOME)
-        n.SCAN_J1_RANGE = 1.57
-        n.SCAN_J2_OFFSETS = [0.0]
+        n.SCAN_POSES = [[0.1] * 6, [0.2] * 6, [0.3] * 6]
 
     def _perception_pose(self, entity):
         self.observed += 1
         if self.available is not None:
             return POSE if self.available(self) else None
         return self.looks.pop(0) if self.looks else None
+
+    def _observe(self, entity, which='fixed', newer_than=None, quiet=False):
+        if which == 'wrist':
+            if self.wrist is not None and self.wrist(entity, self):
+                return list(POSE), 1.0
+            return None
+        pose = self._perception_pose(entity)
+        return None if pose is None else (pose, 1.0)
 
     def _start_execution(self):
         self.sessions.append(('start', self.plant_ok))
@@ -186,9 +202,10 @@ def test_the_retreat_runs_only_after_the_wait_has_failed():
 
 
 def test_the_scan_is_reached_only_when_the_retreat_did_not_help():
-    # Visible only from a viewpoint the scan reaches: the retreat plans once
-    # (to home), so the second planned motion is the scan's first leg.
-    s = _Server(available=lambda s: len(s.node.tamp.planned) >= 2)
+    # Visible only to the wrist camera from a viewpoint the scan reaches: the
+    # retreat plans once (to home), so the second planned motion is the scan's
+    # first leg.
+    s = _Server(looks=[], wrist=lambda e, s: len(s.node.tamp.planned) >= 2)
     s.node.RECOVERY_SCAN = True
     assert s.localize() == POSE
     assert s.summary['stage'] == 'scan'
@@ -296,3 +313,76 @@ def test_the_summary_line_is_greppable():
         r'^\[recovery\] entity=\S+ outcome=(immediate|recovered|failed|skipped) '
         r'stage=(wait|retreat|scan) elapsed_s=\d+\.\d\d attempts=\d+'
         r'( reason=\S+)?$', line), line
+
+
+# -- the scan, with the wrist camera -----------------------------------
+
+def test_the_scan_latches_the_wrist_view_and_goes_back_to_the_start():
+    # Seen from the second viewpoint only. The pose is the wrist camera's, and
+    # the last motion is the planned return to where the arm started, so the
+    # plan that follows starts from the trial's own start configuration.
+    s = _Server(looks=[], wrist=lambda e, s: len(s.node.tamp.planned) >= 2)
+    s.node.RECOVERY_RETREAT = False
+    s.node.RECOVERY_SCAN = True
+    assert s.localize() == POSE
+    assert s.summary['stage'] == 'scan' and s.summary['outcome'] == 'recovered'
+    assert [q for _, q in s.node.tamp.planned[:2]] == s.node.SCAN_POSES[:2]
+    assert s.node.tamp.planned[-1][1] == [0.0] * 6, 'did not plan the way back'
+    assert s.node._loc_info['beaker']['source'] == 'recovery'
+
+
+def test_a_vessel_seen_on_the_way_is_not_scanned_for_again():
+    s = _Server(looks=[], wrist=lambda e, s: len(s.node.tamp.planned) >= 1)
+    s.node.RECOVERY_RETREAT = False
+    s.node.RECOVERY_SCAN = True
+    s.node._pending_entities = ['beaker', 'flask']
+    assert s.localize('beaker') == POSE
+    planned = len(s.node.tamp.planned)
+    assert s.localize('flask') == POSE
+    assert len(s.node.tamp.planned) == planned, 'scanned again for a latched view'
+    assert s.node._loc_info['flask']['source'] == 'recovery'
+
+
+def test_a_scan_that_sees_nothing_fails_and_still_goes_back():
+    s = _Server(looks=[])
+    s.node.RECOVERY_RETREAT = False
+    s.node.RECOVERY_SCAN = True
+    assert s.localize() is None
+    assert s.summary['outcome'] == 'failed' and s.summary['stage'] == 'scan'
+    assert s.node.tamp.planned[-1][1] == [0.0] * 6
+    assert s.sessions == [('start', True), ('finish', False)]
+
+
+# -- the check before execution -----------------------------------------
+
+def _verifier(fixed_now, source='fixed'):
+    s = _Server(available=lambda s: fixed_now is not None)
+    n = s.node
+    planned = [0.50, 0.20, 0.10, 1.0, 0.0, 0.0, 0.0]
+    n._perception_report = {'state_source': 'perception',
+                            'entities': {'beaker': {'source': source}}}
+    n._last_env_request = {'poses': {'beaker': planned}}
+    n.VERIFY_TOL_M = 0.015
+    n.VERIFY_WAIT_S = 0.05
+    s._perception_pose = lambda e: fixed_now
+    n._perception_pose = s._perception_pose
+    return s
+
+
+def test_a_vessel_within_tolerance_keeps_its_planned_pose():
+    s = _verifier([0.51, 0.20, 0.10, 1.0, 0.0, 0.0, 0.0])
+    assert s.node._verify_before_execution() == {}
+    assert s.node._perception_report['entities']['beaker']['verify'] == 'verified'
+
+
+def test_a_vessel_that_moved_is_reported_with_where_it_is_now():
+    now = [0.53, 0.20, 0.10, 1.0, 0.0, 0.0, 0.0]
+    s = _verifier(now)
+    assert s.node._verify_before_execution() == {'beaker': now}
+    assert s.node._perception_report['entities']['beaker']['verify'] == 'moved'
+
+
+def test_a_recovered_vessel_the_fixed_cameras_still_miss_is_kept():
+    s = _verifier(None, source='recovery')
+    assert s.node._verify_before_execution() == {}
+    assert s.node._perception_report['entities']['beaker']['verify'] == 'unseen'

@@ -39,16 +39,17 @@ PROJ = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 URDF = os.path.join(PROJ, "TAMP/tamp/content/assets/robot/dcp_description"
                           "/urdf/robot/fr5_ag95.urdf")
 
-# The wrist camera as isaacsim Task mounts it: SDL_WRIST_CAMERA_XYZ in
-# wrist3_link's frame, turned 180 deg about X so a USD camera (which images
-# along its own -Z) looks down the wrist's +Z tool axis.
-MOUNT_XYZ = np.array([0.06, 0.0, 0.05])
+# The wrist camera's mount: the D435 optical frame (x right, y down, z along the
+# view) in wrist3_link, from the one file the simulator and the perception
+# launch also read.
+MOUNT_FILE = os.path.join(PROJ, "perception/perception_manager/config/wrist_camera.yaml")
 # utils/camera.py CameraInfo: D435 colour at 1280x720.
 FX, FY, CX, CY, W, H = 923.7, 925.8, 640.0, 360.0, 1280, 720
 # tamp_server.TAMPServer.RECOVERY_HOME
 HOME = np.array([0.0, -1.05, -2.18, -1.57, 1.57, 0.0])
-# Vessel tag heights above the bench; a tag is what actually has to be imaged.
-OBJ_Z = {"beaker": 0.036, "flask": 0.080}
+# Half the tag plate's edge: the whole plate has to be in the image, with a margin.
+TAG_HALF_M = 0.05
+EDGE_MARGIN_PX = 20
 
 
 def _rpy(r, p, y):
@@ -99,7 +100,11 @@ class Arm:
         self.chain.reverse()
         self.lo = np.array([j["lo"] for j in self.chain])
         self.hi = np.array([j["hi"] for j in self.chain])
-        self.cam_local = _T(np.diag([1., -1., -1.]), MOUNT_XYZ)
+        import yaml
+        with open(MOUNT_FILE) as fh:
+            m = yaml.safe_load(fh)
+        self.cam_local = _T(_rpy(*[float(v) for v in m["rpy"]]),
+                            np.array([float(v) for v in m["xyz"]]))
 
     def fk(self, q):
         M, i = np.eye(4), 0
@@ -116,32 +121,38 @@ class Arm:
     def look_at(self, q):
         """Where this configuration's optical axis meets the bench, or None."""
         M = self.camera(q)
-        t, z = M[:3, 3], -M[:3, 2]
+        t, z = M[:3, 3], M[:3, 2]          # optical frame: +z along the view
         if z[2] > -1e-6:
             return None
         return t + (-t[2] / z[2]) * z
 
-    def sees(self, q, point):
+    def sees(self, q, point, margin_px=0.0):
         """Is `point` (world xyz) inside the wrist camera's image at `q`?"""
         M = self.camera(q)
         R, t = M[:3, :3], M[:3, 3]
         v = R.T @ (np.asarray(point, dtype=float) - t)
-        depth = -v[2]                      # USD camera images along its own -Z
+        depth = v[2]
         if depth <= 1e-6:
             return False
         u = FX * (v[0] / depth) + CX
-        w = -FY * (v[1] / depth) + CY
-        return 0 <= u < W and 0 <= w < H
+        w = FY * (v[1] / depth) + CY
+        return margin_px <= u < W - margin_px and margin_px <= w < H - margin_px
+
+    def sees_tag(self, q, centre):
+        """The whole (level) tag plate centred at `centre` inside the image."""
+        cx, cy, cz = centre
+        return all(self.sees(q, (cx + dx, cy + dy, cz), EDGE_MARGIN_PX)
+                   for dx in (-TAG_HALF_M, TAG_HALF_M) for dy in (-TAG_HALF_M, TAG_HALF_M))
 
 
 def solve_pose(arm, target_xy, height, seeds=24, rng_seed=1):
-    """Joints putting the camera `height` above `target_xy`, looking straight down."""
+    """Joints putting the camera at world z `height` above `target_xy`, looking straight down."""
     if least_squares is None:
         raise SystemExit("scipy is required to solve poses (scoring works without it)")
 
     def residual(q):
         M = arm.camera(q)
-        t, z = M[:3, 3], -M[:3, 2]
+        t, z = M[:3, 3], M[:3, 2]
         geom = np.array([t[2] - height, z[0], z[1],
                          t[0] - target_xy[0], t[1] - target_xy[1], z[2] + 1.0]) * 3.0
         # Weak regularisers: stay near the home pose, and keep the wrist roll
@@ -168,8 +179,48 @@ def solve_pose(arm, target_xy, height, seeds=24, rng_seed=1):
     return best
 
 
+def solve_look(arm, target, dist, max_tilt_deg=50.0, seeds=48, rng_seed=1):
+    """Joints aiming the optical axis at `target` (world xyz) from `dist` away.
+
+    The camera sits 0.22 m out from the wrist, so a straight-down view high
+    enough to take in the tag region is out of the FR5's reach; an oblique view
+    is not. The tilt of the axis from vertical is free up to `max_tilt_deg` (a
+    level tag stays readable at that angle: its short side still spans ~150 px
+    at 0.35 m), and the solve prefers configurations near the home pose.
+    """
+    if least_squares is None:
+        raise SystemExit("scipy is required to solve poses (scoring works without it)")
+    target = np.asarray(target, dtype=float)
+    cos_max = np.cos(np.radians(max_tilt_deg))
+
+    def residual(q):
+        M = arm.camera(q)
+        t, z = M[:3, 3], M[:3, 2]
+        d = target - t
+        along = float(d @ z)
+        perp = d - along * z
+        tilt = max(0.0, (-z[2]) * -1.0 + cos_max)   # >0 once the axis is flatter than max
+        geom = np.concatenate([perp * 5.0, [(along - dist) * 2.0, tilt * 5.0]])
+        reg = np.concatenate([[0.05 * q[5]], 0.02 * (q - HOME)])
+        return np.concatenate([geom, reg]), geom
+
+    rng = np.random.default_rng(rng_seed)
+    best = None
+    for k in range(seeds):
+        q0 = np.clip(HOME + (0 if k == 0 else rng.normal(0, 0.7, 6)),
+                     arm.lo + 1e-3, arm.hi - 1e-3)
+        r = least_squares(lambda q: residual(q)[0], q0, bounds=(arm.lo, arm.hi),
+                          xtol=1e-12, ftol=1e-12)
+        err = np.linalg.norm(residual(r.x)[1])
+        if err < 0.01:
+            cost = np.linalg.norm(r.x - HOME) + abs(r.x[5])
+            if best is None or cost < best[0]:
+                best = (cost, r.x, err)
+    return best
+
+
 def read_layouts(path):
-    """Vessel xy per seed, from the trial sim logs (newest log per seed wins)."""
+    """Tag plate centres per seed, from the trial sim logs (newest log per seed wins)."""
     files = sorted(glob.glob(os.path.join(path, "sim_seed*.log")))
     best = {}
     for f in files:
@@ -177,16 +228,17 @@ def read_layouts(path):
         if not m:
             continue
         seed = int(m.group(1))
-        txt = open(f, errors="ignore").read()
-        b = re.search(r"beaker\s+xy=\(([-\d.]+),([-\d.]+)\)", txt)
-        fl = re.search(r"flask\s+xy=\(([-\d.]+),([-\d.]+)\)", txt)
-        if not (b and fl):
+        tags = {}
+        for t in re.finditer(r"tag /World/(beaker|flask)/visual/apriltag_\d+ "
+                             r"world=\(([-\d.]+),([-\d.]+),([-\d.]+)\)",
+                             open(f, errors="ignore").read()):
+            tags[t.group(1)] = tuple(float(t.group(i)) for i in (2, 3, 4))
+        if len(tags) < 2:
             continue
-        t = os.path.getmtime(f)
-        if seed not in best or t > best[seed][0]:
-            best[seed] = (t, (float(b.group(1)), float(b.group(2))),
-                          (float(fl.group(1)), float(fl.group(2))))
-    return [dict(seed=s, beaker=v[1], flask=v[2]) for s, v in sorted(best.items())]
+        mt = os.path.getmtime(f)
+        if seed not in best or mt > best[seed][0]:
+            best[seed] = (mt, tags)
+    return [dict(seed=s, **v[1]) for s, v in sorted(best.items())]
 
 
 def score(arm, legs, layouts, label):
@@ -195,35 +247,56 @@ def score(arm, legs, layouts, label):
     for L in layouts:
         hit = {}
         for name in ("beaker", "flask"):
-            p = list(L[name]) + [OBJ_Z[name]]
-            hit[name] = any(arm.sees(q, p) for q in legs)
+            hit[name] = any(arm.sees_tag(q, L[name]) for q in legs)
             counts[name] += hit[name]
         both += hit["beaker"] and hit["flask"]
     n = len(layouts)
-    print("%-28s beaker %2d/%d  flask %2d/%d  both %2d/%d"
+    print("%-28s beaker tag %2d/%d  flask tag %2d/%d  both %2d/%d"
           % (label, counts["beaker"], n, counts["flask"], n, both, n))
     return both
-
-
-SHIPPED_OFFSET_LEGS = [
-    [HOME[0] + dj1, HOME[1] + dj2, HOME[2], HOME[3], HOME[4], HOME[5]]
-    for dj2 in (0.0, 0.2) for dj1 in (-1.57, 1.57, 0.0)
-]
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--urdf", default=URDF)
-    ap.add_argument("--height", type=float, default=0.45,
-                    help="camera height above the bench [m]")
+    ap.add_argument("--height", type=float, default=0.62,
+                    help="camera height above the bench [m] (the tags are at 0.18 m)")
     ap.add_argument("--targets", default="0.48:0.12,0.48:0.28,0.48:0.40",
                     help="bench points to look at, x:y comma separated")
     ap.add_argument("--layouts", default=os.path.join(PROJ, "scripts/trials/logs"),
                     help="directory of sim_seed*.log files to score against")
+    ap.add_argument("--look", default="",
+                    help="aim at tag-plane points instead, x:y comma separated (see --dist)")
+    ap.add_argument("--dist", type=float, default=0.35, help="camera-to-target distance for --look [m]")
+    ap.add_argument("--tag-z", type=float, default=0.18, help="height of the tag plane for --look [m]")
+    ap.add_argument("--max-tilt", type=float, default=50.0, help="largest axis tilt from vertical for --look [deg]")
     args = ap.parse_args()
 
     arm = Arm(args.urdf)
+    if args.look:
+        looks = [tuple(float(v) for v in t.split(":")) for t in args.look.split(",")]
+        print("aiming %d viewpoints from %.2f m at the tag plane z=%.2f (tilt <= %.0f deg)"
+              % (len(looks), args.dist, args.tag_z, args.max_tilt))
+        legs = []
+        for t in looks:
+            got = solve_look(arm, (t[0], t[1], args.tag_z), args.dist, args.max_tilt)
+            if got is None:
+                print("  (%.2f, %.2f): NO SOLUTION" % t)
+                continue
+            _, q, err = got
+            z = arm.camera(q)[:3, 2]
+            print("  (%.2f, %.2f): residual %.5f, travel %.2f rad, axis tilt %.1f deg"
+                  % (t[0], t[1], err, np.linalg.norm(q - HOME), np.degrees(np.arccos(-z[2]))))
+            legs.append(q)
+        layouts = read_layouts(args.layouts)
+        if layouts:
+            print("\nscored against %d layouts from %s" % (len(layouts), args.layouts))
+            score(arm, legs, layouts, "aimed viewpoints")
+        print("\nSDL_RECOVERY_SCAN_POSES=" + ";".join(
+            ",".join("%.4f" % v for v in q) for q in legs))
+        return 0
+
     targets = [tuple(float(v) for v in t.split(":")) for t in args.targets.split(",")]
 
     print("solving %d viewpoints at h=%.2f m" % (len(targets), args.height))
@@ -242,8 +315,6 @@ def main():
     layouts = read_layouts(args.layouts)
     if layouts:
         print("\nscored against %d layouts from %s" % (len(layouts), args.layouts))
-        score(arm, [np.array(q) for q in SHIPPED_OFFSET_LEGS], layouts,
-              "j1/j2 offsets (superseded)")
         score(arm, legs, layouts, "solved viewpoints")
     else:
         print("\nno sim_seed*.log layouts found under %s; not scored" % args.layouts)

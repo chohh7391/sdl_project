@@ -162,9 +162,9 @@ for seed in "${SEEDS[@]}"; do
   if (( sim_ready == 0 )); then
     echo "[seed $seed] SIM WILL NOT BOOT after 3 tries -- recording sim_boot_failed and moving on."
     if [[ ! -s "$CSV" ]]; then
-      echo "timestamp,seed,task,robot_cfg,plan_success,planning_time_s,num_satisfying,execute_success,max_transport_tilt_deg,failure_reason,beaker_xy,flask_xy,poured,final_tilt_deg,final_xy,placed_upright,placed_in_goal,task_success,target_obj,goal_err_mm,aux_check,pour_peak_tilt_deg,pour_lip_err_mm,pour_lip_err_along_mm,pour_lip_err_perp_mm,pour_start_lip_err_mm,pour_lip_height_mm" >"$CSV"
+      echo "timestamp,seed,task,robot_cfg,plan_success,planning_time_s,num_satisfying,execute_success,max_transport_tilt_deg,failure_reason,beaker_xy,flask_xy,poured,final_tilt_deg,final_xy,placed_upright,placed_in_goal,task_success,target_obj,goal_err_mm,aux_check,pour_peak_tilt_deg,pour_lip_err_mm,pour_lip_err_along_mm,pour_lip_err_perp_mm,pour_start_lip_err_mm,pour_lip_height_mm,perc_beaker_source,perc_beaker_recovery_s,perc_beaker_err_xy_mm,perc_beaker_err_z_mm,perc_beaker_err_yaw_deg,perc_beaker_verify,perc_beaker_verify_dxy_mm,perc_flask_source,perc_flask_recovery_s,perc_flask_err_xy_mm,perc_flask_err_z_mm,perc_flask_err_yaw_deg,perc_flask_verify,perc_flask_verify_dxy_mm,perc_replanned" >"$CSV"
     fi
-    echo "$(date -Is),$seed,$TASK,$ROBOT,False,,,False,,sim_boot_failed,,,False,,,False,False,False,,,,,,,,," >>"$CSV"
+    echo "$(date -Is),$seed,$TASK,$ROBOT,False,,,False,,sim_boot_failed,,,False,,,False,False,False,,,,,,,,,,,,,,,,,,,,,,,," >>"$CSV"
     continue
   fi
   echo "[seed $seed] sim ready. randomized layout:"

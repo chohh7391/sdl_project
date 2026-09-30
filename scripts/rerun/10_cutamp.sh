@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # cuTAMP in Isaac Sim, the paper's scene: Transfer / Move / Stir with the
-# simulator's ground-truth state, then Transfer with the rendered-perception
-# state, RERUN_REPS repetitions of the same 30 layouts each.
+# simulator's ground-truth state, then the same three with the rendered-
+# perception state, RERUN_REPS repetitions of the same 30 layouts each.
 #
 # cuTAMP is not reproducible from a seed, so each layout's outcome is estimated
 # from several draws; repetition r uses planner seed offset r*1000, the same
@@ -49,7 +49,12 @@ for ((rep = 0; rep < REPS; rep++)); do
   run_batch move     fr5_vgc10 ground_truth "$rep"
   run_batch stir     fr5_dh3   ground_truth "$rep"
 done
+# The same tasks with the rendered-perception World State: the tagged vessels
+# from the AprilTag cameras (fixed pair, wrist-camera recovery scan, the check
+# before execution), everything else from the simulator.
 for ((rep = 0; rep < REPS; rep++)); do
-  run_batch transfer fr5_ag95 perception "$rep"
+  run_batch transfer fr5_ag95  perception "$rep"
+  run_batch move     fr5_vgc10 perception "$rep"
+  run_batch stir     fr5_dh3   perception "$rep"
 done
 rr_log "cuTAMP campaign finished"

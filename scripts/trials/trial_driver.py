@@ -21,6 +21,7 @@ Env: conda `sdl` (py3.10) + system Humble + colcon overlay, ROS_DOMAIN_ID=100.
 """
 import argparse
 import csv
+import json
 import math
 import os
 import time
@@ -66,7 +67,23 @@ CSV_HEADER = [
     # How far the stream falls: the lip's height above the target vessel's mouth
     # at peak tilt. The horizontal miss and the fall height are separate defects.
     "pour_lip_height_mm",
-]
+] + [
+    # Perception state only (tamp_perception_report): per tagged vessel, which
+    # views produced the pose the plan used (fixed | recovery | failed), how long
+    # localizing it took with any recovery scan, how far that pose was from the
+    # simulator's own (xy and z [mm], yaw [deg]), and what the fixed cameras
+    # found when they looked again before the arm moved (verified | moved |
+    # unseen, and by how much). Empty in the ground-truth state.
+    "perc_%s_%s" % (obj, field)
+    for obj in ("beaker", "flask")
+    for field in ("source", "recovery_s", "err_xy_mm", "err_z_mm", "err_yaw_deg",
+                  "verify", "verify_dxy_mm")
+] + ["perc_replanned"]
+
+PERCEPTION_FIELDS = {"source": "source", "recovery_s": "elapsed_s",
+                     "err_xy_mm": "err_xy_mm", "err_z_mm": "err_z_mm",
+                     "err_yaw_deg": "err_yaw_deg", "verify": "verify",
+                     "verify_dxy_mm": "verify_dxy_mm"}
 
 # Goal region for the transfer task, mirroring the xy that
 # TAMP/tamp/src/envs/transfer.py gives entities["goal_region"] (0.35, -0.35),
@@ -208,6 +225,9 @@ class TaskOrchestrator(Node):
         self._plan_failure_reason = ""
         self.create_subscription(
             String, "tamp_plan_failure_reason", self._plan_failure_cb, latched)
+        self._perception_report = {}
+        self.create_subscription(
+            String, "tamp_perception_report", self._perception_report_cb, latched)
         self.create_subscription(Float32, "carried_tilt_deg", self._tilt_cb, 10)
         self.create_subscription(String, "carried_obj", self._carried_obj_cb, 10)
         self.create_subscription(Float32MultiArray, "carried_lip_xy", self._lip_cb, 10)
@@ -222,6 +242,25 @@ class TaskOrchestrator(Node):
     # --- topic callbacks ------------------------------------------------------
     def _plan_failure_cb(self, msg):
         self._plan_failure_reason = (msg.data or "").strip()
+
+    def _perception_report_cb(self, msg):
+        try:
+            self._perception_report = json.loads(msg.data or "{}")
+        except ValueError:
+            self.get_logger().warn("unreadable tamp_perception_report: %r" % msg.data)
+
+    def perception_columns(self):
+        """The CSV's perc_* columns from the newest perception report."""
+        rclpy.spin_once(self, timeout_sec=0.2)
+        entities = (self._perception_report or {}).get("entities") or {}
+        out = {}
+        for obj, info in entities.items():
+            for col, key in PERCEPTION_FIELDS.items():
+                if key in info and ("perc_%s_%s" % (obj, col)) in CSV_HEADER:
+                    out["perc_%s_%s" % (obj, col)] = info[key]
+        if entities:
+            out["perc_replanned"] = bool(self._perception_report.get("replanned", False))
+        return out
 
     def _op_cb(self, msg):
         self.current_op = msg.data
@@ -480,7 +519,11 @@ class TaskOrchestrator(Node):
         env.statics = list(spec.statics)
         env.ex_collision = list(spec.ex_collision)
         env.rearrange_grid = spec.rearrange_grid
-        res = self._call(self.env_cli, env, timeout=60.0)
+        # Long enough for the perception state's recovery: per tagged vessel a
+        # 5 s wait and a wrist-camera scan of up to RECOVERY_SCAN_S (90 s),
+        # then the way back. At 60 s the driver gave up in the middle of a
+        # scan and the harness tore the planner down under it.
+        res = self._call(self.env_cli, env, timeout=300.0)
         if res is None or not getattr(res, "success", False):
             row["failure_reason"] = "set_tamp_env_failed"
             return row
@@ -594,6 +637,7 @@ def main():
             "pour_lip_height_mm": "",
         }
         node.get_logger().error(f"trial exception: {e}")
+    row.update(node.perception_columns())
     append_csv(args.csv, row)
     node.get_logger().info(f"CSV row appended -> {args.csv}: {row}")
     node.destroy_node()

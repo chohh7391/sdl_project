@@ -50,6 +50,7 @@ Environment:
 """
 
 import os
+import time
 
 import rclpy
 import yaml
@@ -94,6 +95,13 @@ class RealTAMPServer(TAMPServer):
     #: (cho_robot_config fr5.yaml model.arm_base_link). Nothing here transforms
     #: frames, so a pose in any other frame is refused rather than obeyed.
     BASE_FRAME = 'base_link'
+
+    #: The recovery scan and the check before execution were written for the
+    #: simulated cell, whose wrist camera publishes into TF. On this plant the
+    #: occlusion recovery belongs to cho_robot_project (occlusion_recovery), so
+    #: the scan stays off unless asked for; the check reads cho_object_pose
+    #: through `_observe` below.
+    RECOVERY_SCAN = os.environ.get('SDL_RECOVERY_SCAN', '0') == '1'
 
     def __init__(self, tamp):
         super().__init__(tamp)
@@ -208,6 +216,12 @@ class RealTAMPServer(TAMPServer):
         stamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
         if self._newest_object_stamp is None or stamp > self._newest_object_stamp:
             self._newest_object_stamp = stamp
+
+    def _observe(self, entity, which='fixed', newer_than=None, quiet=False):
+        """cho_object_pose has no per-camera split, and its stamps are not the
+        simulator's; every request is answered with `_perception_pose`."""
+        pose = self._perception_pose(entity)
+        return None if pose is None else (pose, time.time())
 
     def _perception_pose(self, entity):
         """base_link -> entity from cho_object_pose, or None.

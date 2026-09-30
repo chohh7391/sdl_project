@@ -16,6 +16,8 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 
 from typing import Optional, List, Dict
 import copy
+import json
+import math
 import time
 import traceback
 
@@ -32,7 +34,7 @@ import logging
 from cutamp.cost_reduction import CostReducer
 from cutamp.tamp_world import InitialStateCollisionError
 
-from envs.utils import TAMPEnvManager
+from envs.utils import TAMPEnvManager, ENTITIES
 from orchestration.planner_api import PlanningResult, with_explicit_pour_steps
 from curobo.wrap.reacher.motion_gen import MotionGenPlanConfig
 import os as _os
@@ -333,14 +335,27 @@ class TAMP:
         self,
         q_init: List,
         q_des: List,
+        env=None,
     ):
+        """Joint-space motion from *q_init* to *q_des*, collision-checked in
+        *env* (default: the current request's world).
+
+        The motion generator is kept for as long as *env* is the same object:
+        building and warming one takes 3-4 s, which a recovery scan used to pay
+        at every leg of a sweep over a world that does not change."""
         tensor_args = TensorDeviceType()
 
-        _, _, timer, world = setup_cutamp(self.env, self.config, q_init)
-        motion_gen = world.get_motion_gen(collision_activation_distance=self.config.world_activation_distance)
-        if self.config.warmup_motion_gen:
-            with timer.time("curobo_motion_gen_warmup"):
-                motion_gen.warmup()
+        env = env if env is not None else self.env
+        cached = getattr(self, "_js_motion_gen", None)
+        if cached is not None and cached[0] is env:
+            motion_gen = cached[1]
+        else:
+            _, _, timer, world = setup_cutamp(env, self.config, q_init)
+            motion_gen = world.get_motion_gen(collision_activation_distance=self.config.world_activation_distance)
+            if self.config.warmup_motion_gen:
+                with timer.time("curobo_motion_gen_warmup"):
+                    motion_gen.warmup()
+            self._js_motion_gen = (env, motion_gen)
 
         plan_config = MotionGenPlanConfig(
             max_attempts=1, time_dilation_factor=self.config.time_dilation_factor
@@ -459,9 +474,23 @@ class TAMPServer(Node):
         # Used only to age-check a perception pose; camera_info is chosen over
         # the image topic because it is tiny and shares the same clock.
         self._sensor_now = None
-        for _cam in ("camera_1", "camera_2"):
+        for _cam in ("camera_1", "camera_2", "camera_3"):
             self.create_subscription(
                 CameraInfo, "/%s/camera_info" % _cam, self._on_camera_info, 10)
+
+        # Per request, perception state only: how each tagged vessel was
+        # localized, the recovery scan's latched wrist views, and the world the
+        # scan's motions are checked against (see _recovery_motion_world).
+        self._loc_info = {}
+        self._scan_cache = {}
+        self._pending_entities = []
+        self._recovery_env = None
+        self._perception_report = {}
+        # What perception put into the World State against the simulator's own
+        # poses, and what the check before execution found: one JSON object per
+        # plan, latched like tamp_plan_failure_reason, for the trial harness.
+        self.perception_report_pub = self.create_publisher(
+            String, "tamp_perception_report", _latched_qos)
 
         # subscription
         self.joint_states_subscription = self.create_subscription(JointState, "isaac_joint_states", self.joint_states_cb, 10)
@@ -639,17 +668,24 @@ class TAMPServer(Node):
     RECOVERY_ENABLED = os.environ.get("SDL_RECOVERY", "1") == "1"
     RECOVERY_WAIT_S = float(os.environ.get("SDL_RECOVERY_WAIT_S", "5.0"))
     RECOVERY_POLL_S = float(os.environ.get("SDL_RECOVERY_POLL_S", "0.25"))
-    RECOVERY_RETREAT = os.environ.get("SDL_RECOVERY_RETREAT", "1") == "1"
+    #: L1 is off since 09-30. It never moved in any campaign: it ran before the
+    #: request's world existed and refused ("no world model yet"). At a trial's
+    #: first request the arm is at its start pose anyway, and L2 moves the
+    #: camera that can actually look somewhere else.
+    RECOVERY_RETREAT = os.environ.get("SDL_RECOVERY_RETREAT", "0") == "1"
 
-    #: L2 is OFF by default, and that is not timidity. This cell has two FIXED
-    #: cameras (/World/camera_1 and /World/camera_2 in
-    #: isaacsim/scripts/standalone/simulation.py) and no wrist camera, so
-    #: sweeping the arm moves nothing that is looking: the scan would spend
-    #: tens of seconds of motion to observe the same two viewpoints it started
-    #: from. It is written and left here as the switch to throw once a wrist
-    #: camera exists -- not before.
-    RECOVERY_SCAN = os.environ.get("SDL_RECOVERY_SCAN", "0") == "1"
-    RECOVERY_SCAN_S = float(os.environ.get("SDL_RECOVERY_SCAN_S", "30.0"))
+    #: L2, on since 09-30: the wrist camera (camera_3, isaacsim Task) is in the
+    #: paper's scene, so sweeping the arm now moves a viewpoint. As in
+    #: cho_robot_project's occlusion_recovery, the arm visits fixed viewpoints,
+    #: dwells at each, and stops at the first one whose wrist camera sees the
+    #: object; that pose is latched before the arm goes back.
+    RECOVERY_SCAN = os.environ.get("SDL_RECOVERY_SCAN", "1") == "1"
+    RECOVERY_SCAN_S = float(os.environ.get("SDL_RECOVERY_SCAN_S", "90.0"))
+    #: Time at each viewpoint for the detector to see the tag once the arm is
+    #: still, and the window whose wrist samples are averaged into the latched
+    #: pose [s].
+    RECOVERY_DWELL_S = float(os.environ.get("SDL_RECOVERY_DWELL_S", "1.5"))
+    RECOVERY_LATCH_S = float(os.environ.get("SDL_RECOVERY_LATCH_S", "0.5"))
 
     #: Where L1 parks the arm: the configuration tamp_client.py do_home()
     #: sends, so "retreated" is a pose an operator already recognises.
@@ -658,59 +694,87 @@ class TAMPServer(Node):
             "SDL_RECOVERY_HOME", "0.0,-1.05,-2.18,-1.57,1.57,0.0").split(",")
     ]
 
-    #: L2's viewpoints, as absolute 6-joint configurations separated by ";".
-    #:
-    #: These replace an earlier formulation that swept j1 by +/-1.57 rad at two
-    #: j2 offsets around RECOVERY_HOME. That sweep changed the camera's AZIMUTH
-    #: but never its REACH: forward kinematics on fr5_ag95.urdf puts the optical
-    #: axis of all six of those legs through the bench between 0.16 m and 0.27 m
-    #: from the base, while the randomizer places the vessels at a radius of
-    #: 0.46-0.65 m. Projecting the 30 seeds' layouts into the wrist camera
-    #: (D435 intrinsics, 1280x720) through those legs, the beaker fell inside
-    #: some leg's image on 6 of 30 layouts, the flask on 2, and BOTH on none --
-    #: the sweep looked at bare bench, so the rung could not have recovered a
-    #: transfer no matter how long it ran.
-    #:
-    #: Each pose here is solved instead from what the rung needs: the camera
-    #: 0.45 m above a chosen bench point with the optical axis vertical. The
-    #: three points (0.48, 0.12), (0.48, 0.28) and (0.48, 0.40) span the region
-    #: the randomizer draws from; against the same 30 layouts they contain the
-    #: beaker on 30/30, the flask on 30/30 and both on 30/30. The solution is
-    #: regularised towards RECOVERY_HOME and towards zero wrist roll (j6 is a
-    #: rotation about the optical axis, so it buys no coverage), which keeps
-    #: each leg under 1.5 rad of travel.
-    #:
-    #: Re-solve them with scripts/trials/solve_scan_poses.py if the camera
-    #: mount, its intrinsics, or the layout distribution changes.
+    #: L2's viewpoints, as absolute 6-joint configurations separated by ";",
+    #: solved by scripts/trials/solve_scan_poses.py --look for the wrist mount in
+    #: perception/perception_manager/config/wrist_camera.yaml: the optical axis
+    #: aimed from 0.38 m at points (0.36|0.60, 0.05|0.25|0.45) on the tag plane
+    #: (z 0.18 m), tilted 37-47 deg from vertical. A camera 0.22 m out from the
+    #: wrist cannot look straight down from high enough to take in the region;
+    #: an oblique view can. Scored by the same script, the six contain both tag
+    #: plates, whole and 20 px inside the frame, on 30/30 evaluated layouts, and
+    #: miss 2 of 2000 fresh draws from the randomizer's distribution (beaker).
+    #: Ordered as a serpentine so consecutive legs are neighbours.
     SCAN_POSES = [
         [float(v) for v in leg.split(",")]
         for leg in os.environ.get(
             "SDL_RECOVERY_SCAN_POSES",
-            "0.5787,-1.5163,-1.8198,-1.3762,1.5708,-0.0162;"
-            "0.8240,-1.6657,-1.6672,-1.3795,1.5708,-0.0224;"
-            "0.9571,-1.8310,-1.4700,-1.4113,1.5708,-0.0319"
+            "0.0661,-0.7172,-1.8296,-1.6981,1.7875,-0.0001;"
+            "0.1611,-1.0577,-1.8622,-1.1878,1.6635,-0.0001;"
+            "0.3440,-1.1838,-1.8276,-1.0923,1.7993,-0.0001;"
+            "0.2619,-0.8407,-1.9063,-1.5114,2.0041,-0.0003;"
+            "0.5370,-1.1199,-1.8965,-1.2078,2.1067,-0.0003;"
+            "0.5608,-1.3965,-1.7271,-0.9492,1.8494,-0.0002"
         ).split(";") if leg.strip()
     ]
 
+    # ---- the check before the arm moves ---------------------------------
+    #
+    # Planning takes seconds, and the world can change in them. After a plan
+    # and before execution, the fixed cameras look again; an object within
+    # VERIFY_TOL_M (xy) of where it was planned has not moved and the plan
+    # stands. Further than that, it moved: it is localized again and the plan
+    # is redone, once. A pose the recovery scan produced is the better one
+    # (the wrist camera sees the tag from 0.3-0.5 m), so a fixed-camera view
+    # that agrees with it keeps it rather than replacing it, and a fixed view
+    # that still sees nothing -- the reason the scan ran -- keeps it too.
+    # 15 mm is cho_robot_project's replay tolerance (object_layout.py), well
+    # above both views' measured error.
+    VERIFY_BEFORE_EXECUTION = os.environ.get("SDL_VERIFY_BEFORE_EXECUTION", "1") == "1"
+    VERIFY_TOL_M = float(os.environ.get("SDL_VERIFY_TOL_M", "0.015"))
+    VERIFY_WAIT_S = float(os.environ.get("SDL_VERIFY_WAIT_S", "3.0"))
+
     def _on_camera_info(self, msg):
         t = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        if self._sensor_now is not None and t < self._sensor_now - 1.0:
+            # The simulator rebuilt its world (every trial's tool change does)
+            # and its clock started again from zero. tf2 then takes every new
+            # transform for "data from the past" (TF_OLD_DATA) and goes on
+            # answering with the ones from before, for as long as the old
+            # stamps stay newest -- about 20 s, with stale perception poses and
+            # a wrist camera on an arm that has since moved. Static transforms
+            # survive a clear.
+            self.get_logger().warn(
+                "[state] sensor clock went back %.1f s -> %.1f s (simulator "
+                "rebuilt); clearing the TF buffer" % (self._sensor_now, t))
+            self.tf_buffer.clear()
+            self._sensor_now = t
+            return
         if self._sensor_now is None or t > self._sensor_now:
             self._sensor_now = t
 
-    def _perception_pose(self, entity):
-        """base_link -> entity from the perception TF, or None.
+    #: Which of perception_manager's frames an observation is read from: the
+    #: fixed cell cameras alone, the wrist camera alone, or the object's own
+    #: frame (the wrist camera replaces the fixed pair while it sees the tag).
+    PERCEPTION_FRAME_SUFFIX = {"fixed": "_fixed", "wrist": "_wrist", "fused": ""}
 
-        Same convention as the ground-truth path: the object's own pose,
-        w-first quaternion, no z correction -- the planner lift is applied
-        downstream in envs/utils.py, so adding one here would double it.
+    def _observe(self, entity, which="fixed", newer_than=None, quiet=False):
+        """base_link -> *entity* as camera group *which* sees it, or None.
+
+        Returns (pose, stamp): the pose in the ground-truth path's convention
+        (the object's own pose, w-first quaternion, no z correction -- the
+        planner lift is applied downstream in envs/utils.py, so adding one here
+        would double it) and its sensor-clock stamp. With *newer_than*, only an
+        observation stamped after it counts, i.e. a new image rather than the
+        last one before the simulator was held.
         """
+        frame = entity + self.PERCEPTION_FRAME_SUFFIX[which]
         try:
-            t = self.tf_buffer.lookup_transform(
-                "base_link", entity, rclpy.time.Time())
+            t = self.tf_buffer.lookup_transform("base_link", frame, rclpy.time.Time())
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
                 tf2_ros.ExtrapolationException) as exc:
-            self.get_logger().warn(
-                "[state] %s has no perception pose: %s" % (entity, exc))
+            if not quiet:
+                self.get_logger().warn(
+                    "[state] %s has no perception pose (%s): %s" % (entity, which, exc))
             return None
         stamp = t.header.stamp.sec + t.header.stamp.nanosec * 1e-9
         # Compare in the SENSOR clock, not the wall clock. Isaac Sim stamps its
@@ -718,22 +782,36 @@ class TAMPServer(Node):
         # fused transform's stamp and self.get_clock() are ~1.8e9 s apart and a
         # wall-clock age rejects every pose.
         if self._sensor_now is None:
-            self.get_logger().warn(
-                "[state] no camera_info seen yet, so a perception pose's age "
-                "cannot be checked; treating %s as not localized" % entity)
+            if not quiet:
+                self.get_logger().warn(
+                    "[state] no camera_info seen yet, so a perception pose's age "
+                    "cannot be checked; treating %s as not localized" % entity)
             return None
         age = self._sensor_now - stamp
         if age > self.PERCEPTION_MAX_AGE_S:
-            self.get_logger().warn(
-                "[state] %s perception pose is %.1f s old (limit %.1f s); "
-                "treating it as not localized" % (entity, age,
-                                                  self.PERCEPTION_MAX_AGE_S))
+            if not quiet:
+                self.get_logger().warn(
+                    "[state] %s perception pose (%s) is %.1f s old (limit %.1f s); "
+                    "treating it as not localized" % (entity, which, age,
+                                                      self.PERCEPTION_MAX_AGE_S))
+            return None
+        if newer_than is not None and stamp <= newer_than:
             return None
         p, q = t.transform.translation, t.transform.rotation
-        self.get_logger().info(
-            "[state] %s from perception at (%.4f, %.4f, %.4f), age %.2f s"
-            % (entity, p.x, p.y, p.z, age))
-        return [p.x, p.y, p.z, q.w, q.x, q.y, q.z]
+        if not quiet:
+            self.get_logger().info(
+                "[state] %s from perception (%s) at (%.4f, %.4f, %.4f), age %.2f s"
+                % (entity, which, p.x, p.y, p.z, age))
+        return [p.x, p.y, p.z, q.w, q.x, q.y, q.z], stamp
+
+    def _perception_pose(self, entity):
+        """The fixed cameras' pose for *entity*, or None (see `_observe`).
+
+        The name the ladder has always polled; the real server overrides it to
+        read cho_object_pose instead of TF.
+        """
+        got = self._observe(entity, "fixed")
+        return None if got is None else got[0]
 
     def _log_recovery(self, entity, outcome, stage, started, reason=None):
         """One fixed-format line per localization attempt.
@@ -783,14 +861,44 @@ class TAMPServer(Node):
     def _recovery_motion_world(self):
         """The world model a recovery motion is collision-checked against.
 
-        Recovery runs BEFORE `update_env` for the current request -- there is
-        no World State yet, that is the problem being recovered from -- so the
-        only collision model available is the one the PREVIOUS request built.
-        Returned explicitly (rather than reached for silently) so that the two
-        cases it fails in are visible: no request has been served in this
-        process yet, in which case there is no model at all.
+        Recovery runs before `update_env` for the current request -- there is
+        no complete World State yet, that is the problem being recovered from.
+        set_tamp_env_cb builds what is known (the untagged furniture from the
+        simulator, the vessels localized so far) into `_recovery_env` first; a
+        vessel not yet seen is, necessarily, missing from it, which is why the
+        scan's viewpoints are high above the bench. Without that (the real
+        server), the model the PREVIOUS request built, or None.
         """
-        return getattr(self.tamp, "env", None)
+        env = getattr(self, "_recovery_env", None)
+        return env if env is not None else getattr(self.tamp, "env", None)
+
+    def _replay_js(self, plan, dt):
+        """Stream a joint-space plan to the plant at *dt* per waypoint."""
+        for i in range(plan.position.shape[0]):
+            self._publish_arm_command(plan.position[i].tolist(), plan.joint_names)
+            time.sleep(dt)
+
+    def _latch_wrist(self, entity, after):
+        """Average the wrist camera's views of *entity* newer than *after* over
+        RECOVERY_LATCH_S; None if it has none. The position is averaged, the
+        orientation is the newest sample's."""
+        samples, last = [], after
+        end = time.monotonic() + self.RECOVERY_LATCH_S
+        while time.monotonic() < end:
+            got = self._observe(entity, "wrist", newer_than=last, quiet=True)
+            if got is not None:
+                samples.append(got[0])
+                last = got[1]
+            time.sleep(0.05)
+        if not samples:
+            return None
+        pose = list(samples[-1])
+        for k in range(3):
+            pose[k] = sum(p[k] for p in samples) / len(samples)
+        self.get_logger().info(
+            "[recovery] latched %s from %d wrist sample(s) at (%.4f, %.4f, %.4f)"
+            % (entity, len(samples), pose[0], pose[1], pose[2]))
+        return pose
 
     def _recovery_retreat(self):
         """L1: park the arm at RECOVERY_HOME. True only if it got there.
@@ -815,7 +923,8 @@ class TAMPServer(Node):
             return False
 
         try:
-            plan = self.tamp.motion_plan_js(list(q), list(self.RECOVERY_HOME))
+            plan = self.tamp.motion_plan_js(list(q), list(self.RECOVERY_HOME),
+                                            env=self._recovery_motion_world())
         except Exception:
             self.get_logger().error(
                 "[recovery] retreat planning raised:\n%s" % traceback.format_exc())
@@ -860,97 +969,138 @@ class TAMPServer(Node):
         return reached
 
     def _recovery_scan(self, entity, deadline):
-        """L2: sweep the arm looking for a viewpoint that sees *entity*.
+        """L2: carry the wrist camera over the bench until it sees *entity*.
 
-        Only meaningful with a camera ON the arm -- see RECOVERY_SCAN, which is
-        why this is off by default. Each leg is planned with `motion_plan_js`
-        and only collision-checked paths are replayed; an unplannable leg is
-        skipped, not forced.
+        The arm visits SCAN_POSES in order, each leg planned with
+        `motion_plan_js` (an unplannable leg is skipped, not forced), and dwells
+        RECOVERY_DWELL_S at each for images taken after it stopped. The first
+        viewpoint whose wrist camera sees the tag ends the sweep, and the pose
+        is latched there, before the arm leaves (a wrist view expires with the
+        view). Any other pending vessel it sees on the way is latched too, into
+        `_scan_cache`, so a second localization does not sweep again. The arm
+        then goes back, planned, to where it started, so the plan that follows
+        starts from the trial's own start configuration.
         """
-        if self._recovery_motion_world() is None:
-            self.get_logger().warn(
-                "[recovery] no world model yet; not scanning")
+        world = self._recovery_motion_world()
+        if world is None:
+            self.get_logger().warn("[recovery] no world model; not scanning")
             return None
-
         legs = [list(q) for q in self.SCAN_POSES]
         if not legs:
             self.get_logger().warn("[recovery] no scan poses configured; not scanning")
             return None
-
+        q_start = self._arm_q()
+        if not q_start:
+            self.get_logger().warn("[recovery] no measured arm configuration; not scanning")
+            return None
+        q_start = list(q_start)
         if not self._start_execution():
             self.get_logger().warn("[recovery] the plant refused the arm; not scanning")
             return None
 
         dt = float(_os.environ.get("SDL_EXEC_DT", "0.04"))
-        # Probe at the configured poll period rather than at every waypoint:
-        # a waypoint is 0.04 s of arm motion and a miss logs a line, so
-        # probing each one would bury the run log and inflate the attempt
-        # count without adding a viewpoint worth the name.
-        probe_every = max(1, int(round(self.RECOVERY_POLL_S / max(dt, 1e-6))))
-
-        pose = None
+        # One sweep for every pending vessel the fixed cameras cannot see right
+        # now, as cho_robot_project's single_pass does: sweeping for each in
+        # turn went over the same viewpoints again, and back to the start in
+        # between. A vessel the fixed cameras do see is left to them.
+        pending = [e for e in getattr(self, "_pending_entities", [entity])
+                   if e not in self._scan_cache
+                   and (e == entity or self._perception_pose(e) is None)]
+        if entity not in pending:
+            pending.append(entity)
+        moved = False
         try:
-            for leg in legs:
-                if pose is not None or time.monotonic() >= deadline:
+            for li, leg in enumerate(legs):
+                if all(e in self._scan_cache for e in pending) or time.monotonic() >= deadline:
                     break
                 q = self._arm_q()
-                if not q:
-                    self.get_logger().warn(
-                        "[recovery] no measured arm configuration; stopping the scan")
-                    break
                 try:
-                    plan = self.tamp.motion_plan_js(list(q), list(leg))
+                    plan = self.tamp.motion_plan_js(list(q), list(leg), env=world)
                 except Exception:
                     self.get_logger().error(
-                        "[recovery] scan leg planning raised:\n%s"
-                        % traceback.format_exc())
+                        "[recovery] scan leg planning raised:\n%s" % traceback.format_exc())
                     break
                 if plan is None:
                     self.get_logger().info(
-                        "[recovery] scan leg %s is not reachable collision-free; "
-                        "skipping it" % (" ".join("%.2f" % v for v in leg),))
+                        "[recovery] scan leg %d is not reachable collision-free; skipping it" % li)
                     continue
-                for i in range(plan.position.shape[0]):
-                    self._publish_arm_command(
-                        plan.position[i].tolist(), plan.joint_names)
-                    time.sleep(dt)
-                    if i % probe_every:
-                        continue
+                self._replay_js(plan, dt)
+                moved = True
+                arrived = self._sensor_now
+                end = time.monotonic() + self.RECOVERY_DWELL_S
+                while time.monotonic() < end:
+                    time.sleep(self.RECOVERY_POLL_S)
                     self._recovery_attempts += 1
-                    pose = self._perception_pose(entity)
-                    if pose is not None:
+                    seen = [e for e in pending if e not in self._scan_cache
+                            and self._observe(e, "wrist", newer_than=arrived, quiet=True)]
+                    for e in seen:
+                        pose = self._latch_wrist(e, arrived)
+                        if pose is not None:
+                            self._scan_cache[e] = {"pose": pose, "leg": li}
+                    if all(e in self._scan_cache for e in pending):
                         break
-                    if time.monotonic() >= deadline:
-                        break
+                self.get_logger().info(
+                    "[recovery] scan leg %d: latched %s of %s" % (
+                        li, sorted(e for e in pending if e in self._scan_cache), sorted(pending)))
         except Exception:
-            self.get_logger().error(
-                "[recovery] scan aborted:\n%s" % traceback.format_exc())
+            self.get_logger().error("[recovery] scan aborted:\n%s" % traceback.format_exc())
         finally:
-            self._finish_execution(pose is not None)
-        return pose
+            if moved:
+                try:
+                    back = self.tamp.motion_plan_js(list(self._arm_q()), q_start, env=world)
+                except Exception:
+                    back = None
+                    self.get_logger().error(
+                        "[recovery] return planning raised:\n%s" % traceback.format_exc())
+                if back is not None:
+                    self._replay_js(back, dt)
+                    time.sleep(0.5)
+                else:
+                    self.get_logger().error(
+                        "[recovery] could not plan the way back to the start "
+                        "configuration; the plan will start where the scan ended")
+            self._finish_execution(entity in self._scan_cache)
+        return self._scan_cache.get(entity, {}).get("pose")
 
     def _localize_with_recovery(self, entity):
         """A perception pose for *entity*, with the recovery ladder behind it.
 
         The single entry point both `set_tamp_env_cb` implementations use, so
         the simulated and the physical path recover identically and a rung
-        added here reaches both. It resolves `self._perception_pose`, which the
-        real server overrides, so each plant is polled through its own source.
+        added here reaches both. The fixed cameras are asked first
+        (`_perception_pose`, which the real server overrides); the wrist camera
+        only through the scan. Records how the pose was obtained in
+        `_loc_info[entity]` (source fixed | recovery, the stage, the time).
 
         Returns None when every rung failed, and the caller then does what it
         did before: fail the request. Nothing here falls back to ground truth.
         """
         started = time.monotonic()
         self._recovery_attempts = 1
-        pose = self._perception_pose(entity)
-        if pose is not None:
-            self._log_recovery(entity, "immediate", "wait", started)
+        if not hasattr(self, "_loc_info"):
+            self._loc_info = {}
+        if not hasattr(self, "_scan_cache"):
+            self._scan_cache = {}
+
+        def done(pose, source, outcome, stage, reason=None):
+            self._log_recovery(entity, outcome, stage, started, reason=reason)
+            self._loc_info[entity] = {
+                "source": source if pose is not None else "failed",
+                "stage": stage, "outcome": outcome,
+                "elapsed_s": round(time.monotonic() - started, 2)}
             return pose
 
+        pose = self._perception_pose(entity)
+        if pose is not None:
+            return done(pose, "fixed", "immediate", "wait")
+
+        # Seen by the wrist camera during an earlier scan of this request.
+        cached = self._scan_cache.get(entity)
+        if cached is not None:
+            return done(cached["pose"], "recovery", "recovered", "scan")
+
         if not self.RECOVERY_ENABLED:
-            self._log_recovery(entity, "failed", "wait", started,
-                               reason="disabled")
-            return None
+            return done(None, None, "failed", "wait", reason="disabled")
 
         # L0 -- the wait the manuscript already describes.
         self.get_logger().warn(
@@ -958,14 +1108,12 @@ class TAMPServer(Node):
             "re-detection" % (entity, self.RECOVERY_WAIT_S))
         pose = self._poll_perception_pose(entity, self.RECOVERY_WAIT_S)
         if pose is not None:
-            self._log_recovery(entity, "recovered", "wait", started)
-            return pose
+            return done(pose, "fixed", "recovered", "wait")
 
         stage = ("retreat" if self.RECOVERY_RETREAT
                  else ("scan" if self.RECOVERY_SCAN else None))
         if stage is None:
-            self._log_recovery(entity, "failed", "wait", started)
-            return None
+            return done(None, None, "failed", "wait")
 
         if self._holding:
             # Not a conservatism that can be traded away. The gripper is
@@ -975,30 +1123,80 @@ class TAMPServer(Node):
             self.get_logger().warn(
                 "[recovery] the gripper is holding something; a recovery "
                 "motion would carry it, so this fails closed instead")
-            self._log_recovery(entity, "skipped", stage, started,
-                               reason="holding")
-            return None
+            return done(None, None, "skipped", stage, reason="holding")
 
-        # L1 -- the arm itself may be what is in the way.
+        # L1 -- the arm itself may be what is in the way (off by default).
         if self.RECOVERY_RETREAT:
             if self._recovery_retreat():
                 pose = self._poll_perception_pose(entity, self.RECOVERY_WAIT_S)
                 if pose is not None:
-                    self._log_recovery(entity, "recovered", "retreat", started)
-                    return pose
+                    return done(pose, "fixed", "recovered", "retreat")
             stage = "retreat"
 
-        # L2 -- move the viewpoint (needs a camera on the arm; off by default).
+        # L2 -- move the wrist camera's viewpoint.
         if self.RECOVERY_SCAN:
             stage = "scan"
             pose = self._recovery_scan(
                 entity, time.monotonic() + self.RECOVERY_SCAN_S)
             if pose is not None:
-                self._log_recovery(entity, "recovered", "scan", started)
-                return pose
+                return done(pose, "recovery", "recovered", "scan")
 
-        self._log_recovery(entity, "failed", stage, started)
-        return None
+        return done(None, None, "failed", stage)
+
+    async def _ground_truth_pose(self, entity):
+        """The simulator's own pose of /World/<entity>, or None."""
+        req = GetEntityState.Request()
+        req.entity = "/World/" + entity
+        res = await self.get_entity_state_cli.call_async(req)
+        if res.result.result != 1:
+            return None
+        p, o = res.state.pose.position, res.state.pose.orientation
+        return [p.x, p.y, p.z, o.w, o.x, o.y, o.z]
+
+    def _build_recovery_env(self, poses, statics):
+        """A collision world from what is known so far, for recovery motions.
+
+        *poses* are the entities localized so far (the simulator's furniture,
+        the vessels perception has found); *statics* the request's own. One of
+        them has to be a movable for cuTAMP's world, and nothing is planned on
+        it. A vessel perception has not found is not in it -- nothing can be.
+        """
+        known = [n for n in poses if n in ENTITIES]
+        movable = next((n for n in self.PERCEPTION_ENTITIES if n in poses),
+                       next((n for n in known if n != "table"), None))
+        if movable is None:
+            return None
+        names = []
+        for n in list(known) + list(statics):
+            if n != movable and n not in names and n in ENTITIES:
+                names.append(n)
+        try:
+            mgr = TAMPEnvManager()
+            # copies: update_entities lifts vessel z in place
+            mgr.update_entities(poses={n: list(poses[n]) for n in poses if n in ENTITIES},
+                                movables=[movable], statics=names, ex_collision=[])
+            return mgr.load_env("default")
+        except Exception:
+            self.get_logger().error(
+                "[recovery] could not build a world for recovery motions:\n%s"
+                % traceback.format_exc())
+            return None
+
+    @staticmethod
+    def _pose_error(pose, gt):
+        """Perceived minus simulator pose: xy and z [mm], yaw [deg] (wrapped)."""
+        def yaw(q):
+            w, x, y, z = q
+            return math.degrees(math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)))
+        dyaw = (yaw(pose[3:7]) - yaw(gt[3:7]) + 180.0) % 360.0 - 180.0
+        return {"err_xy_mm": round(1000 * math.hypot(pose[0] - gt[0], pose[1] - gt[1]), 2),
+                "err_z_mm": round(1000 * (pose[2] - gt[2]), 2),
+                "err_yaw_deg": round(dyaw, 2),
+                "pose": [round(v, 5) for v in pose[:3]],
+                "gt": [round(v, 5) for v in gt[:3]]}
+
+    def _publish_perception_report(self):
+        self.perception_report_pub.publish(String(data=json.dumps(self._perception_report)))
 
     async def set_tamp_env_cb(self, request, response):
 
@@ -1014,72 +1212,91 @@ class TAMPServer(Node):
             return response
 
         env_name = request.env_name
-        entities = request.entities
-        movables = request.movables
-        statics = request.statics
-        ex_collision = request.ex_collision
-        rearrange_grid = request.rearrange_grid
+        entities = list(request.entities)
+        perceived = [e for e in entities
+                     if state_source == "perception" and e in self.PERCEPTION_ENTITIES]
 
         entities_states = {
             "poses": {},
-            "movables": movables,
-            "statics": statics,
-            "ex_collision": ex_collision,
-            "rearrange_grid": rearrange_grid,
+            "movables": request.movables,
+            "statics": request.statics,
+            "ex_collision": request.ex_collision,
+            "rearrange_grid": request.rearrange_grid,
         }
 
-        sources = {}
+        # 1. The simulator, for everything it is asked about. A tagged vessel's
+        # pose from here is kept ONLY to score perception against afterwards;
+        # it never reaches the World State in the perception condition.
+        sources, gt = {}, {}
         for entity in entities:
-            if (state_source == "perception"
-                    and entity in self.PERCEPTION_ENTITIES):
-                entity_pose = self._localize_with_recovery(entity)
-                if entity_pose is None:
-                    # A tagged vessel the pipeline never localized, and the
-                    # recovery ladder did not change that. Falling back to
-                    # ground truth here would silently report a
-                    # perception-in-the-loop result that was not one.
-                    self.get_logger().error(
-                        "[state] no perception pose for %s; the trial is a "
-                        "perception failure, not a planning one" % entity)
-                    response.success = False
-                    return response
-                entities_states["poses"][entity] = entity_pose
-                sources[entity] = "perception"
+            pose = await self._ground_truth_pose(entity)
+            if pose is None:
                 continue
-
-            get_entity_state_request = GetEntityState.Request()
-            get_entity_state_request.entity = "/World/" + entity
-
-            get_entity_state_response = await self.get_entity_state_cli.call_async(get_entity_state_request)
-
-            if get_entity_state_response.result.result == 1:
-
-                response.success = True
-                entity_pose = [
-                    get_entity_state_response.state.pose.position.x,
-                    get_entity_state_response.state.pose.position.y,
-                    get_entity_state_response.state.pose.position.z,
-                    get_entity_state_response.state.pose.orientation.w,
-                    get_entity_state_response.state.pose.orientation.x,
-                    get_entity_state_response.state.pose.orientation.y,
-                    get_entity_state_response.state.pose.orientation.z
-                ]
-                entities_states["poses"][entity] = entity_pose
+            gt[entity] = pose
+            if entity not in perceived:
+                entities_states["poses"][entity] = pose
                 sources[entity] = "ground_truth"
+
+        # 2. The tagged vessels, from perception, with the recovery ladder.
+        self._perception_report = {"state_source": state_source}
+        if perceived:
+            self._loc_info, self._scan_cache = {}, {}
+            self._pending_entities = list(perceived)
+            report = {}
+            try:
+                for entity in perceived:
+                    self._recovery_env = self._build_recovery_env(
+                        entities_states["poses"], request.statics)
+                    entity_pose = self._localize_with_recovery(entity)
+                    info = dict(self._loc_info.get(entity, {}))
+                    if entity_pose is None:
+                        report[entity] = info
+                        self._perception_report["entities"] = report
+                        self._publish_perception_report()
+                        # A tagged vessel the pipeline never localized, and the
+                        # recovery ladder did not change that. Falling back to
+                        # ground truth here would silently report a
+                        # perception-in-the-loop result that was not one.
+                        self.get_logger().error(
+                            "[state] no perception pose for %s; the trial is a "
+                            "perception failure, not a planning one" % entity)
+                        response.success = False
+                        return response
+                    if entity in gt:
+                        info.update(self._pose_error(entity_pose, gt[entity]))
+                    report[entity] = info
+                    entities_states["poses"][entity] = entity_pose
+                    sources[entity] = "perception:%s" % info.get("source", "?")
+                    self._pending_entities.remove(entity)
+            finally:
+                self._recovery_env = None
+                # the scan's cached motion generator holds GPU memory the plan wants
+                self.tamp._js_motion_gen = None
+            self._perception_report["entities"] = report
 
         self.get_logger().info(
             "[state] source=%s %s" % (state_source, " ".join(
                 "%s:%s" % (k, sources[k]) for k in sorted(sources))))
+        if perceived:
+            self.get_logger().info("[perception] " + json.dumps(self._perception_report))
 
+        # Kept so the check before execution can rebuild the world with a
+        # vessel that moved.
+        self._last_env_request = dict(
+            name=env_name, poses=dict(entities_states["poses"]),
+            movables=entities_states["movables"], statics=entities_states["statics"],
+            ex_collision=entities_states["ex_collision"],
+            rearrange_grid=entities_states["rearrange_grid"])
         self.tamp.update_env(
             name=env_name,
-            poses=entities_states["poses"],
+            poses={k: list(v) for k, v in entities_states["poses"].items()},
             movables=entities_states["movables"],
             statics=entities_states["statics"],
             ex_collision=entities_states["ex_collision"],
             rearrange_grid=entities_states["rearrange_grid"],
         )
-
+        self._publish_perception_report()
+        response.success = bool(entities_states["poses"])
         return response
     
     def set_tamp_cfg_cb(self, request, response):
@@ -1171,9 +1388,30 @@ class TAMPServer(Node):
                 f"using q_home for '{self.tamp.config.robot}' as q_init."
             )
 
-        held = self._hold_plant_for_planning(True)
         try:
-            result = self.tamp.plan(q_init, None)
+            result = self._plan_held(q_init)
+            report = self._perception_report
+            if (result.success and self.VERIFY_BEFORE_EXECUTION
+                    and report.get("state_source") == "perception" and report.get("entities")):
+                moved = self._verify_before_execution()
+                if moved:
+                    # A vessel is not where it was planned: plan again, once,
+                    # with where the fixed cameras see it now.
+                    req = self._last_env_request
+                    poses = dict(req["poses"])
+                    poses.update(moved)
+                    req["poses"] = poses
+                    self.tamp.update_env(
+                        name=req["name"], poses={k: list(v) for k, v in poses.items()},
+                        movables=req["movables"], statics=req["statics"],
+                        ex_collision=req["ex_collision"], rearrange_grid=req["rearrange_grid"])
+                    self.get_logger().warn(
+                        "[verify] %s moved since planning; planning again"
+                        % ", ".join(sorted(moved)))
+                    result = self._plan_held(q_init)
+                    report["replanned"] = True
+            self._publish_perception_report()
+
             curobo_plan = with_explicit_pour_steps(result.plan)
             total_num_satisfying = result.total_num_satisfying
             response.plan_success = result.success
@@ -1203,11 +1441,65 @@ class TAMPServer(Node):
             self.plan_failure_pub.publish(
                 String(data="plan_cb_exception:%s" % _classify_plan_error(e)))
 
+        return response
+
+    def _plan_held(self, q_init):
+        """One planning call with the plant held; released however it ends."""
+        held = self._hold_plant_for_planning(True)
+        try:
+            return self.tamp.plan(q_init, None)
         finally:
             if held:
                 self._hold_plant_for_planning(False)
 
-        return response
+    def _verify_before_execution(self):
+        """Look again with the fixed cameras, after planning and before the arm
+        moves. Returns {vessel: new pose} for the vessels that moved (see
+        VERIFY_TOL_M), and records each vessel's outcome in the perception report:
+
+            verified     the fixed cameras see it within tolerance; the planned
+                         pose stands (a recovered one included -- it is the
+                         better measurement, so an agreeing coarser view does
+                         not replace it)
+            moved        the fixed cameras see it further away than that
+            unseen       the fixed cameras do not see it; the planned pose
+                         stands (for a recovered pose, the reason there was a
+                         scan at all)
+
+        Only images taken after planning count: the simulator renders nothing
+        while it is held, so the newest image before that is not a new look.
+        """
+        after = self._sensor_now
+        started = time.monotonic()
+        report = self._perception_report["entities"]
+        planned = {e: self._last_env_request["poses"][e] for e in report
+                   if e in self._last_env_request["poses"]}
+        seen, remaining = {}, list(planned)
+        deadline = time.monotonic() + self.VERIFY_WAIT_S
+        while remaining and time.monotonic() < deadline:
+            for e in list(remaining):
+                got = self._observe(e, "fixed", newer_than=after, quiet=True)
+                if got is not None:
+                    seen[e] = got[0]
+                    remaining.remove(e)
+            time.sleep(0.1)
+        moved = {}
+        for e, P in planned.items():
+            v = {"verify_s": round(time.monotonic() - started, 2)}
+            if e in seen:
+                d = math.hypot(seen[e][0] - P[0], seen[e][1] - P[1])
+                v["verify_dxy_mm"] = round(1000 * d, 2)
+                v["verify"] = "verified" if d <= self.VERIFY_TOL_M else "moved"
+                if d > self.VERIFY_TOL_M:
+                    moved[e] = seen[e]
+            else:
+                v["verify"] = "unseen"
+            report[e].update(v)
+            self.get_logger().info("[verify] %s %s%s (planned from %s)" % (
+                e, v["verify"],
+                (" by %.1f mm" % v["verify_dxy_mm"]) if "verify_dxy_mm" in v else "",
+                report[e].get("source", "?")))
+        return moved
     
 
     def process_plan(self, plan):

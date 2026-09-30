@@ -180,7 +180,11 @@ def approximate_goal_aabb(goal: Obstacle) -> Float[torch.Tensor, "2 3"]:
 def get_world_cfg(env: TAMPEnvironment, include_movables: bool = False) -> WorldConfig:
     """Get the cuRobo WorldConfig from the TAMP environment."""
     geoms = defaultdict(list)
-    obstacles = env.movables if include_movables else []
+    # A copy: `+=` on env.movables itself appended the statics to the
+    # environment's own movables on every call, so the second motion plan on
+    # one environment saw each static twice -- and a static "movable" in
+    # collision with its own copy (a recovery scan's second leg failed on it).
+    obstacles = list(env.movables) if include_movables else []
     obstacles += env.statics
     for obj in obstacles:
         if isinstance(obj, Cuboid):

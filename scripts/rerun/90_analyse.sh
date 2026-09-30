@@ -28,6 +28,9 @@ python3 "$A/paired_outcome.py" --field task_success \
   --b "$RR_OUT/cutamp/transfer_perception_rep*.csv"   --label-b perception \
   > "$RES/state_source.md" 2>&1
 
+python3 "$A/perception_state.py" "$RR_OUT" --out "$RES/perception_state.md" > /dev/null 2>&1 \
+  || echo "perception state report failed" > "$RES/perception_state.md"
+
 for csv in "$RR_OUT"/cutamp/transfer_ground_truth_rep*.csv; do
   [[ -f "$csv" ]] || continue
   python3 "$A/analyse_pour_vector.py" "$csv" > "$RES/pour_$(basename "$csv" .csv).txt" 2>&1
@@ -74,6 +77,8 @@ L="$RR_OUT/llm"
   echo; echo "---"; echo
   echo "## End-to-end Transfer: 정답 상태 vs 인식 상태"
   sed 's/^# /### /' "$RES/state_source.md"
+  echo; echo "---"; echo
+  sed 's/^# /## /; s/^## \([a-z]\)/### \1/' "$RES/perception_state.md"
   echo; echo "---"; echo
   echo "## 시행 요약 (예산 ${MAXB} s)"
   for f in "$RES"/trials_*.txt; do
