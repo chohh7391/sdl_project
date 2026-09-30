@@ -646,6 +646,10 @@ class TAMPServer(Node):
     # built on a pose measured a minute earlier and still be reported as
     # perception-in-the-loop.
     PERCEPTION_MAX_AGE_S = float(os.environ.get("SDL_PERCEPTION_MAX_AGE_S", "2.0"))
+    # ...and one stamped this far AFTER the newest image predates a clock
+    # restart (see _on_camera_info). Normally the age is >= 0: a detection
+    # carries its image's stamp, and camera_info with that stamp comes first.
+    PERCEPTION_FUTURE_TOL_S = 1.0
 
     # ---- perception recovery -------------------------------------------
     #
@@ -789,6 +793,20 @@ class TAMPServer(Node):
                     "cannot be checked; treating %s as not localized" % entity)
             return None
         age = self._sensor_now - stamp
+        if age < -self.PERCEPTION_FUTURE_TOL_S:
+            # Stamped after the newest image: seen before the simulator rebuilt
+            # its world and restarted its clock, and delivered after the buffer
+            # was cleared for it. tf2 answers with it for as long as its stamp
+            # stays the newest, so the pose would be the scene before the
+            # rebuild (20261001f: 34 of 90 perception trials planned from such
+            # a pose, one of them 77 mm off). Clear again and wait for a new one.
+            if not quiet:
+                self.get_logger().warn(
+                    "[state] %s perception pose (%s) is stamped %.1f s after the "
+                    "newest image (from before the simulator rebuilt); clearing "
+                    "the TF buffer, not localized" % (entity, which, -age))
+            self.tf_buffer.clear()
+            return None
         if age > self.PERCEPTION_MAX_AGE_S:
             if not quiet:
                 self.get_logger().warn(

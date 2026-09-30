@@ -386,3 +386,58 @@ def test_a_recovered_vessel_the_fixed_cameras_still_miss_is_kept():
     s = _verifier(None, source='recovery')
     assert s.node._verify_before_execution() == {}
     assert s.node._perception_report['entities']['beaker']['verify'] == 'unseen'
+
+
+# -- the age check on a perception pose ------------------------------------
+# The real _observe, over a stub TF buffer holding one transform.
+
+class _Stamped:
+    def __init__(self, stamp):
+        from types import SimpleNamespace as NS
+        sec = int(stamp)
+        self.header = NS(stamp=NS(sec=sec, nanosec=int(round((stamp - sec) * 1e9))))
+        self.transform = NS(translation=NS(x=0.5, y=0.2, z=0.1),
+                            rotation=NS(w=1.0, x=0.0, y=0.0, z=0.0))
+
+
+class _Buffer:
+    def __init__(self, stamp):
+        self.stamp, self.cleared = stamp, 0
+
+    def lookup_transform(self, target, source, when):
+        return _Stamped(self.stamp)
+
+    def clear(self):
+        self.cleared += 1
+
+
+def _observer(sensor_now, stamp):
+    node = tamp_server.TAMPServer.__new__(tamp_server.TAMPServer)
+    node.tf_buffer = _Buffer(stamp)
+    node._sensor_now = sensor_now
+    logger = _Logger()
+    node.get_logger = lambda: logger
+    return node
+
+
+def test_observe_accepts_a_current_pose():
+    node = _observer(10.0, 9.9)
+    pose, stamp = node._observe('beaker')
+    assert pose[:3] == [0.5, 0.2, 0.1]
+    assert stamp == pytest.approx(9.9)
+    assert node.tf_buffer.cleared == 0
+
+
+def test_observe_rejects_a_pose_from_before_the_clock_restart():
+    # 20261001f transfer seed 24: the newest image at ~1 s and the fused pose
+    # stamped ~55 s, i.e. the scene before the tool change rebuilt it.
+    node = _observer(1.0, 56.2)
+    assert node._observe('beaker') is None
+    assert node._observe('beaker', 'wrist', newer_than=0.5) is None
+    assert node.tf_buffer.cleared == 2
+
+
+def test_observe_rejects_an_old_pose():
+    node = _observer(10.0, 10.0 - tamp_server.TAMPServer.PERCEPTION_MAX_AGE_S - 0.5)
+    assert node._observe('beaker') is None
+    assert node.tf_buffer.cleared == 0

@@ -46,6 +46,12 @@ PerceptionManager::PerceptionManager() : Node("perception_manager")
                             cam.c_str(), kv.second.seconds(), t.seconds());
                         tf_buffer_->clear();
                         latest_image_stamp_.clear();
+                        // ...and what was fused from the old transforms, or the
+                        // publish timer sends it once more and puts the old
+                        // stamps straight back into every listener's buffer.
+                        for (auto& kv : objects_) {
+                            kv.second.processed.clear();
+                        }
                         break;
                     }
                 }
@@ -149,8 +155,27 @@ void PerceptionManager::process_fusion_tf() {
                 }
                 auto cam_to_tag = tf_buffer_->lookupTransform(cam, cam_tag, tf2::TimePointZero);
                 auto newest = latest_image_stamp_.find(cam);
-                if (newest == latest_image_stamp_.end() ||
-                    (newest->second - rclcpp::Time(cam_to_tag.header.stamp)).seconds() > max_obs_age_s_) {
+                if (newest == latest_image_stamp_.end()) {
+                    continue;
+                }
+                const double age =
+                    (newest->second - rclcpp::Time(cam_to_tag.header.stamp)).seconds();
+                // Stamped AFTER this camera's newest image: seen before the
+                // simulator rebuilt and restarted its clock, delivered after
+                // the buffer was cleared for it (a detection still in flight).
+                // tf2 keeps answering with it while its stamp stays the newest,
+                // so the age test above would pass it as current: 20261001f
+                // planned 34 of 90 perception trials from the scene before the
+                // rebuild, one 77 mm off. Clear again and wait for new images.
+                if (age < -kFutureTolS) {
+                    RCLCPP_WARN(this->get_logger(),
+                        "%s: %s stamped %.1f s after the newest image (from before the "
+                        "simulator rebuilt); clearing TF", cam.c_str(), cam_tag.c_str(), -age);
+                    tf_buffer_->clear();
+                    obj.observations.clear();
+                    break;
+                }
+                if (age > max_obs_age_s_) {
                     continue;
                 }
 
@@ -171,6 +196,17 @@ void PerceptionManager::process_fusion_tf() {
                 } catch (const tf2::TransformException &) {
                     base_to_cam = tf_buffer_->lookupTransform(
                         "base_link", cam, tf2::TimePointZero);
+                    // The same for the camera's own pose (the arm's, for the
+                    // wrist camera): a latest transform from before the rebuild
+                    // is where the arm was then. A static mount is stamped 0.
+                    if ((rclcpp::Time(base_to_cam.header.stamp) - newest->second).seconds() > kFutureTolS) {
+                        RCLCPP_WARN(this->get_logger(),
+                            "base_link -> %s is from before the simulator rebuilt; clearing TF",
+                            cam.c_str());
+                        tf_buffer_->clear();
+                        obj.observations.clear();
+                        break;
+                    }
                 }
 
                 tf2::Transform t_base_cam, t_cam_tag;

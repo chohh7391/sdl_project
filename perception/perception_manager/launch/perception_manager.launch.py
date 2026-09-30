@@ -73,7 +73,15 @@ def _setup(context, *args, **kwargs):
             executable='robot_state_publisher',
             name='wrist_camera_kinematics',
             output='log',
-            parameters=[{'robot_description': arm_urdf, 'publish_frequency': 60.0}],
+            # ignore_timestamp: publish on every joint state. Otherwise the node
+            # skips a message stamped before the last one it published, and the
+            # simulator's clock restarts at zero when a tool change rebuilds the
+            # world, so the arm's transforms stopped until the new clock passed
+            # the old one (~50 s). Move's vgc10 hit this: its joint states add no
+            # new joint names, which is what had unblocked the other tools, and
+            # the wrist scan of 20261001f Move seed 17 found nothing.
+            parameters=[{'robot_description': arm_urdf, 'publish_frequency': 60.0,
+                         'ignore_timestamp': True}],
             remappings=[('joint_states', '/isaac_joint_states')],
         ))
         x, y, z = (str(v) for v in mount['xyz'])

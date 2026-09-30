@@ -87,6 +87,9 @@ private:
     //! An observation older than this, measured against the newest image its
     //! own camera has produced, is not a current view and is not fused [s].
     double max_obs_age_s_ = 0.5;
+    // An observation stamped this far after its camera's newest image predates
+    // a simulator clock restart (normally the age is >= 0).
+    static constexpr double kFutureTolS = 1.0;
     std::map<std::string, rclcpp::Time> latest_image_stamp_;
     std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr> camera_info_subs_;
     //! Fuse *obs* (range-weighted) and apply the tag->object offset. False if empty.

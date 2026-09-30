@@ -62,6 +62,9 @@ L="$RR_OUT/llm"
   echo
   echo "\`scripts/rerun/90_analyse.sh\`가 $(date '+%F %T')에 생성했습니다. 손으로 고치지 말고 다시 생성하세요."
   echo "환경과 코드는 [RUN_INFO.md](RUN_INFO.md), 절차와 원고 반영 위치는 저장소 루트의 \`RERUN.md\`에 있습니다."
+  if [[ -f "$RR_OUT/PERCEPTION_COMMIT" ]]; then
+    echo "인식 상태 배치는 태그 커밋이 아니라 \`$(cat "$RR_OUT/PERCEPTION_COMMIT")\`에서 다시 쟀습니다. 정답 상태 배치는 태그 커밋 그대로입니다(RUN_INFO.md 끝)."
+  fi
   if [[ -f "$RR_OUT/PDDL_COMMIT" ]]; then
     echo "PDDLStream은 태그 커밋이 아니라 \`$(cat "$RR_OUT/PDDL_COMMIT")\`에서 다시 쟀습니다. 그 사이 바뀐 것은 기준선과 분석뿐입니다(RUN_INFO.md 끝)."
   fi

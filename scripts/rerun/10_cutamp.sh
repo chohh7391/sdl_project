@@ -16,8 +16,38 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 rr_scene_guard
 [[ -f "$RR_OUT/COMMIT" ]] || rr_die "run 00_preflight.sh first"
-[[ "$(git -C "$RR_ROOT" rev-parse HEAD)" == "$(cat "$RR_OUT/COMMIT")" ]] \
-  || rr_die "HEAD differs from this tag's commit $(cat "$RR_OUT/COMMIT")"
+# The perception batches alone may be measured again at a later commit, into
+# the same tag, when the ground-truth batches are complete (they are then only
+# skipped, never extended at the new commit) and nothing outside the perception
+# path, the baseline, the campaign scripts and the analysis changed since the
+# tag's commit: RERUN_ALLOW_COMMIT_CHANGE=1. Move the old perception CSVs and
+# logs aside first. The commit goes to PERCEPTION_COMMIT and RUN_INFO.md.
+HEAD_NOW="$(git -C "$RR_ROOT" rev-parse HEAD)"; BASE="$(cat "$RR_OUT/COMMIT")"
+COMMIT_CHANGED=0
+if [[ "$HEAD_NOW" != "$BASE" ]]; then
+  [[ -n "${RERUN_ALLOW_COMMIT_CHANGE:-}" ]] || rr_die "HEAD differs from this tag's commit $BASE"
+  OTHER="$(git -C "$RR_ROOT" diff --name-only "$BASE" "$HEAD_NOW" \
+    | grep -vE '^(perception/|TAMP/tamp/scripts/server/tamp_server\.py$|TAMP/tamp/test/|experiments/pddlstream/|scripts/rerun/|_2026__IEEE_Access/revision/analysis/[^/]+\.py$|RERUN\.md$)' || true)"
+  [[ -z "$OTHER" ]] || rr_die "HEAD changes more than the perception path since $BASE: $(echo $OTHER)"
+  [[ -z "$(git -C "$RR_ROOT" status --porcelain --untracked-files=no -- .)" ]] \
+    || rr_die "uncommitted changes; the batches' commit would not describe their code"
+  COMMIT_CHANGED=1
+  if [[ "$(cat "$RR_OUT/PERCEPTION_COMMIT" 2>/dev/null)" != "$HEAD_NOW" ]]; then
+    echo "$HEAD_NOW" > "$RR_OUT/PERCEPTION_COMMIT"
+    {
+      echo
+      echo "## Perception batches measured again at a later commit ($(date '+%F %T'))"
+      echo
+      echo "The ground-truth batches keep \`$BASE\`."
+      echo
+      echo "| | |"
+      echo "|---|---|"
+      echo "| commit | \`$HEAD_NOW\` |"
+      echo "| changed since \`$BASE\` | $(git -C "$RR_ROOT" diff --name-only "$BASE" "$HEAD_NOW" | sed 's/.*/`&`/' | paste -sd, - | sed 's/,/, /g') |"
+    } >> "$RR_OUT/RUN_INFO.md"
+  fi
+  rr_log "cuTAMP perception batches at $HEAD_NOW (tag commit $BASE)"
+fi
 
 OUTC="$RR_OUT/cutamp"; mkdir -p "$OUTC"
 REPS="${RERUN_REPS:-3}"
@@ -32,6 +62,8 @@ run_batch() {   # task robot state_source rep
   local csv="$OUTC/${name}.csv" logs="$RR_OUT/logs/$name"
   local missing; missing="$(rr_missing_seeds "$csv" 30)"
   if [[ -z "$missing" ]]; then rr_log "skip $name (complete)"; return 0; fi
+  [[ "$COMMIT_CHANGED" == 0 || "$src" == perception ]] \
+    || rr_die "$name is incomplete, and at $HEAD_NOW only perception batches may run"
   local foreign; foreign="$(rr_gpu_foreign)"
   [[ -z "$foreign" ]] || rr_die "another process is on the GPU, not starting $name: $foreign"
   rr_batch_begin "$name"
