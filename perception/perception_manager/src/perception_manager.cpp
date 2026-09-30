@@ -69,13 +69,19 @@ PerceptionManager::PerceptionManager() : Node("perception_manager")
     // rendered; task.py lifts it to 5 mm, which shortens this z by the lift
     // (0.0601 -> 0.0550). Keep this in step with SDL_TAG_Z_MIN.
     // With SDL_TAG_MOUNT=raise (the default) the plate sits on a post at
-    // 0.18 m so neighbouring glassware cannot cover it; the vessel centre is
+    // 0.18-0.20 m so neighbouring glassware cannot cover it; the vessel centre is
     // then BELOW the tag. beaker centre 0.0675 m, flask centre 0.0600 m.
-    // SDL_TAG_Z overrides the mount height if task.py's is changed.
-    const double tag_z = std::getenv("SDL_TAG_Z")
-                             ? std::atof(std::getenv("SDL_TAG_Z")) : 0.18;
-    tag_to_object_["beaker"] = tf2::Vector3(-0.15, 0.0, 0.0675 - tag_z);
-    tag_to_object_["flask"] = tf2::Vector3(-0.15, 0.0, 0.0600 - tag_z);
+    // The plate heights come from config/tag_mount.yaml through the launch
+    // (the file task.py raises the plates with); SDL_TAG_Z sets both.
+    double tag_z_beaker = this->declare_parameter<double>("tag_z_beaker", 0.18);
+    double tag_z_flask = this->declare_parameter<double>("tag_z_flask", 0.20);
+    if (std::getenv("SDL_TAG_Z")) {
+        tag_z_beaker = tag_z_flask = std::atof(std::getenv("SDL_TAG_Z"));
+    }
+    RCLCPP_INFO(this->get_logger(), "tag plates at z beaker %.3f m, flask %.3f m",
+                tag_z_beaker, tag_z_flask);
+    tag_to_object_["beaker"] = tf2::Vector3(-0.15, 0.0, 0.0675 - tag_z_beaker);
+    tag_to_object_["flask"] = tf2::Vector3(-0.15, 0.0, 0.0600 - tag_z_flask);
 
     auto update_cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     

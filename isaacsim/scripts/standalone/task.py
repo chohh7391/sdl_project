@@ -904,7 +904,15 @@ class Task(ABC, BaseTask):
         # "clear" swings it to the clearest bearing (loses yaw), "yaw" is the
         # asset's own behaviour, kept for the occlusion sensitivity analysis.
         _tag_mount = os.environ.get("SDL_TAG_MOUNT", "raise").strip()
-        _tag_height = float(os.environ.get("SDL_TAG_HEIGHT", "0.18"))
+        # Per vessel, from perception_manager/config/tag_mount.yaml (which the
+        # fusion's tag->object offset also reads); SDL_TAG_HEIGHT sets both.
+        import yaml as _yaml
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..",
+                               "perception", "perception_manager", "config",
+                               "tag_mount.yaml")) as _fh:
+            _tag_heights = {k: float(v) for k, v in _yaml.safe_load(_fh).items()}
+        if os.environ.get("SDL_TAG_HEIGHT"):
+            _tag_heights = dict.fromkeys(_tag_heights, float(os.environ["SDL_TAG_HEIGHT"]))
         from pxr import Gf, UsdGeom as _UG
         from isaacsim.core.utils.stage import get_current_stage as _gcs
         for _nm in ("beaker", "flask"):
@@ -954,8 +962,8 @@ class Task(ABC, BaseTask):
                     if _tr is not None:
                         _v = _tr.Get()
                         _tr.Set((_v[0], _v[1],
-                                 _v[2] + (_tag_height - _wz)))
-                        _wz = _tag_height
+                                 _v[2] + (_tag_heights[_nm] - _wz)))
+                        _wz = _tag_heights[_nm]
                 elif _tag_mount == "clear":
                     _phi = self._clear_tag_angle(_nm)
                     if _phi is not None and _tr is not None:

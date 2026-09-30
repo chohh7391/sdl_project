@@ -697,12 +697,13 @@ class TAMPServer(Node):
     #: L2's viewpoints, as absolute 6-joint configurations separated by ";",
     #: solved by scripts/trials/solve_scan_poses.py --look for the wrist mount in
     #: perception/perception_manager/config/wrist_camera.yaml: the optical axis
-    #: aimed from 0.38 m at points (0.36|0.60, 0.05|0.25|0.45) on the tag plane
-    #: (z 0.18 m), tilted 37-47 deg from vertical. A camera 0.22 m out from the
-    #: wrist cannot look straight down from high enough to take in the region;
-    #: an oblique view can. Scored by the same script, the six contain both tag
-    #: plates, whole and 20 px inside the frame, on 30/30 evaluated layouts, and
-    #: miss 2 of 2000 fresh draws from the randomizer's distribution (beaker).
+    #: aimed from 0.38 m at points (0.36|0.60, 0.05|0.25|0.45) on the beaker's
+    #: tag plane (z 0.18 m; the flask's plate is at 0.20 m), tilted 37-47 deg
+    #: from vertical. A camera 0.22 m out from the wrist cannot look straight
+    #: down from high enough to take in the region; an oblique view can. Scored
+    #: by the same script, the six contain both tag plates, whole and 20 px
+    #: inside the frame, on 30/30 evaluated layouts, and miss 2 (beaker) and 10
+    #: (flask) of 2000 fresh draws from the randomizer's distribution.
     #: Ordered as a serpentine so consecutive legs are neighbours.
     SCAN_POSES = [
         [float(v) for v in leg.split(",")]

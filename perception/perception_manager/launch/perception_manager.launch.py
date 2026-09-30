@@ -33,6 +33,8 @@ def _setup(context, *args, **kwargs):
     config_file_path = os.path.join(pkg_dir, 'config', 'object_configs.yaml')
     with open(os.path.join(pkg_dir, 'config', 'wrist_camera.yaml')) as fh:
         mount = yaml.safe_load(fh)
+    with open(os.path.join(pkg_dir, 'config', 'tag_mount.yaml')) as fh:
+        tag_heights = yaml.safe_load(fh)
 
     apriltag_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(PathJoinSubstitution([
@@ -53,6 +55,7 @@ def _setup(context, *args, **kwargs):
             config_file_path,
             {"publish_tf": False},
             {"camera_frames": camera_list},
+            {"tag_z_%s" % k: float(v) for k, v in tag_heights.items()},
         ],
     )
     nodes = [apriltag_launch, perception_manager_node]

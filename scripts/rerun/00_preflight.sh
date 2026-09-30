@@ -89,6 +89,8 @@ checks = [
     ("grasp beta max [deg]", round(math.degrees(samplers.BETA_MAX), 6), 18.0),
     ("grasp height bias", samplers.GRASP_H_FRAC, 0.0),
     ("wrist camera", os.environ.get("SDL_WRIST_CAMERA", "1") == "1", True),
+    ("tag plate heights", yaml.safe_load(open(os.path.join(
+        root, "perception/perception_manager/config/tag_mount.yaml"))), {"beaker": 0.18, "flask": 0.2}),
     ("wrist camera mount", [round(v, 5) for v in yaml.safe_load(open(os.path.join(
         root, "perception/perception_manager/config/wrist_camera.yaml")))["xyz"]], [0.0, 0.05038, 0.22]),
     ("transfer entities", get_environment_spec("transfer").entities, ("beaker", "flask", "magnet")),

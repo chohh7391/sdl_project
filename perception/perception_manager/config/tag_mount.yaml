@@ -1,0 +1,14 @@
+# Height of each vessel's AprilTag plate above the bench [m], in ONE place:
+# isaacsim/scripts/standalone/task.py raises the plates to it (SDL_TAG_MOUNT=
+# raise), and perception_manager.launch.py hands it to the fusion, whose
+# tag->object offset depends on it.
+#
+# The plates are 0.1 m squares 0.15 m from their vessel. At one common height
+# two of them could overlap in the same plane: on 2 of the 30 evaluated layouts
+# (seeds 9 and 17) the centres are 86-88 mm apart and the flask's plate was
+# buried in the beaker's -- never rendered, from any viewpoint, which no
+# recovery can fix and no real bench can produce. At different heights one
+# plate covers part of the other instead: a real occlusion, which a view from
+# another side can see past. Since 09-30; the flask's is the one raised.
+beaker: 0.18
+flask: 0.20
