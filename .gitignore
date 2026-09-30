@@ -53,6 +53,8 @@ scripts/trials/logs/**
 # Same size problem as the trial logs above; the CSVs, RUN_INFO.md, the GPU
 # monitor and RESULTS.md beside them are the record and stay tracked.
 _2026__IEEE_Access/revision/analysis/data/rerun/*/logs/
+# ...and those of batches set aside after a fix (<tag>/perception_stale/logs/).
+_2026__IEEE_Access/revision/analysis/data/rerun/*/*/logs/
 
 # --- LLM model weights and archives -----------------------------------------
 # Fine-tuned adapters / tokenizers / optimizer state. Re-obtain from the

@@ -1,0 +1,62 @@
+[2026-09-30 11:34:05] BEGIN transfer_ground_truth_rep0
+[2026-09-30 12:22:06] END   transfer_ground_truth_rep0 (done)
+[2026-09-30 12:22:06] BEGIN move_ground_truth_rep0
+[2026-09-30 12:56:42] END   move_ground_truth_rep0 (done)
+[2026-09-30 12:56:42] BEGIN stir_ground_truth_rep0
+[2026-09-30 13:48:54] END   stir_ground_truth_rep0 (done)
+[2026-09-30 13:48:55] BEGIN transfer_perception_rep0
+[2026-09-30 15:02:44] END   transfer_perception_rep0 (done)
+[2026-09-30 15:02:44] BEGIN move_perception_rep0
+[2026-09-30 16:00:53] END   move_perception_rep0 (done)
+[2026-09-30 16:00:53] BEGIN stir_perception_rep0
+[2026-09-30 17:17:38] END   stir_perception_rep0 (done)
+[2026-09-30 17:17:38] cuTAMP campaign finished
+[2026-09-30 17:17:38] BEGIN pddlstream_transfer_ps0
+[2026-09-30 17:27:52] END   pddlstream_transfer_ps0 (done)
+[2026-09-30 17:27:52] BEGIN pddlstream_move_ps0
+[2026-09-30 17:27:57] END   pddlstream_move_ps0 (done)
+[2026-09-30 17:27:57] BEGIN pddlstream_stir_ps0
+[2026-09-30 17:28:33] END   pddlstream_stir_ps0 (done)
+[2026-09-30 17:28:33] PDDLStream campaign finished
+[2026-09-30 17:28:33] BEGIN llm_xdl_generator
+[2026-09-30 17:30:51] END   llm_xdl_generator (done)
+[2026-09-30 17:30:51] BEGIN llm_ar_heldout_split2400
+[2026-09-30 17:31:44] END   llm_ar_heldout_split2400 (done)
+[2026-09-30 17:31:44] BEGIN llm_ar_unseen_control_in_distribution
+[2026-09-30 17:32:15] END   llm_ar_unseen_control_in_distribution (done)
+[2026-09-30 17:32:15] BEGIN llm_ar_unseen_L1_unseen_class
+[2026-09-30 17:34:10] END   llm_ar_unseen_L1_unseen_class (done)
+[2026-09-30 17:34:10] BEGIN llm_ar_unseen_L2_unseen_layout
+[2026-09-30 17:34:25] END   llm_ar_unseen_L2_unseen_layout (done)
+[2026-09-30 17:34:26] BEGIN llm_ar_unseen_L3_unseen_pair
+[2026-09-30 17:34:51] END   llm_ar_unseen_L3_unseen_pair (done)
+[2026-09-30 17:34:51] LLM experiments finished
+[2026-09-30 17:34:51] campaign rtx5080_20261001f: run_all.sh finished -- read /home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001f/RESULTS.md, audit first
+[2026-09-30 17:36:10] PDDLStream at c2f8bd047208315f51296ff22f1c400aa38030a0 (tag commit 63bb4b0254c64f917b80d22b8d4def613120ed49; only the baseline and the analysis differ)
+[2026-09-30 17:36:10] BEGIN pddlstream_transfer_ps0
+[2026-09-30 18:03:00] END   pddlstream_transfer_ps0 (done)
+[2026-09-30 18:03:00] BEGIN pddlstream_move_ps0
+[2026-09-30 18:03:05] END   pddlstream_move_ps0 (done)
+[2026-09-30 18:03:05] BEGIN pddlstream_stir_ps0
+[2026-09-30 18:04:02] END   pddlstream_stir_ps0 (done)
+[2026-09-30 18:04:02] PDDLStream campaign finished
+[2026-09-30 18:44:47] cuTAMP perception batches at a50f925987928653d640dff4434e089a0b3c2b07 (tag commit 63bb4b0254c64f917b80d22b8d4def613120ed49)
+[2026-09-30 18:44:47] skip transfer_ground_truth_rep0 (complete)
+[2026-09-30 18:44:47] skip move_ground_truth_rep0 (complete)
+[2026-09-30 18:44:47] skip stir_ground_truth_rep0 (complete)
+[2026-09-30 18:44:47] BEGIN transfer_perception_rep0
+[2026-09-30 19:55:38] END   transfer_perception_rep0 (done)
+[2026-09-30 19:55:38] BEGIN move_perception_rep0
+[2026-09-30 20:54:26] END   move_perception_rep0 (done)
+[2026-09-30 20:54:26] BEGIN stir_perception_rep0
+[2026-09-30 22:10:15] END   stir_perception_rep0 (done)
+[2026-09-30 22:10:15] cuTAMP campaign finished
+[2026-09-30 22:11:26] cuTAMP perception batches at a50f925987928653d640dff4434e089a0b3c2b07 (tag commit 63bb4b0254c64f917b80d22b8d4def613120ed49)
+[2026-09-30 22:11:26] skip transfer_ground_truth_rep0 (complete)
+[2026-09-30 22:11:26] skip move_ground_truth_rep0 (complete)
+[2026-09-30 22:11:26] skip stir_ground_truth_rep0 (complete)
+[2026-09-30 22:11:26] skip transfer_perception_rep0 (complete)
+[2026-09-30 22:11:26] BEGIN move_perception_rep0
+[2026-09-30 22:13:24] END   move_perception_rep0 (done)
+[2026-09-30 22:13:24] skip stir_perception_rep0 (complete)
+[2026-09-30 22:13:24] cuTAMP campaign finished

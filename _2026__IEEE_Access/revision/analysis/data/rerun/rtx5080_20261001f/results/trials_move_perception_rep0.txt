@@ -1,0 +1,24 @@
+
+=== move_perception_rep0.csv : 30 trials ===
+  seeds 0..29, 30 distinct
+
+RATES
+  task success                  30/30  = 100.0%  [95% CI  88.6, 100.0]   <- headline [move]: placed upright inside the goal region (no pour step)
+  planning success              30/30  = 100.0%  [95% CI  88.6, 100.0]
+  trajectory ran to completion  30/30  = 100.0%  [95% CI  88.6, 100.0]   (NOT a task-success criterion)
+  box upright after release     30/30  = 100.0%  [95% CI  88.6, 100.0]
+  box inside goal region        30/30  = 100.0%  [95% CI  88.6, 100.0]
+  placement error from goal centre [mm]: n=30 min 3.9  median 13.1  max 20.0
+
+PLANNING
+  time [s]                     n=30  min 9.24  median 9.34  mean 9.37  sd 0.20  max 10.41 
+  time <= 180 s                 30/30  = 100.0%  [95% CI  88.6, 100.0]
+  satisfying particles         n=30  min 666.00  median 704.00  mean 706.67  sd 19.62  max 745.00 
+
+CARRIED-VESSEL TILT (executed, simulator measurement)
+  transport max [deg]          n=30  min 1.16  median 2.21  mean 1.99  sd 0.41  max 2.56 
+  transport <= 5 deg            30/30  = 100.0%  [95% CI  88.6, 100.0]
+  final tilt after release [deg] n=30  min 0.00  median 0.00  mean 0.00  sd 0.00  max 0.00 
+
+FAILURES
+  none recorded

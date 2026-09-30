@@ -1,0 +1,172 @@
+Skipping import of cpp extensions due to incompatible torch version 2.7.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:
+    PyTorch 2.10.0+cu128 with CUDA 1208 (you have 2.7.0+cu128)
+    Python  3.10.19 (you have 3.10.19)
+  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)
+  Memory-efficient attention, SwiGLU, sparse and more won't be available.
+  Set XFORMERS_MORE_DETAILS=1 for more details
+Unsloth 2025.10.8 patched 16 layers with 0 QKV layers, 0 O layers and 0 MLP layers.
+🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+========
+Switching to PyTorch attention since your Xformers is broken.
+========
+
+Unsloth: Xformers was not installed correctly.
+Please install xformers separately first.
+Then confirm if it's correctly installed by running:
+python -m xformers.info
+
+Longer error message:
+xFormers can't load C++/CUDA extensions. xFormers was built for:
+    PyTorch 2.10.0+cu128 with CUDA 1208 (you have 2.7.0+cu128)
+    Python  3.10.19 (you have 3.10.19)
+  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)
+  Memory-efficient attention, SwiGLU, sparse and more won't be available.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+[eval] geometry grounding: off
+[eval] model=/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/model_unseen/checkpoint
+[eval] test =/home/home/sdl_ws/src/sdl_project/LLM/llama/script/experiments/ActionReasoner/dataset/unseen/L3_unseen_pair.jsonl
+Loading model...
+==((====))==  Unsloth 2025.10.8: Fast Llama patching. Transformers: 4.56.2.
+   \\   /|    NVIDIA GeForce RTX 5080. Num GPUs = 1. Max memory: 15.447 GB. Platform: Linux.
+O^O/ \_/ \    Torch: 2.7.0+cu128. CUDA: 12.0. CUDA Toolkit: 12.8. Triton: 3.3.0
+\        /    Bfloat16 = TRUE. FA [Xformers = None. FA2 = False]
+ "-____-"     Free license: http://github.com/unslothai/unsloth
+Unsloth: Fast downloading is enabled - ignore downloading bars which are red colored!
+Model loaded.
+
+Loading test data...
+Test samples: 223
+
+Running evaluation...
+  [50/223] running accuracy: 70.0%
+  [100/223] running accuracy: 62.0%
+  [150/223] running accuracy: 65.3%
+  [200/223] running accuracy: 64.5%
+
+============================================================
+EVALUATION RESULTS
+============================================================
+
+Total: 223, Format errors: 0
+Avg Inference Time: 0.0774s  (median 0.0837s, first query 0.4446s, steady-state mean 0.0758s over 222 queries)
+
+--- Overall Accuracy ---
+  Exact Match:      138/223 (61.9%)
+  Main Tool:        223/223 (100.0%)
+  Need Rearrange:   191/223 (85.7%)
+  Aux Tool:         191/223 (85.7%)
+  Target Grid (category match): 138/223 (61.9%)
+  Target Grid (exact match):    115/223 (51.6%)
+
+--- Accuracy by Category ---
+  no_rearrange: 66/79 (83.5%)
+  rearrange_context: 67/111 (60.4%)
+  rearrange_irrelevant: 5/33 (15.2%)
+
+--- Error Samples (first 10) ---
+
+  [3] Category: rearrange_context
+    Current XDL:     <Add vessel="flask_C" reagent="water" volume="15 mL" />
+    Next XDL:        <HeatChill vessel="beaker_B" temp="20 C" active="true" />
+    Obstacle:        beaker at G9 (blocking)
+    Candidate Grids: heater zone: [G2]
+workspace edge: [G7, G8, G12]
+open area: [G4, G5, G6, G9, G10, G11]
+    GT:   dh3,True,dh3,G8
+    Pred: dh3,True,dh3,G2
+
+  [5] Category: rearrange_context
+    Current XDL:     <Stir vessel="beaker_A" time="20 s" />
+    Next XDL:        <CleanVessel vessel="flask" />
+    Obstacle:        flask at G9 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G8, G12]
+open area: [G2, G4, G5, G6, G9, G10, G11]
+    GT:   dh3,True,dh3,G2
+    Pred: dh3,False,None,None
+
+  [8] Category: rearrange_context
+    Current XDL:     <HeatChill vessel="beaker_C" temp="9 C" active="true" />
+    Next XDL:        <Transfer from_vessel="flask" to_vessel="beaker_A" volume="3 mL" />
+    Obstacle:        beaker_A at G7 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G8]
+open area: [G2, G3, G4, G5, G9, G10, G11]
+    GT:   dh3,True,dh3,G9
+    Pred: dh3,True,dh3,G7
+
+  [9] Category: no_rearrange
+    Current XDL:     <Add vessel="beaker_B" reagent="water" volume="1 mL" />
+    Next XDL:        <HeatChill vessel="beaker" temp="6 C" active="true" />
+    Obstacle:        flask_B at G12
+    Candidate Grids: heater zone: [G2]
+plate zone: [G1]
+workspace edge: [G7, G8]
+open area: [G3, G5, G6, G9, G10]
+    GT:   dh3,False,None,None
+    Pred: dh3,True,dh3,G2
+
+  [12] Category: no_rearrange
+    Current XDL:     <Add vessel="beaker" reagent="water" volume="4 mL" />
+    Next XDL:        <HeatChill vessel="flask_A" temp="3 C" active="true" />
+    Obstacle:        flask_B at G4
+    Candidate Grids: heater zone: [G2]
+plate zone: [G1]
+workspace edge: [G7, G8, G12]
+open area: [G5, G6, G9, G10]
+    GT:   dh3,False,None,None
+    Pred: dh3,True,dh3,G2
+
+  [13] Category: rearrange_irrelevant
+    Current XDL:     <Stir vessel="flask_C" time="4 s" />
+    Next XDL:        <CleanVessel vessel="beaker" />
+    Obstacle:        beaker_C at G11 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G8, G12]
+open area: [G2, G3, G4, G5, G6, G11]
+    GT:   dh3,True,dh3,G12
+    Pred: dh3,False,None,None
+
+  [14] Category: rearrange_irrelevant
+    Current XDL:     <Add vessel="flask_A" reagent="water" volume="5 mL" />
+    Next XDL:        <HeatChill vessel="flask_C" temp="14 C" active="true" />
+    Obstacle:        beaker_B at G9 (blocking)
+    Candidate Grids: heater zone: [G2]
+plate zone: [G1]
+workspace edge: [G7, G12]
+open area: [G3, G5, G6, G9, G10, G11]
+    GT:   dh3,True,dh3,G12
+    Pred: dh3,True,dh3,G2
+
+  [15] Category: no_rearrange
+    Current XDL:     <HeatChill vessel="flask" temp="12 C" active="true" />
+    Next XDL:        <Transfer from_vessel="beaker_C" to_vessel="beaker_A" volume="20 mL" />
+    Obstacle:        flask_B at G11
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G12]
+open area: [G2, G4, G5, G6, G9]
+    GT:   dh3,False,None,None
+    Pred: dh3,True,dh3,G12
+
+  [17] Category: no_rearrange
+    Current XDL:     <HeatChill vessel="beaker_A" temp="16 C" active="true" />
+    Next XDL:        <Transfer from_vessel="beaker_C" to_vessel="beaker_A" volume="16 mL" />
+    Obstacle:        flask_C at G3
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G8]
+open area: [G2, G4, G5, G6, G9, G11]
+    GT:   dh3,False,None,None
+    Pred: dh3,True,dh3,G2
+
+  [26] Category: rearrange_context
+    Current XDL:     <HeatChill vessel="flask_A" temp="18 C" active="true" />
+    Next XDL:        <Transfer from_vessel="flask_C" to_vessel="beaker" volume="19 mL" />
+    Obstacle:        beaker at G7 (blocking)
+    Candidate Grids: plate zone: [G1]
+workspace edge: [G7, G8, G12]
+open area: [G2, G3, G4, G9, G10, G11]
+    GT:   dh3,True,dh3,G2
+    Pred: dh3,True,dh3,G8
+
+Detailed results saved to: /home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001f/llm/ar_unseen_L3_unseen_pair.jsonl
