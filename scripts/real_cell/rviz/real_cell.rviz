@@ -96,15 +96,18 @@ Visualization Manager:
         Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
-    - Class: rviz_default_plugins/Marker
-      Name: Status
+    # No status text in the view (author, 2026-09-29): the only writing is the
+    # beakers' and the standing cameras' names. monitor_node still publishes
+    # /real_cell/status for anyone who adds it back.
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Fixed cell (riser, balance)
       Enabled: true
       Namespaces:
         {}
       Topic:
-        Value: /real_cell/status
+        Value: /real_cell/fixed_scene
         Depth: 1
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
     # Best Effort subscribes to both the reliable and the best-effort image

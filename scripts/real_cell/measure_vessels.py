@@ -63,8 +63,11 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from visualization_msgs.msg import Marker, MarkerArray
 
 MARKER_TOPIC = "/perception/object_markers"
-#: A drawn body older than this does not describe the pose just in.
-MARKER_FRESH_S = 0.5
+#: How long a drawn body's heading stands for the vessel's. The markers share a
+#: depth-1 topic with every other body the pose node draws, so a given pose's
+#: own body is sometimes dropped; a vessel at rest keeps its heading, and one
+#: that turned would also move, which the position spread gate catches.
+MARKER_FRESH_S = 3.0
 
 VISIBILITY_TOPIC = "/perception/object_visibility"
 #: A visibility snapshot older than this says nothing about the pose just in.
@@ -93,6 +96,17 @@ def assess(pts):
     bspread = max(abs((math.degrees(math.atan2(p[4], p[3])) - bearing + 180.0) % 360.0 - 180.0)
                   for p in pts)
     return mx, my, mz, spread, bearing, bspread
+
+
+def usable(pts):
+    """The poses whose bearing can be trusted: the unfolded ones, if there are any.
+
+    Poses that arrived before the pose node's first drawn body for the vessel
+    only have the folded grasp yaw, 180 deg away from the truth half the time;
+    mixed in, they turn a steady bearing into a 180 deg spread.
+    """
+    unfolded = [p for p in pts if p[5]]
+    return unfolded if unfolded else list(pts)
 
 
 def main():
@@ -161,16 +175,16 @@ def main():
                     return
             frames[name].add(msg.header.frame_id)
             seen = heading.get(name)
-            if seen is not None and time.monotonic() - seen[0] <= MARKER_FRESH_S:
+            unfolded = seen is not None and time.monotonic() - seen[0] <= MARKER_FRESH_S
+            if unfolded:
                 ax, ay = math.cos(seen[1]), math.sin(seen[1])
             else:
                 # The grasp orientation: its x axis carries the FOLDED yaw.
-                folded.add(name)
                 q = msg.pose.orientation
                 ax, ay = 1.0 - 2.0 * (q.y * q.y + q.z * q.z), 2.0 * (q.x * q.y + q.w * q.z)
             # The heading's +y (z up), along which the tag lies from the vessel.
             samples[name].append((msg.pose.position.x, msg.pose.position.y,
-                                  msg.pose.position.z, -ay, ax))
+                                  msg.pose.position.z, -ay, ax, unfolded))
         return on_pose
 
     # Subscribed before the poses, so the first pose already has its body.
@@ -197,7 +211,8 @@ def main():
         rclpy.spin_once(node, timeout_sec=0.05)
         if not a.latch:
             continue
-        for name, pts in samples.items():
+        for name in samples:
+            pts = usable(samples[name])
             if name in latched or len(pts) < a.min_samples:
                 continue
             recent = pts[-a.min_samples:]
@@ -215,7 +230,9 @@ def main():
 
     ok, out = True, []
     for name, topic in topics.items():
-        pts = samples[name]
+        pts = usable(samples[name])
+        if pts and not pts[0][5]:
+            folded.add(name)
         if frames[name] - {FRAME}:
             print("%s: poses on %s are in %s, not %s" % (name, topic, sorted(frames[name]), FRAME),
                   file=sys.stderr)

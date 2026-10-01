@@ -19,7 +19,12 @@ the pose node; this node adds what only the plan knows:
                                         and how far each perceived beaker is from
                                         where the plan put it
 
-No object is drawn from the plan or from any preset layout: the objects in
+  /real_cell/fixed_scene   MarkerArray  the cell's FIXED furniture, which is not
+                                        perceived: the riser bar under beaker1
+                                        and the balance under beaker2, as boxes,
+                                        where the planner puts them
+
+No vessel is drawn from the plan or from any preset layout: the beakers in
 rviz are the perceived ones only, and the plan is shown as the path it drives.
 
 The trajectory shown is the one plan_remote.sh last selected: the file stem in
@@ -68,6 +73,40 @@ def colour(rgb, a=1.0):
 RIM_RADIUS = 0.025
 
 
+#: The two-beaker cell's furniture as record_transfer_real.sh plans it (author,
+#: 2026-09-29). It does not move, so it is drawn whether or not a plan is up.
+CELL_ENV = {"SDL_TABLE_Z_M": "-0.013", "SDL_BEAKER_RISER_M": "0.072",
+            "SDL_BEAKER_RISER_XY_M": "0.200", "SDL_BEAKER_RISER_Y_M": "0.070",
+            "SDL_RISER_XY": "0.360,-0.300", "SDL_SCALE_TOP_M": "0.092",
+            "SDL_SCALE_BODY_BEARING_DEG": "180"}
+PAN_XY = (0.520, 0.320)
+FURNITURE_RGBA = (0.62, 0.62, 0.66, 0.55)
+
+
+def fixed_scene(frame, stamp):
+    """The riser bar and the balance, as the planner's boxes (envs/constants.py)."""
+    for key, value in CELL_ENV.items():
+        os.environ.setdefault(key, value)
+    sys.path.insert(0, os.path.join(HERE, "..", "..", "TAMP", "tamp", "src"))
+    from envs import constants as C
+    bench = C.TABLE_Z_OFFSET
+    (sx, sy), syaw = C.scale_pose_from_pan(PAN_XY)
+    boxes = [("riser", C.riser_xy(), 0.0, C.beaker_riser_dims()),
+             ("scale", (sx, sy), syaw, C.scale_dims())]
+    markers = []
+    for k, (name, (x, y), yaw, dims) in enumerate(boxes):
+        m = Marker()
+        m.header.frame_id, m.header.stamp = frame, stamp
+        m.ns, m.id, m.type, m.action = "fixed cell", k, Marker.CUBE, Marker.ADD
+        m.pose.position.x, m.pose.position.y = float(x), float(y)
+        m.pose.position.z = bench + float(dims[2]) / 2.0
+        m.pose.orientation.z, m.pose.orientation.w = math.sin(yaw / 2.0), math.cos(yaw / 2.0)
+        m.scale.x, m.scale.y, m.scale.z = (float(v) for v in dims)
+        m.color = colour(FURNITURE_RGBA[:3], FURNITURE_RGBA[3])
+        markers.append(m)
+    return MarkerArray(markers=markers)
+
+
 def receiver_rim(run_dir):
     """The rim centre plan_remote.sh sends with the pour (REQUEST.env), or None."""
     try:
@@ -101,6 +140,9 @@ class Monitor:
         # so the path and its gripper events travel together.
         self.pub_path = node.create_publisher(MarkerArray, "/real_cell/planned_path", latched)
         self.pub_status = node.create_publisher(Marker, "/real_cell/status", 10)
+        # Latched: an rviz started later still gets the furniture.
+        self.pub_fixed = node.create_publisher(MarkerArray, "/real_cell/fixed_scene", latched)
+        self.pub_fixed.publish(fixed_scene(frame, node.get_clock().now().to_msg()))
         self.current, self.current_mtime = None, None
         self.planned_xy, self.plan_label = {}, "no plan selected yet"
         self.receiver_rim = None
