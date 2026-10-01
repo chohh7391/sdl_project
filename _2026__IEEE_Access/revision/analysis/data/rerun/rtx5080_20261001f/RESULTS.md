@@ -1,8 +1,9 @@
 # 재실험 결과 — `rtx5080_20261001f`
 
-`scripts/rerun/90_analyse.sh`가 2026-09-30 22:13:24에 생성했습니다. 손으로 고치지 말고 다시 생성하세요.
+`scripts/rerun/90_analyse.sh`가 2026-10-01 14:02:42에 생성했습니다. 손으로 고치지 말고 다시 생성하세요.
 환경과 코드는 [RUN_INFO.md](RUN_INFO.md), 절차와 원고 반영 위치는 저장소 루트의 `RERUN.md`에 있습니다.
 인식 상태 배치는 태그 커밋이 아니라 `a50f925987928653d640dff4434e089a0b3c2b07`에서 다시 쟀습니다. 정답 상태 배치는 태그 커밋 그대로입니다(RUN_INFO.md 끝).
+PDDLStream의 인식 상태 실행은 `fb2bca3a745d7e524c3a3ddf2fe4b7f3f5967f66`에서 쟀습니다. 입력은 인식 상태 cuTAMP 시행이 계획에 쓴 위치입니다(RUN_INFO.md 끝).
 PDDLStream은 태그 커밋이 아니라 `c2f8bd047208315f51296ff22f1c400aa38030a0`에서 다시 쟀습니다. 그 사이 바뀐 것은 기준선과 분석뿐입니다(RUN_INFO.md 끝).
 
 > **감사: CLEAN.** 모든 배치가 끝났고, 실행 중 GPU를 공유한 프로세스가 없었고, 논문 scene에서 돌았습니다.
@@ -30,20 +31,26 @@ commit `63bb4b0254c64f917b80d22b8d4def613120ed49`, declared budgets 60,120,180 s
 | llm_ar_unseen_L1_unseen_class | 1 | done | 0.0 h | 2.2 | paper |
 | llm_ar_unseen_L2_unseen_layout | 1 | done | 0.0 h | nan | paper |
 | llm_ar_unseen_L3_unseen_pair | 1 | done | 0.0 h | 2.1 | paper |
+| pddlstream_perception_transfer_ps0 | 1 | done | 0.5 h | 3.0 | paper |
+| pddlstream_perception_move_ps0 | 1 | done | 0.0 h | 1.2 | paper |
+| pddlstream_perception_stir_ps0 | 1 | done | 0.0 h | 1.2 | paper |
 
 ## Trials: completeness and GPU exclusivity
 
 | file | planner seed | layouts | duplicates | missing | trials that shared the GPU |
 |---|---|---|---|---|---|
-| `move_ground_truth_rep0.csv` | - | 30 | - | - | - |
-| `move_perception_rep0.csv` | - | 30 | - | - | - |
-| `stir_ground_truth_rep0.csv` | - | 30 | - | - | - |
-| `stir_perception_rep0.csv` | - | 30 | - | - | - |
-| `transfer_ground_truth_rep0.csv` | - | 30 | - | - | - |
-| `transfer_perception_rep0.csv` | - | 30 | - | - | - |
-| `pddlstream_move_5streams.csv` | 0 | 30 | - | - | - |
-| `pddlstream_stir_5streams.csv` | 0 | 30 | - | - | - |
-| `pddlstream_transfer_5streams.csv` | 0 | 30 | - | - | - |
+| `cutamp/move_ground_truth_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/move_perception_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/stir_ground_truth_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/stir_perception_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/transfer_ground_truth_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/transfer_perception_rep0.csv` | - | 30 | - | - | - |
+| `pddlstream/pddlstream_move_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream/pddlstream_stir_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream/pddlstream_transfer_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream_perception/pddlstream_move_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream_perception/pddlstream_stir_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream_perception/pddlstream_transfer_5streams.csv` | 0 | 30 | - | - | - |
 
 **Verdict: CLEAN**
 
@@ -115,6 +122,136 @@ cuTAMP repetitions [0], PDDLStream planner seeds [0]; paired on [0]. Layouts che
 
 ---
 
+## Planner comparison (cuTAMP vs PDDLStream), perception state
+
+cuTAMP: `/home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001f/cutamp`  
+PDDLStream: `/home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001f/pddlstream_perception`  
+budgets (declared): 60, 120, 180 s
+
+
+## transfer
+
+cuTAMP repetitions [0], PDDLStream planner seeds [0]; paired on [0]. Layouts checked identical on all 30 shared seeds.
+
+- cuTAMP solved-only planning time (n=30): mean 15.88 s, SD 3.36 s, median 15.09 s [IQR 14.83-15.59], range 14.51-33.16 s
+- PDDLStream solved-only planning time (n=21): mean 5.12 s, SD 12.31 s, median 1.37 s [IQR 0.66-3.00], range 0.35-57.20 s
+
+| budget | cuTAMP success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] | PDDLStream success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] |
+|---|---|---|---|---|---|---|
+| 60 s | 30/30 = 100.0% [88.6, 100.0] | 15.9 s | 14.8 / 15.1 / 15.6 | 21/30 = 70.0% [52.1, 83.3] | 21.6 s | 1.0 / 2.7 / NR |
+| 120 s | 30/30 = 100.0% [88.6, 100.0] | 15.9 s | 14.8 / 15.1 / 15.6 | 21/30 = 70.0% [52.1, 83.3] | 39.6 s | 1.0 / 2.7 / NR |
+| 180 s | 30/30 = 100.0% [88.6, 100.0] | 15.9 s | 14.8 / 15.1 / 15.6 | 21/30 = 70.0% [52.1, 83.3] | 57.6 s | 1.0 / 2.7 / NR |
+
+| budget | pairing | cuTAMP | PDDLStream | cuTAMP-only | PDDLStream-only | exact McNemar p |
+|---|---|---|---|---|---|---|
+| 60 s | rep 0 vs seed 0 | 30/30 | 21/30 | 9 | 0 | 0.00391 |
+| 120 s | rep 0 vs seed 0 | 30/30 | 21/30 | 9 | 0 | 0.00391 |
+| 180 s | rep 0 vs seed 0 | 30/30 | 21/30 | 9 | 0 | 0.00391 |
+
+## move
+
+cuTAMP repetitions [0], PDDLStream planner seeds [0]; paired on [0]. Layouts checked identical on all 30 shared seeds.
+
+- cuTAMP solved-only planning time (n=30): mean 9.37 s, SD 0.20 s, median 9.34 s [IQR 9.30-9.37], range 9.24-10.41 s
+- PDDLStream solved-only planning time (n=30): mean 0.11 s, SD 0.10 s, median 0.08 s [IQR 0.06-0.10], range 0.05-0.60 s
+
+| budget | cuTAMP success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] | PDDLStream success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] |
+|---|---|---|---|---|---|---|
+| 60 s | 30/30 = 100.0% [88.6, 100.0] | 9.4 s | 9.3 / 9.3 / 9.4 | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 0.1 / 0.1 / 0.1 |
+| 120 s | 30/30 = 100.0% [88.6, 100.0] | 9.4 s | 9.3 / 9.3 / 9.4 | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 0.1 / 0.1 / 0.1 |
+| 180 s | 30/30 = 100.0% [88.6, 100.0] | 9.4 s | 9.3 / 9.3 / 9.4 | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 0.1 / 0.1 / 0.1 |
+
+| budget | pairing | cuTAMP | PDDLStream | cuTAMP-only | PDDLStream-only | exact McNemar p |
+|---|---|---|---|---|---|---|
+| 60 s | rep 0 vs seed 0 | 30/30 | 30/30 | 0 | 0 | 1 |
+| 120 s | rep 0 vs seed 0 | 30/30 | 30/30 | 0 | 0 | 1 |
+| 180 s | rep 0 vs seed 0 | 30/30 | 30/30 | 0 | 0 | 1 |
+
+## stir
+
+cuTAMP repetitions [0], PDDLStream planner seeds [0]; paired on [0]. Layouts checked identical on all 30 shared seeds.
+
+- cuTAMP solved-only planning time (n=30): mean 12.98 s, SD 2.01 s, median 12.46 s [IQR 12.28-12.58], range 12.12-20.83 s
+- PDDLStream solved-only planning time (n=30): mean 1.44 s, SD 1.70 s, median 0.82 s [IQR 0.50-1.80], range 0.31-8.75 s
+
+| budget | cuTAMP success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] | PDDLStream success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] |
+|---|---|---|---|---|---|---|
+| 60 s | 30/30 = 100.0% [88.6, 100.0] | 13.0 s | 12.3 / 12.5 / 12.6 | 30/30 = 100.0% [88.6, 100.0] | 1.4 s | 0.5 / 0.8 / 1.9 |
+| 120 s | 30/30 = 100.0% [88.6, 100.0] | 13.0 s | 12.3 / 12.5 / 12.6 | 30/30 = 100.0% [88.6, 100.0] | 1.4 s | 0.5 / 0.8 / 1.9 |
+| 180 s | 30/30 = 100.0% [88.6, 100.0] | 13.0 s | 12.3 / 12.5 / 12.6 | 30/30 = 100.0% [88.6, 100.0] | 1.4 s | 0.5 / 0.8 / 1.9 |
+
+| budget | pairing | cuTAMP | PDDLStream | cuTAMP-only | PDDLStream-only | exact McNemar p |
+|---|---|---|---|---|---|---|
+| 60 s | rep 0 vs seed 0 | 30/30 | 30/30 | 0 | 0 | 1 |
+| 120 s | rep 0 vs seed 0 | 30/30 | 30/30 | 0 | 0 | 1 |
+| 180 s | rep 0 vs seed 0 | 30/30 | 30/30 | 0 | 0 | 1 |
+
+---
+
+## PDDLStream: ground-truth state vs perception state
+
+Same layouts, same planner seeds; the perception state gives the planner the beaker and flask poses (x, y, yaw) cuTAMP's perception trial planned from. Planning only.
+
+
+## transfer
+
+| budget | planner seed | ground truth [Wilson 95%] | RMST | perception [Wilson 95%] | RMST | ground truth only | perception only | exact McNemar p |
+|---|---|---|---|---|---|---|---|---|
+| 60 s | 0 | 22/30 = 73.3% [55.6, 85.8] | 21.3 s | 21/30 = 70.0% [52.1, 83.3] | 21.6 s | 3 [12, 13, 19] | 2 [2, 24] | 1 |
+| 120 s | 0 | 22/30 = 73.3% [55.6, 85.8] | 37.3 s | 21/30 = 70.0% [52.1, 83.3] | 39.6 s | 3 [12, 13, 19] | 2 [2, 24] | 1 |
+| 180 s | 0 | 22/30 = 73.3% [55.6, 85.8] | 53.3 s | 21/30 = 70.0% [52.1, 83.3] | 57.6 s | 3 [12, 13, 19] | 2 [2, 24] | 1 |
+
+ground truth: solved-only planning time median 0.97 s (n=22); not planned: no_plan_within_budget 8
+
+perception: solved-only planning time median 1.37 s (n=21); not planned: no_plan_within_budget 9
+
+Perceived input (from the perception rows):
+
+| vessel | from the fixed cameras | from the wrist recovery | shift from the layout [mm] median / max |
+|---|---|---|---|
+| beaker | 29 | 1 | 3.0 / 6.8 |
+| flask | 30 | 0 | 2.4 / 5.5 |
+
+## move
+
+| budget | planner seed | ground truth [Wilson 95%] | RMST | perception [Wilson 95%] | RMST | ground truth only | perception only | exact McNemar p |
+|---|---|---|---|---|---|---|---|---|
+| 60 s | 0 | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 0 | 0 | 1 |
+| 120 s | 0 | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 0 | 0 | 1 |
+| 180 s | 0 | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 30/30 = 100.0% [88.6, 100.0] | 0.1 s | 0 | 0 | 1 |
+
+ground truth: solved-only planning time median 0.08 s (n=30)
+
+perception: solved-only planning time median 0.08 s (n=30)
+
+Perceived input (from the perception rows):
+
+| vessel | from the fixed cameras | from the wrist recovery | shift from the layout [mm] median / max |
+|---|---|---|---|
+| beaker | 29 | 1 | 2.7 / 6.9 |
+| flask | 30 | 0 | 2.4 / 5.2 |
+
+## stir
+
+| budget | planner seed | ground truth [Wilson 95%] | RMST | perception [Wilson 95%] | RMST | ground truth only | perception only | exact McNemar p |
+|---|---|---|---|---|---|---|---|---|
+| 60 s | 0 | 30/30 = 100.0% [88.6, 100.0] | 1.8 s | 30/30 = 100.0% [88.6, 100.0] | 1.4 s | 0 | 0 | 1 |
+| 120 s | 0 | 30/30 = 100.0% [88.6, 100.0] | 1.8 s | 30/30 = 100.0% [88.6, 100.0] | 1.4 s | 0 | 0 | 1 |
+| 180 s | 0 | 30/30 = 100.0% [88.6, 100.0] | 1.8 s | 30/30 = 100.0% [88.6, 100.0] | 1.4 s | 0 | 0 | 1 |
+
+ground truth: solved-only planning time median 0.83 s (n=30)
+
+perception: solved-only planning time median 0.82 s (n=30)
+
+Perceived input (from the perception rows):
+
+| vessel | from the fixed cameras | from the wrist recovery | shift from the layout [mm] median / max |
+|---|---|---|---|
+| beaker | 29 | 1 | 2.7 / 6.9 |
+| flask | 30 | 0 | 2.2 / 5.7 |
+
+---
+
 ### cuTAMP planning calls: restarts and cuRobo candidates
 
 Per trial, from its tamp_server log. `attempts` = optimizations run; `candidate` = which satisfying particle cuRobo planned in the successful attempt (1 = the best, the only one tried before candidates were added). Times are the driver's wall clock, solved trials only -- success rates and censored times are in the planner comparison.
@@ -183,7 +320,7 @@ candidates cuRobo could not plan, all trials: 28
 Per trial, from its CSV. `attempts` = solve() calls within the limit; each restart puts the scene back and draws a fresh sample stream.
 
 
-### pddlstream, move (30 trials, restart 1)
+### pddlstream, move, ground_truth (30 trials, restart 1)
 
 | attempts | planned | not planned | solved-only time min / median / max [s] |
 |---|---|---|---|
@@ -192,7 +329,7 @@ Per trial, from its CSV. `attempts` = solve() calls within the limit; each resta
 solved by the first solve() alone: 30/30; solved only after a restart: 0
 the same tag's run without restarts (pddlstream_no_restart/): 30/30 planned
 
-### pddlstream, stir (30 trials, restart 1)
+### pddlstream, stir, ground_truth (30 trials, restart 1)
 
 | attempts | planned | not planned | solved-only time min / median / max [s] |
 |---|---|---|---|
@@ -203,7 +340,7 @@ the same tag's run without restarts (pddlstream_no_restart/): 30/30 planned
 solved by the first solve() alone: 20/30; solved only after a restart: 10
 the same tag's run without restarts (pddlstream_no_restart/): 23/30 planned
 
-### pddlstream, transfer (30 trials, restart 1)
+### pddlstream, transfer, ground_truth (30 trials, restart 1)
 
 | attempts | planned | not planned | solved-only time min / median / max [s] |
 |---|---|---|---|
@@ -214,6 +351,35 @@ the same tag's run without restarts (pddlstream_no_restart/): 23/30 planned
 solved by the first solve() alone: 20/30; solved only after a restart: 2
 not planned, by reason: no_plan_within_budget 8
 the same tag's run without restarts (pddlstream_no_restart/): 20/30 planned
+
+### pddlstream, move, perception (30 trials, restart 1)
+
+| attempts | planned | not planned | solved-only time min / median / max [s] |
+|---|---|---|---|
+| 1 | 30 | 0 | 0.0 / 0.1 / 0.6 |
+
+solved by the first solve() alone: 30/30; solved only after a restart: 0
+
+### pddlstream, stir, perception (30 trials, restart 1)
+
+| attempts | planned | not planned | solved-only time min / median / max [s] |
+|---|---|---|---|
+| 1 | 22 | 0 | 0.3 / 0.6 / 1.9 |
+| 2 | 7 | 0 | 1.6 / 2.7 / 4.3 |
+| 3-9 | 1 | 0 | 8.7 / 8.7 / 8.7 |
+
+solved by the first solve() alone: 22/30; solved only after a restart: 8
+
+### pddlstream, transfer, perception (30 trials, restart 1)
+
+| attempts | planned | not planned | solved-only time min / median / max [s] |
+|---|---|---|---|
+| 1 | 18 | 7 | 0.4 / 1.2 / 57.2 |
+| 2 | 3 | 1 | 3.0 / 6.5 / 12.8 |
+| 3-9 | 0 | 1 | -- |
+
+solved by the first solve() alone: 18/30; solved only after a restart: 3
+not planned, by reason: no_plan_within_budget 9
 
 ---
 

@@ -66,7 +66,7 @@ candidates cuRobo could not plan, all trials: 28
 Per trial, from its CSV. `attempts` = solve() calls within the limit; each restart puts the scene back and draws a fresh sample stream.
 
 
-## pddlstream, move (30 trials, restart 1)
+## pddlstream, move, ground_truth (30 trials, restart 1)
 
 | attempts | planned | not planned | solved-only time min / median / max [s] |
 |---|---|---|---|
@@ -75,7 +75,7 @@ Per trial, from its CSV. `attempts` = solve() calls within the limit; each resta
 solved by the first solve() alone: 30/30; solved only after a restart: 0
 the same tag's run without restarts (pddlstream_no_restart/): 30/30 planned
 
-## pddlstream, stir (30 trials, restart 1)
+## pddlstream, stir, ground_truth (30 trials, restart 1)
 
 | attempts | planned | not planned | solved-only time min / median / max [s] |
 |---|---|---|---|
@@ -86,7 +86,7 @@ the same tag's run without restarts (pddlstream_no_restart/): 30/30 planned
 solved by the first solve() alone: 20/30; solved only after a restart: 10
 the same tag's run without restarts (pddlstream_no_restart/): 23/30 planned
 
-## pddlstream, transfer (30 trials, restart 1)
+## pddlstream, transfer, ground_truth (30 trials, restart 1)
 
 | attempts | planned | not planned | solved-only time min / median / max [s] |
 |---|---|---|---|
@@ -97,3 +97,32 @@ the same tag's run without restarts (pddlstream_no_restart/): 23/30 planned
 solved by the first solve() alone: 20/30; solved only after a restart: 2
 not planned, by reason: no_plan_within_budget 8
 the same tag's run without restarts (pddlstream_no_restart/): 20/30 planned
+
+## pddlstream, move, perception (30 trials, restart 1)
+
+| attempts | planned | not planned | solved-only time min / median / max [s] |
+|---|---|---|---|
+| 1 | 30 | 0 | 0.0 / 0.1 / 0.6 |
+
+solved by the first solve() alone: 30/30; solved only after a restart: 0
+
+## pddlstream, stir, perception (30 trials, restart 1)
+
+| attempts | planned | not planned | solved-only time min / median / max [s] |
+|---|---|---|---|
+| 1 | 22 | 0 | 0.3 / 0.6 / 1.9 |
+| 2 | 7 | 0 | 1.6 / 2.7 / 4.3 |
+| 3-9 | 1 | 0 | 8.7 / 8.7 / 8.7 |
+
+solved by the first solve() alone: 22/30; solved only after a restart: 8
+
+## pddlstream, transfer, perception (30 trials, restart 1)
+
+| attempts | planned | not planned | solved-only time min / median / max [s] |
+|---|---|---|---|
+| 1 | 18 | 7 | 0.4 / 1.2 / 57.2 |
+| 2 | 3 | 1 | 3.0 / 6.5 / 12.8 |
+| 3-9 | 0 | 1 | -- |
+
+solved by the first solve() alone: 18/30; solved only after a restart: 3
+not planned, by reason: no_plan_within_budget 9

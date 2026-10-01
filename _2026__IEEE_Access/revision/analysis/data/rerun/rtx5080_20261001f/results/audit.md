@@ -21,19 +21,25 @@ commit `63bb4b0254c64f917b80d22b8d4def613120ed49`, declared budgets 60,120,180 s
 | llm_ar_unseen_L1_unseen_class | 1 | done | 0.0 h | 2.2 | paper |
 | llm_ar_unseen_L2_unseen_layout | 1 | done | 0.0 h | nan | paper |
 | llm_ar_unseen_L3_unseen_pair | 1 | done | 0.0 h | 2.1 | paper |
+| pddlstream_perception_transfer_ps0 | 1 | done | 0.5 h | 3.0 | paper |
+| pddlstream_perception_move_ps0 | 1 | done | 0.0 h | 1.2 | paper |
+| pddlstream_perception_stir_ps0 | 1 | done | 0.0 h | 1.2 | paper |
 
 ## Trials: completeness and GPU exclusivity
 
 | file | planner seed | layouts | duplicates | missing | trials that shared the GPU |
 |---|---|---|---|---|---|
-| `move_ground_truth_rep0.csv` | - | 30 | - | - | - |
-| `move_perception_rep0.csv` | - | 30 | - | - | - |
-| `stir_ground_truth_rep0.csv` | - | 30 | - | - | - |
-| `stir_perception_rep0.csv` | - | 30 | - | - | - |
-| `transfer_ground_truth_rep0.csv` | - | 30 | - | - | - |
-| `transfer_perception_rep0.csv` | - | 30 | - | - | - |
-| `pddlstream_move_5streams.csv` | 0 | 30 | - | - | - |
-| `pddlstream_stir_5streams.csv` | 0 | 30 | - | - | - |
-| `pddlstream_transfer_5streams.csv` | 0 | 30 | - | - | - |
+| `cutamp/move_ground_truth_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/move_perception_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/stir_ground_truth_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/stir_perception_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/transfer_ground_truth_rep0.csv` | - | 30 | - | - | - |
+| `cutamp/transfer_perception_rep0.csv` | - | 30 | - | - | - |
+| `pddlstream/pddlstream_move_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream/pddlstream_stir_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream/pddlstream_transfer_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream_perception/pddlstream_move_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream_perception/pddlstream_stir_5streams.csv` | 0 | 30 | - | - | - |
+| `pddlstream_perception/pddlstream_transfer_5streams.csv` | 0 | 30 | - | - | - |
 
 **Verdict: CLEAN**

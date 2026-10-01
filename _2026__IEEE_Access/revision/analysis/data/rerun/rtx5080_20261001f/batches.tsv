@@ -20,3 +20,6 @@ transfer_perception_rep0	1790761487	1790765738	done
 move_perception_rep0	1790765738	1790769266	done
 stir_perception_rep0	1790769266	1790773815	done
 move_perception_rep0	1790773886	1790774004	done
+pddlstream_perception_transfer_ps0	1790829102	1790830841	done
+pddlstream_perception_move_ps0	1790830841	1790830846	done
+pddlstream_perception_stir_ps0	1790830846	1790830892	done
