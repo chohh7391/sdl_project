@@ -69,7 +69,7 @@ run_batch() {   # task robot state_source rep
   rr_batch_begin "$name"
   SDL_STATE_SOURCE="$src" PLANNER_SEED_OFFSET="$((rep * 1000))" CSV="$csv" \
     TASK="$task" ROBOT="$robot" LOGDIR="$logs" PLAN_TIMEOUT="${RERUN_PLAN_TIMEOUT:-600}" PLAN_BUDGET_S="$MAXB" \
-    bash "$RR_ROOT/scripts/run_trials.sh" $missing > "$RR_OUT/logs/${name}.out" 2>&1
+    bash "$RR_ROOT/scripts/run_trials.sh" $missing >> "$RR_OUT/logs/${name}.out" 2>&1
   local status=done
   rr_check_complete "$csv" 30 || status=incomplete
   rr_check_scene_logs "$logs" || status=scene_contaminated

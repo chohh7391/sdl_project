@@ -2,10 +2,13 @@
 """Paired cuTAMP vs PDDLStream comparison over REPEATED runs, per budget.
 
 Inputs (one directory each):
-  cuTAMP      <task>_ground_truth_rep<r>.csv   30 layouts per file, one file per
-              repetition r = 0, 1, 2, ... (scripts/trials/trial_driver.py rows)
+  cuTAMP      <task>_<state>_rep<r>.csv   30 layouts per file, one file per
+              repetition r = 0, 1, 2, ... (scripts/trials/trial_driver.py rows);
+              --state ground_truth (default) or perception
   PDDLStream  pddlstream_<task>_5streams.csv   30 layouts x N planner seeds, the
-              seed in the `planner_seed` column (run_paired_trials.py rows)
+              seed in the `planner_seed` column (run_paired_trials.py rows); for
+              the perception state, the directory 20_pddlstream.sh wrote with
+              RERUN_PDDL_STATE=perception (pddlstream_perception/)
 
 Pairing: cuTAMP repetition r is paired with PDDLStream planner seed r on the
 same 30 layouts, for every r both planners have. Each exact McNemar test is
@@ -44,10 +47,10 @@ def _truthy(v):
     return str(v).strip() in ("1", "True", "true")
 
 
-def load_cutamp_reps(d, task):
-    """{rep: {seed: (ok, t)}} from <task>_ground_truth_rep<r>.csv."""
+def load_cutamp_reps(d, task, state="ground_truth"):
+    """{rep: {seed: (ok, t)}} from <task>_<state>_rep<r>.csv."""
     reps = {}
-    for f in sorted(glob.glob(os.path.join(d, "%s_ground_truth_rep*.csv" % task))):
+    for f in sorted(glob.glob(os.path.join(d, "%s_%s_rep*.csv" % (task, state)))):
         m = re.search(r"_rep(\d+)\.csv$", f)
         if not m:
             continue
@@ -104,7 +107,7 @@ def layouts(paths):
     return out
 
 
-def check_same_layouts(task, cu_dir, pd_dir):
+def check_same_layouts(task, cu_dir, pd_dir, state="ground_truth"):
     """Refuse to pair planners that did not see the same scenes.
 
     The pairing is only meaningful if layout s is the same scene for both: the
@@ -112,9 +115,16 @@ def check_same_layouts(task, cu_dir, pd_dir):
     randomizer (or to anything its overlap test depends on) would silently pair
     different scenes. Both runners record where the vessels were, so compare.
     """
-    cu = layouts(sorted(glob.glob(os.path.join(cu_dir, "%s_ground_truth_rep*.csv" % task))))
-    pd = layouts([os.path.join(pd_dir, "pddlstream_%s_5streams.csv" % task)])
+    cu = layouts(sorted(glob.glob(os.path.join(cu_dir, "%s_%s_rep*.csv" % (task, state)))))
+    pd_file = os.path.join(pd_dir, "pddlstream_%s_5streams.csv" % task)
+    pd = layouts([pd_file])
     bad = []
+    if state != "ground_truth":
+        # ...and the baseline was given the state of THIS cuTAMP state's trials
+        for r in csv.DictReader(open(pd_file)):
+            if r.get("state_source", "ground_truth") != state:
+                bad.append("seed %s: PDDLStream row is from the %s state"
+                           % (r["seed"], r.get("state_source") or "ground_truth"))
     for s in sorted(set(cu) & set(pd)):
         for i, name in enumerate(("beaker", "flask")):
             a, b = cu[s][i], pd[s][i]
@@ -174,18 +184,21 @@ def main():
     ap.add_argument("--budgets", default="60,120,180",
                     help="comma-separated wall-clock budgets [s], DECLARED before the run")
     ap.add_argument("--tasks", default="transfer,move,stir")
+    ap.add_argument("--state", default="ground_truth", choices=("ground_truth", "perception"),
+                    help="which cuTAMP state to pair; PDDLStream rows must be from the same")
     ap.add_argument("--out", default=None, help="also write the report here (markdown)")
     a = ap.parse_args()
     budgets = [float(b) for b in a.budgets.split(",") if b.strip()]
 
     lines = []
     say = lines.append
-    say("# Planner comparison (cuTAMP vs PDDLStream)\n")
+    say("# Planner comparison (cuTAMP vs PDDLStream)%s\n"
+        % ("" if a.state == "ground_truth" else ", %s state" % a.state))
     say("cuTAMP: `%s`  \nPDDLStream: `%s`  \nbudgets (declared): %s s\n"
         % (a.cutamp, a.pddlstream, ", ".join("%.0f" % b for b in budgets)))
 
     for task in [t.strip() for t in a.tasks.split(",") if t.strip()]:
-        cu = load_cutamp_reps(a.cutamp, task)
+        cu = load_cutamp_reps(a.cutamp, task, a.state)
         pd = load_pddl_streams(a.pddlstream, task)
         say("\n## %s\n" % task)
         if not cu or not pd:
@@ -193,7 +206,7 @@ def main():
                 % (len(cu), len(pd)))
             continue
         pairs = sorted(set(cu) & set(pd))
-        n_same = check_same_layouts(task, a.cutamp, a.pddlstream)
+        n_same = check_same_layouts(task, a.cutamp, a.pddlstream, a.state)
         say("cuTAMP repetitions %s, PDDLStream planner seeds %s; paired on %s. "
             "Layouts checked identical on all %d shared seeds.\n"
             % (sorted(cu), sorted(pd), pairs, n_same))

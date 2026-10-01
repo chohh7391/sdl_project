@@ -250,6 +250,15 @@ PDDLStream도 같은 방식으로 재시작합니다(2026-09-30).
 - 첫 `solve()`는 전과 같은 스트림을 씁니다. `first_attempt_success` 열이 재시작 없는 판정입니다. 다만 PDDLStream은 같은 시드에서도 실행마다 판정이 달라서(`PYTHONHASHSEED`를 고정해도 마찬가지), 이 열이 예전 캠페인 행과 일치하지는 않습니다.
 - 플래너 예외는 재시작하지 않고 `planner_error`로 남깁니다.
 - `RERUN_PDDL_RESTART=0`이면 예전처럼 시행당 `solve()` 한 번입니다(`20261001c`, `20261001e`).
+- **인식 상태의 PDDLStream (`RERUN_PDDL_STATE=perception`, 2026-10-01):**
+  - 각 레이아웃에서, 인식 상태 cuTAMP 시행이 계획에 쓴 비커·플라스크 위치를 그 시행의 로그(`[perception]` 보고)에서 꺼냅니다.
+  - 꺼낸 값은 `export_perceived_layouts.py`가 레이아웃 파일 형식으로 `pddlstream_perception/perceived_layouts_<task>.json`에 씁니다.
+  - 레이아웃에 더하는 것은 인식 위치와 시뮬레이터 위치의 차이(x, y, yaw)입니다.
+  - 높이는 정답 상태 실행처럼 테이블 위에 올려놓은 값이라, 인식 높이 오차는 PDDLStream에 들어가지 않습니다. cuTAMP는 인식 높이를 쓰고, 두 상태 모두 10 mm(`PLANNER_Z_LIFT`)를 띄워 계획합니다.
+  - 행은 `pddlstream_perception/`에 쌓입니다. `beaker_xy`/`flask_xy`는 레이아웃 값 그대로라 cuTAMP와 짝을 맞춰 볼 수 있고, 인식값은 `perc_*` 열에 남습니다.
+  - `planner_comparison.py --state perception`(인식 상태의 cuTAMP 대 PDDLStream)과 `pddlstream_state.py`(PDDLStream의 정답 대 인식)가 `RESULTS.md`에 들어갑니다.
+  - 커밋 확인의 기준은 인식 배치의 커밋(`PERCEPTION_COMMIT`)입니다. 측정한 커밋은 `PDDL_PERCEPTION_COMMIT`에 남깁니다.
+- 배치 콘솔 출력(`logs/<배치>.out`)은 이제 덮어쓰지 않고 이어 씁니다(10·20 단계).
 - 기준선만 나중 커밋에서 다시 잴 때는 `RERUN_ALLOW_COMMIT_CHANGE=1`로 같은 태그에 씁니다. 태그 커밋 이후 기준선·캠페인 스크립트·분석 외의 파일이 바뀌었으면 거부합니다. 그 커밋은 `PDDL_COMMIT`와 `RUN_INFO.md` 끝에 남습니다.
 
 폭 기준 **도구 선택 규칙**(09-14, `tool_rule.py`)은 실행 경로에 연결된 스위치가 아니라 분석 결과입니다. 시뮬레이션 시행은 작업마다 로봇을 고정하므로 영향이 없고, LLM 단계가 이 규칙을 같은 정답 라벨과 대조한 결과를 따로 냅니다. 원고에 "학습 대신 계산"으로 쓸지는 저자 결정입니다.

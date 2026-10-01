@@ -24,6 +24,10 @@ PyBullet allows, the scene cuTAMP planned in:
   same restarts        a failed solve() is restarted with fresh samples
                        until the budget is spent, as cuTAMP's harness restarts
                        a failed round (see RESTART_STREAM_STRIDE)
+  same state           --layouts: the exported layouts (the ground-truth
+                       state), or the vessel poses cuTAMP's perception trial
+                       of the same layout planned from
+                       (analysis/export_perceived_layouts.py)
 
 What still differs is inherent to the baseline and belongs in the write-up:
 PyBullet against Isaac Sim for collision and stability, and PDDLStream's
@@ -327,8 +331,15 @@ def run_seed(layout, max_time, max_iterations, opt):
            "first_attempt_success": 0,
            "first_attempt_time_s": float("nan")}
     objs = layout["objects"]
-    row["beaker_xy"] = "%.4f;%.4f" % tuple(objs["beaker"]["xy"])
-    row["flask_xy"] = "%.4f;%.4f" % tuple(objs["flask"]["xy"])
+    # beaker_xy/flask_xy are the LAYOUT's, which the pairing with cuTAMP's rows
+    # is checked on. In the perception state the planner is given the poses
+    # cuTAMP's perception trial planned from instead
+    # (analysis/export_perceived_layouts.py), recorded beside them.
+    for v in ("beaker", "flask"):
+        row["%s_xy" % v] = "%.4f;%.4f" % tuple(objs[v].get("gt_xy", objs[v]["xy"]))
+        if "gt_xy" in objs[v]:
+            row["perc_%s_xy" % v] = "%.4f;%.4f" % tuple(objs[v]["xy"])
+            row["perc_%s_source" % v] = layout.get("perception", {}).get(v, {}).get("source", "")
     connect(use_gui=False)
     try:
         w, make = _make_problem(task, layout, opt)
@@ -407,19 +418,24 @@ def main():
 
     data = json.load(open(os.path.abspath(a.layouts)))
     layouts = data["layouts"]
+    # "perception" for a file written by analysis/export_perceived_layouts.py
+    state_source = data.get("state_source", "ground_truth")
     if a.seeds:
         want = {int(v) for v in a.seeds.replace(",", " ").split()}
         layouts = [l for l in layouts if l["seed"] in want]
-    print("pddlstream baseline: task=%s %d seeds, budget %.0f s, tool=%s, %s"
-          % (a.task, len(layouts), a.max_time,
-             os.path.basename(TASK_URDF[a.task]),
-             "one solve per layout" if a.no_restart
-             else "restarts until the budget is spent"))
+    print("pddlstream baseline: task=%s %d seeds, budget %.0f s, tool=%s, %s, "
+          "%s state" % (a.task, len(layouts), a.max_time,
+                        os.path.basename(TASK_URDF[a.task]),
+                        "one solve per layout" if a.no_restart
+                        else "restarts until the budget is spent", state_source))
 
     fields = ["timestamp", "seed", "task", "planner", "robot", "plan_success",
               "planning_time_s", "failure_reason", "beaker_xy", "flask_xy",
               "max_time_s", "planner_seed", "restart", "attempts",
               "first_attempt_success", "first_attempt_time_s"]
+    if state_source != "ground_truth":
+        fields += ["state_source", "perc_beaker_xy", "perc_flask_xy",
+                   "perc_beaker_source", "perc_flask_source"]
     new = not os.path.exists(a.csv) or os.path.getsize(a.csv) == 0
     if not new:
         # rows are appended; a file started with the other column set would
@@ -441,6 +457,8 @@ def main():
                         "max_time_s": a.max_time,
                         "planner_seed": a.planner_seed,
                         "restart": int(opt["restart"])})
+            if state_source != "ground_truth":
+                row["state_source"] = state_source
             wr.writerow(row)
             fh.flush()
             print("seed %-3d success=%d time=%.2fs attempts=%d %s"

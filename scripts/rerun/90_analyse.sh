@@ -15,6 +15,17 @@ python3 "$A/planner_comparison.py" --cutamp "$RR_OUT/cutamp" --pddlstream "$RR_O
   --budgets "$BUDGETS" --out "$RES/planner.md" > /dev/null 2> "$RES/planner.err" \
   || echo "planner comparison failed: $(cat "$RES/planner.err")" > "$RES/planner.md"
 
+# The same comparison in the perception state, and PDDLStream's own two states,
+# once 20_pddlstream.sh has run with RERUN_PDDL_STATE=perception.
+if [[ -d "$RR_OUT/pddlstream_perception" ]]; then
+  python3 "$A/planner_comparison.py" --state perception --cutamp "$RR_OUT/cutamp" \
+    --pddlstream "$RR_OUT/pddlstream_perception" --budgets "$BUDGETS" \
+    --out "$RES/planner_perception.md" > /dev/null 2> "$RES/planner_perception.err" \
+    || echo "planner comparison (perception) failed: $(cat "$RES/planner_perception.err")" > "$RES/planner_perception.md"
+  python3 "$A/pddlstream_state.py" "$RR_OUT" --budgets "$BUDGETS" --out "$RES/pddlstream_state.md" > /dev/null 2>&1 \
+    || echo "PDDLStream state report failed" > "$RES/pddlstream_state.md"
+fi
+
 python3 "$A/planner_attempts.py" "$RR_OUT" --out "$RES/attempts.md" > /dev/null 2>&1 \
   || echo "attempt report failed" > "$RES/attempts.md"
 
@@ -65,6 +76,9 @@ L="$RR_OUT/llm"
   if [[ -f "$RR_OUT/PERCEPTION_COMMIT" ]]; then
     echo "인식 상태 배치는 태그 커밋이 아니라 \`$(cat "$RR_OUT/PERCEPTION_COMMIT")\`에서 다시 쟀습니다. 정답 상태 배치는 태그 커밋 그대로입니다(RUN_INFO.md 끝)."
   fi
+  if [[ -f "$RR_OUT/PDDL_PERCEPTION_COMMIT" ]]; then
+    echo "PDDLStream의 인식 상태 실행은 \`$(cat "$RR_OUT/PDDL_PERCEPTION_COMMIT")\`에서 쟀습니다. 입력은 인식 상태 cuTAMP 시행이 계획에 쓴 위치입니다(RUN_INFO.md 끝)."
+  fi
   if [[ -f "$RR_OUT/PDDL_COMMIT" ]]; then
     echo "PDDLStream은 태그 커밋이 아니라 \`$(cat "$RR_OUT/PDDL_COMMIT")\`에서 다시 쟀습니다. 그 사이 바뀐 것은 기준선과 분석뿐입니다(RUN_INFO.md 끝)."
   fi
@@ -79,6 +93,12 @@ L="$RR_OUT/llm"
   echo; echo "---"; echo
   sed 's/^# /## /' "$RES/planner.md"
   echo; echo "---"; echo
+  if [[ -f "$RES/planner_perception.md" ]]; then
+    sed 's/^# /## /' "$RES/planner_perception.md"
+    echo; echo "---"; echo
+    sed 's/^# /## /' "$RES/pddlstream_state.md"
+    echo; echo "---"; echo
+  fi
   sed 's/^# /## /; s/^## /### /' "$RES/attempts.md"
   echo; echo "---"; echo
   echo "## End-to-end Transfer: 정답 상태 vs 인식 상태"

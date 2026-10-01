@@ -162,7 +162,7 @@ def main():
     say("| file | planner seed | layouts | duplicates | missing | trials that shared the GPU |")
     say("|---|---|---|---|---|---|")
     to_drop = {}
-    for sub, pddl in (("cutamp", False), ("pddlstream", True)):
+    for sub, pddl in (("cutamp", False), ("pddlstream", True), ("pddlstream_perception", True)):
         for f in sorted(glob.glob(os.path.join(d, sub, "*.csv"))):
             rows = list(csv.DictReader(open(f)))
             groups = collections.defaultdict(list)

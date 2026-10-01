@@ -74,15 +74,16 @@ def _bin(lo, hi):
 
 def pddl_section(campaign):
     out = []
-    d = os.path.join(campaign, "pddlstream")
-    for f in sorted(glob.glob(os.path.join(d, "pddlstream_*_5streams.csv"))):
+    files = [(f, "ground_truth") for f in sorted(glob.glob(os.path.join(campaign, "pddlstream", "pddlstream_*_5streams.csv")))]
+    files += [(f, "perception") for f in sorted(glob.glob(os.path.join(campaign, "pddlstream_perception", "pddlstream_*_5streams.csv")))]
+    for f, state in files:
         task = os.path.basename(f).split("_")[1]
         rows = list(csv.DictReader(open(f)))
         if not rows or "attempts" not in rows[0]:
             continue
         ok = lambda r: str(r["plan_success"]).strip() in ("1", "True", "true")
         restart = sorted({r.get("restart", "") for r in rows})
-        out.append("\n## pddlstream, %s (%d trials, restart %s)\n" % (task, len(rows), "/".join(restart)))
+        out.append("\n## pddlstream, %s, %s (%d trials, restart %s)\n" % (task, state, len(rows), "/".join(restart)))
         out.append("| attempts | planned | not planned | solved-only time min / median / max [s] |")
         out.append("|---|---|---|---|")
         for lo, hi in ATTEMPT_BINS:
@@ -100,7 +101,7 @@ def pddl_section(campaign):
         if reasons:
             out.append("not planned, by reason: " + ", ".join("%s %d" % kv for kv in sorted(reasons.items())))
         ref = os.path.join(campaign, "pddlstream_no_restart", os.path.basename(f))
-        if os.path.exists(ref):
+        if state == "ground_truth" and os.path.exists(ref):
             rr = list(csv.DictReader(open(ref)))
             out.append("the same tag's run without restarts (pddlstream_no_restart/): %d/%d planned"
                        % (sum(ok(r) for r in rr), len(rr)))
