@@ -48,8 +48,10 @@
 각 줄은 별도 터미널. ROS 환경은 `source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash`.
 
 ```bash
-# 로봇 (시작하면 그리퍼가 자동으로 열린다 — 잡고 있는 비커를 받칠 것)
-ros2 launch cho_bringup_fr5 bringup_real_robot.launch.py        # MoveIt 홈 이동이 필요하면 bringup_real_moveit
+# 로봇 + MoveIt (시작하면 그리퍼가 자동으로 열린다 — 잡고 있는 비커를 받칠 것).
+# 재생 시작 자세와 recovery 시작 home은 기본으로 MoveIt이 계획한다 (2026-09-30).
+# MoveIt 없이 bringup_real_robot을 쓰면 plan_remote에 --home-via direct를 준다.
+ros2 launch cho_bringup_fr5 bringup_real_moveit.launch.py
 ros2 launch cho_bringup_fr5 camera_extrinsics.launch.py
 
 # 카메라: D435 두 대는 stream:=both (태그용 infra1 848x480@30 그대로 + 보기용 컬러 640x480@15)
@@ -80,7 +82,7 @@ tag 0/1은 `vessel_detect.yaml`·`pour_vessel.yaml`과 겹치므로 **테이블�
 
 ```bash
 cd ~/sdl_ws/src/sdl_project
-scripts/real_cell/plan_remote.sh --perceive --beakers --recover beaker1 --material granular --grams 10 --home-via direct --replay 0 1 2
+scripts/real_cell/plan_remote.sh --perceive --beakers --recover beaker1 --material granular --grams 10 --replay 0 1 2
 ```
 
 (설탕이면 `granular`, 물이면 `liquid`. 뒤의 숫자는 플래닝 seed 목록. `--recover beaker1`은 standing 카메라가 값을
@@ -114,7 +116,11 @@ scripts/real_cell/plan_remote.sh --perceive --beakers --recover beaker1 --materi
      벗어난 궤적은 버린다. 재생용 cell layout(`*_cell.yaml`)도 만든다.
 4. **재생 전 검사** — `check_replay.py`가 재생 트리를 오프라인으로 만든다(명령 없음). 걸리는 것:
    layout gate, 붓기 splice, 속도 한계에 따른 시간 늘리기.
-5. **재생** — `trajectory_replay`를 실행한다. 궤적 중 `pouring` 구간은 재생하지 않는다.
+5. **재생** — 두 비커 셀에서 붓기가 있으면 `cho_task_manager`의 `beaker_transfer` task를 실행한다(2026-09-30).
+   플래닝이 정한 것만 한다: 입력은 `transfer_plan:=<run>/deliver/traj_realcell_seed<N>` 하나이고, 궤적·cell layout·
+   붓는 대상(`*_cell.yaml`의 `pour:` 블록: beaker2 rim, beaker1 바닥 중심, 제자리에 놓기)을 그 plan 파일에서 읽는다.
+   붓는 양과 물질(`replay_pour_grams`, `replay_pour_material`)만 따로 준다. 그 밖의 경우는 `trajectory_replay`.
+   궤적 중 `pouring` 구간은 재생하지 않는다.
    그 구간은 `pouring_controller`가 저울 무게로 붓고(`--material`, `--grams`), 붓기 시작 자세로 돌아온 다음
    남은 궤적을 이어서 재생한다.
    - **붓는 대상 위치는 인식값이다.** beaker2의 인식 바닥 중심 (x, y, z)에 높이 70 mm(`BEAKER2_HEIGHT_M`)를

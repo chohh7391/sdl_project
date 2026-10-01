@@ -62,7 +62,8 @@
 #   --grams G                    -> replay_pour_grams
 #   --flow-index F               -> replay_pour_flow_index, 0 (water, dry sugar) .. 1
 # Without --material the recorded pour is replayed as recorded, weighing nothing.
-#   --home-via moveit|direct     how the arm is taken to the recording's start pose:
+#   --home-via moveit|direct     how the arm is taken to the recording's start pose,
+#                                and to home at the start of a recovery sweep:
 #                                moveit (default, collision-checked) needs
 #                                bringup_real_moveit; direct is a straight joint move
 # Before anything moves, check_replay.py builds the replay tree offline, so a
@@ -210,7 +211,7 @@ PY
     mpid=$!
     (ros_env && exec timeout "${RECOVERY_WAIT_S:-360}" ros2 launch cho_task_manager \
         run_task_manager.launch.py task:=occlusion_recovery robot_type:=fr5 \
-        "vessel_table:=$CHO_TABLE" "sweep_config:=$rsweep") >> "$rlog" 2>&1
+        "vessel_table:=$CHO_TABLE" "sweep_config:=$rsweep" "home_via:=$HOME_VIA") >> "$rlog" 2>&1
     echo "recovery tree: $(grep -a -o 'Task finished with status: [A-Za-z.]*' "$rlog" | tail -1)" \
       "(log $rlog)"
     for _ in $(seq 1 10); do kill -0 "$mpid" 2>/dev/null || break; sleep 1; done
@@ -427,6 +428,17 @@ for meta_path in sorted(glob.glob(os.path.join(run, "deliver", "*.meta.json"))):
         lines.append("  %s:\n    xy: [%.4f, %.4f]" % (name, x, y))
         if name not in ("beaker", "flask", "beaker2") and lay[name].get("yaw_deg") is not None:
             lines.append("    yaw_deg: %.1f" % lay[name]["yaw_deg"])
+    # The pour the plan was made for, where cho_task_manager's beaker_transfer
+    # reads it: beaker2's rim and beaker1's bottom centre as perception gave them
+    # to the planner, and beaker1 set back where it was taken from.
+    rim, marker = asked.get("RECEIVER_RIM", ""), asked.get("GRASP_MARKER", "")
+    if target == "beaker2" and rim and marker:
+        lines += ["# The pour this plan was made for (REQUEST.env): beaker2's rim centre and",
+                  "# beaker1's bottom centre as perception measured them, base_link, m.",
+                  "pour:",
+                  "  receiver_rim: [%s]" % ", ".join(v.strip() for v in rim.split(",")),
+                  "  grasp_marker: [%s]" % ", ".join(v.strip() for v in marker.split(",")),
+                  "  put_back: start"]
     open(base + "_cell.yaml", "w").write("\n".join(lines) + "\n")
     ok.append(re.search(r"seed(\d+)$", base).group(1))
 # score_real_trajectories.py prints the accepted seeds best (smallest lip error) first
@@ -444,24 +456,45 @@ echo
 echo "=== ready: $CSV"
 echo "the physical objects must stand here (base_link, m):"
 awk '/^  [a-z]/ { keep = /^  (beaker|beaker2|riser|flask|scale|tag_beaker|tag_beaker2):/ } keep' "$CELL"
+# The two-beaker cell's own task when it pours: beaker_transfer reads the
+# trajectory, the cell and the pour target from the plan's files.
+TRANSFER=""
+[[ -n "$MATERIAL" && $TARGET == beaker2 ]] && grep -q '^pour:' "$CELL" && TRANSFER=1
+if [[ -n "$TRANSFER" ]]; then
+  LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=beaker_transfer robot_type:=fr5
+          "transfer_plan:=${CSV%.csv}" "replay_pour_material:=$MATERIAL" "replay_pour_grams:=$GRAMS")
+  [[ -n "$FLOW" ]] && LAUNCH+=("replay_pour_flow_index:=$FLOW")
+  echo "pour: $GRAMS g of $MATERIAL by weight, handed to the pouring controller, into the rim at ($RECEIVER)"
+else
 LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=trajectory_replay robot_type:=fr5
         "replay_trajectory:=$CSV" "replay_meta:=$META" "replay_layout:=$CELL")
 if [[ -n "$MATERIAL" ]]; then
   LAUNCH+=("replay_pour_material:=$MATERIAL" "replay_pour_grams:=$GRAMS"
            "replay_pour_receiver:=$RECEIVER")
   [[ -n "$GRASP_MARKER" ]] && LAUNCH+=("replay_pour_grasp_marker:=$GRASP_MARKER")
+  # The two-beaker transfer sets beaker1 back where it took it from, so the pose
+  # node holds the pose it had (the wrist's, if a recovery measured it) again
+  # rather than believing whatever a standing camera makes of its tag next.
+  PUT_BACK=elsewhere; [[ $TARGET == beaker2 ]] && PUT_BACK=start
+  LAUNCH+=("replay_pour_put_back:=$PUT_BACK")
   [[ -n "$FLOW" ]] && LAUNCH+=("replay_pour_flow_index:=$FLOW")
   echo "pour: $GRAMS g of $MATERIAL by weight, handed to the pouring controller, into the rim at ($RECEIVER)"
 else
   echo "pour: replayed as recorded (no --material), nothing is weighed"
+fi
 fi
 LAUNCH+=("home_via:=$HOME_VIA" ${REPLAY_ARGS:-})
 # Build the replay tree here, without ticking it: whatever cho_task_manager
 # refuses at build time (layout gate, pour splice, velocity limits) is refused
 # before anyone is asked to stand back from the arm.
 check=(python3 "$ROOT/scripts/real_cell/check_replay.py" "${CSV%.csv}" --home-via "$HOME_VIA")
-[[ -n "$MATERIAL" ]] && check+=(--grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}"
-                                --receiver "$RECEIVER" --grasp-marker "$GRASP_MARKER")
+if [[ -n "$TRANSFER" ]]; then
+  check+=(--transfer --grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}")
+elif [[ -n "$MATERIAL" ]]; then
+  check+=(--grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}"
+          --receiver "$RECEIVER" --grasp-marker "$GRASP_MARKER"
+          --put-back "$([[ $TARGET == beaker2 ]] && echo start || echo elsewhere)")
+fi
 (set +u; source /opt/ros/humble/setup.bash && source "$CHO_WS/install/setup.bash" && cd /tmp && "${check[@]}") \
   || die "the replay tree does not build for this trajectory (see above); nothing moved"
 echo

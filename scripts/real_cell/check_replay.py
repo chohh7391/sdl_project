@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Build the FR5 trajectory_replay tree for a fetched trajectory, without moving.
+"""Build the FR5 replay tree for a fetched trajectory, without moving.
 
     check_replay.py BASE [--grams G --material liquid|granular [--flow-index F]
                           --receiver X,Y,Z [--grasp-marker X,Y,Z]] [--home-via moveit|direct]
+    check_replay.py BASE --transfer --grams G --material M [--flow-index F] [--home-via ...]
+
+The first form builds trajectory_replay from the pour given here. --transfer
+builds beaker_transfer instead, the two-beaker cell's task, which takes the pour
+target from the plan's own BASE_cell.yaml -- the tree plan_remote.sh launches.
 
 BASE is a deliver/ file stem (BASE.csv, BASE.meta.json, BASE_cell.yaml). The
 tree is BUILT and never ticked, so nothing is sent to the robot, but everything
@@ -29,27 +34,39 @@ def main():
                     help="the receiver's rim centre x,y,z (base_link, m); required with a pour")
     ap.add_argument("--grasp-marker", default="",
                     help="beaker1's perceived bottom centre x,y,z, the grasp's marker")
+    ap.add_argument("--put-back", default="elsewhere",
+                    help="where the poured vessel is set down: start or elsewhere")
     ap.add_argument("--home-via", default="moveit")
+    ap.add_argument("--transfer", action="store_true",
+                    help="build beaker_transfer: the pour target from BASE_cell.yaml")
     a = ap.parse_args()
 
     config = load_robot_config("fr5")
-    config.update({"replay_trajectory": a.base + ".csv",
-                   "replay_meta": a.base + ".meta.json",
-                   "replay_layout": a.base + "_cell.yaml",
-                   "home_via": a.home_via})
-    if a.grams > 0:
-        config.update({"replay_pour_grams": a.grams, "replay_pour_material": a.material,
-                       "replay_pour_flow_index": a.flow_index,
-                       "replay_pour_receiver": a.receiver,
-                       "replay_pour_grasp_marker": a.grasp_marker})
+    config["home_via"] = a.home_via
+    if a.transfer:
+        task = "beaker_transfer"
+        config.update({"transfer_plan": a.base, "replay_pour_grams": a.grams,
+                       "replay_pour_material": a.material,
+                       "replay_pour_flow_index": a.flow_index})
+    else:
+        task = "trajectory_replay"
+        config.update({"replay_trajectory": a.base + ".csv",
+                       "replay_meta": a.base + ".meta.json",
+                       "replay_layout": a.base + "_cell.yaml"})
+        if a.grams > 0:
+            config.update({"replay_pour_grams": a.grams, "replay_pour_material": a.material,
+                           "replay_pour_flow_index": a.flow_index,
+                           "replay_pour_receiver": a.receiver,
+                           "replay_pour_grasp_marker": a.grasp_marker,
+                           "replay_pour_put_back": a.put_back})
     try:
-        tree = build_task_tree("trajectory_replay", config)
+        tree = build_task_tree(task, config)
     except Exception as err:   # RecordingRejected, LayoutMismatch, ValueError
         print("replay REFUSED: %s: %s" % (type(err).__name__, err), file=sys.stderr)
         return 1
     summary = getattr(tree, "replay_summary", {}) or {}
-    print("replay tree builds: home via %s, clock x%.2f"
-          % (summary.get("home_via", a.home_via), float(summary.get("time_scale", 1.0))))
+    print("%s tree builds: home via %s, clock x%.2f"
+          % (task, summary.get("home_via", a.home_via), float(summary.get("time_scale", 1.0))))
     for seg in summary.get("segments", []):
         print("   %s" % seg)
     pour = summary.get("pour")
