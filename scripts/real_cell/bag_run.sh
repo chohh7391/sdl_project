@@ -18,7 +18,8 @@
 #   scripts/real_cell/bag_run.sh LABEL --perceive --beakers ... (no --replay)
 #   BAG_DIR=<that directory> scripts/real_cell/bag_run.sh LABEL --fetch RUN ... --replay
 #
-# A --fetch run records one bag, 2_replay, from its start.
+# A --fetch run records one bag, 2_replay, from its start; a --measure-only run
+# (a grasp trial's measurement after the release) one bag, 3_measure.
 #
 # What goes in is what a render needs and nothing it can recompute: every
 # detector's own image (so a tag outline lands exactly on its tag), the
@@ -35,6 +36,7 @@ FIRST=1_perceive
 REPLAYS=""
 for arg in "$@"; do
   [[ $arg == --fetch ]] && FIRST=2_replay
+  [[ $arg == --measure-only ]] && FIRST=3_measure
   [[ $arg == --replay ]] && REPLAYS=1
 done
 LOG=$OUT/plan_remote_${FIRST%%_*}.log
@@ -82,7 +84,7 @@ trap 'stop_bag' EXIT
 start_bag "$FIRST"
 "$ROOT/scripts/real_cell/plan_remote.sh" "$@" > "$LOG" 2>&1 &
 RUN_PID=$!
-phase=perceive; [[ $FIRST == 2_replay ]] && phase=replay
+phase=perceive; [[ $FIRST == 1_perceive ]] || phase=replay
 while kill -0 "$RUN_PID" 2>/dev/null; do
   if [[ $phase == perceive ]] && grep -a -q "^=== planning on" "$LOG"; then
     stop_bag; phase=planning

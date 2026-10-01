@@ -39,11 +39,20 @@ def main():
     ap.add_argument("--home-via", default="moveit")
     ap.add_argument("--transfer", action="store_true",
                     help="build beaker_transfer: the pour target from BASE_cell.yaml")
+    ap.add_argument("--grasp-only", action="store_true",
+                    help="build grasp_trial: the plan's grasp of beaker1 and nothing else")
+    ap.add_argument("--repeat", type=int, default=1,
+                    help="pours made at the pour start, one trial after another")
     a = ap.parse_args()
 
     config = load_robot_config("fr5")
     config["home_via"] = a.home_via
-    if a.transfer:
+    if a.repeat != 1:
+        config["replay_pour_repeat"] = a.repeat
+    if a.grasp_only:
+        task = "grasp_trial"
+        config["transfer_plan"] = a.base
+    elif a.transfer:
         task = "beaker_transfer"
         config.update({"transfer_plan": a.base, "replay_pour_grams": a.grams,
                        "replay_pour_material": a.material,
@@ -64,9 +73,15 @@ def main():
     except Exception as err:   # RecordingRejected, LayoutMismatch, ValueError
         print("replay REFUSED: %s: %s" % (type(err).__name__, err), file=sys.stderr)
         return 1
+    if a.grasp_only:
+        g = tree.grasp_summary
+        print("grasp_trial tree builds: home via %s, clock x%.2f, reach %.1f s recorded"
+              % (a.home_via, g["time_scale"], g["reach_s"]))
+        return 0
     summary = getattr(tree, "replay_summary", {}) or {}
-    print("%s tree builds: home via %s, clock x%.2f"
-          % (task, summary.get("home_via", a.home_via), float(summary.get("time_scale", 1.0))))
+    print("%s tree builds: home via %s, clock x%.2f%s"
+          % (task, summary.get("home_via", a.home_via), float(summary.get("time_scale", 1.0)),
+             ", %d pours" % summary["pour_repeat"] if summary.get("pour_repeat", 1) > 1 else ""))
     for seg in summary.get("segments", []):
         print("   %s" % seg)
     pour = summary.get("pour")

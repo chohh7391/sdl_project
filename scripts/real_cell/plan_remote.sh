@@ -11,6 +11,15 @@
 #   moves (the author, 2026-09-29); --confirm brings the yes/N prompts back.
 #   --use-seed N replays seed N instead of the best-scored one; it has to be one
 #   of the accepted seeds (e.g. when the best one passes close to a camera).
+#   --grasp-only replays only the plan's grasp of beaker1 (task grasp_trial:
+#   reach, close, check the jaws stopped on it, open, back off, home), for a
+#   perception-to-grasp trial series; no --material is needed.
+#   --measure-only perceives (and recovers, with --recover) and stops there:
+#   no planning. Run after a --grasp-only replay it measures where the jaws
+#   left beaker1.
+#   --repeat N pours N times at the pour start, one trial after another, for a
+#   pour's statistics; each pour after the first waits for the operator's go:
+#   scripts/real_cell/next_trial.sh (ros2 topic pub --once /real_cell/trial_go).
 #
 # What runs where:
 #   remote  record_transfer_real.sh (headless Isaac Sim + tamp_server, one trial
@@ -122,7 +131,7 @@ die() { echo "plan_remote: $*" >&2; status "STOPPED: ${1%%$'\n'*}"; exit 1; }
 BEAKER="" BEAKER_Z="" FLASK="" BEAKER2="" BEAKER2_Z="" RECEIVER="" GRASP_MARKER=""
 PLATE1="" PLATE2="" TARGET=flask PERCEIVE=0
 MATERIAL="" GRAMS="" FLOW="" HOME_VIA=moveit RECOVER=1
-MODE=new STAMP="" REPLAY=0 YES=1 SEEDS=() FORCE_RECOVER=() USE_SEED=
+MODE=new STAMP="" REPLAY=0 YES=1 SEEDS=() FORCE_RECOVER=() USE_SEED= REPEAT=1 GRASP_ONLY=0 MEASURE_ONLY=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --beaker|--beaker1|--beaker2|--receiver)
@@ -142,6 +151,10 @@ while [[ $# -gt 0 ]]; do
     --attach) MODE=attach STAMP="${2:?--attach RUN_ID}"; shift 2 ;;
     --fetch)  MODE=fetch  STAMP="${2:?--fetch RUN_ID}"; shift 2 ;;
     --replay) REPLAY=1; shift ;;
+    --grasp-only) GRASP_ONLY=1; shift ;;
+    --measure-only) MEASURE_ONLY=1; shift ;;
+    --repeat)   REPEAT="${2:?--repeat N}"; shift 2
+                [[ $REPEAT =~ ^[1-9][0-9]*$ ]] || die "--repeat must be a whole number of pours, 1 or more: $REPEAT" ;;
     --use-seed) USE_SEED="${2:?--use-seed N}"; shift 2
                 [[ $USE_SEED =~ ^[0-9]+$ ]] || die "--use-seed must be an integer: $USE_SEED" ;;
     --yes)    YES=1; shift ;;
@@ -232,6 +245,13 @@ PY
       beaker2) BEAKER2="$x,$y"; BEAKER2_Z="$z"; [[ -n "$PLATE2" ]] || PLATE2="$bearing" ;;
     esac
   done <<< "$(grep -E '^beaker[12] ' <<< "$measured")"
+fi
+if [[ $MEASURE_ONLY == 1 ]]; then
+  [[ $PERCEIVE == 1 ]] || die "--measure-only measures: give --perceive"
+  echo "=== measured: beaker1 ${BEAKER:-not seen} z ${BEAKER_Z:--} plate ${PLATE1:--} deg;" \
+       "beaker2 ${BEAKER2:-not seen} z ${BEAKER2_Z:--} plate ${PLATE2:--} deg"
+  status "measured, not planned (--measure-only)"
+  exit 0
 fi
 if [[ $MODE == new ]]; then
   [[ $PERCEIVE == 1 ]] || die "the beakers' positions come from perception only: use --perceive"
@@ -472,7 +492,12 @@ awk '/^  [a-z]/ { keep = /^  (beaker|beaker2|riser|flask|scale|tag_beaker|tag_be
 # trajectory, the cell and the pour target from the plan's files.
 TRANSFER=""
 [[ -n "$MATERIAL" && $TARGET == beaker2 ]] && grep -q '^pour:' "$CELL" && TRANSFER=1
-if [[ -n "$TRANSFER" ]]; then
+if [[ $GRASP_ONLY == 1 ]]; then
+  [[ -z "$MATERIAL" && $REPEAT == 1 ]] || die "--grasp-only grasps and lets go; it pours nothing (no --material, --repeat)"
+  LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=grasp_trial robot_type:=fr5
+          "transfer_plan:=${CSV%.csv}")
+  echo "grasp only: reach, close on beaker1, check, open, back off, home"
+elif [[ -n "$TRANSFER" ]]; then
   LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=beaker_transfer robot_type:=fr5
           "transfer_plan:=${CSV%.csv}" "replay_pour_material:=$MATERIAL" "replay_pour_grams:=$GRAMS")
   [[ -n "$FLOW" ]] && LAUNCH+=("replay_pour_flow_index:=$FLOW")
@@ -496,11 +521,19 @@ else
 fi
 fi
 LAUNCH+=("home_via:=$HOME_VIA" ${REPLAY_ARGS:-})
+if [[ $REPEAT != 1 ]]; then
+  [[ -n "$MATERIAL" ]] || die "--repeat $REPEAT repeats a pour, and there is none without --material"
+  LAUNCH+=("replay_pour_repeat:=$REPEAT")
+  echo "pour: $REPEAT trials, each after the first on scripts/real_cell/next_trial.sh"
+fi
 # Build the replay tree here, without ticking it: whatever cho_task_manager
 # refuses at build time (layout gate, pour splice, velocity limits) is refused
 # before anyone is asked to stand back from the arm.
-check=(python3 "$ROOT/scripts/real_cell/check_replay.py" "${CSV%.csv}" --home-via "$HOME_VIA")
-if [[ -n "$TRANSFER" ]]; then
+check=(python3 "$ROOT/scripts/real_cell/check_replay.py" "${CSV%.csv}" --home-via "$HOME_VIA"
+       --repeat "$REPEAT")
+if [[ $GRASP_ONLY == 1 ]]; then
+  check+=(--grasp-only)
+elif [[ -n "$TRANSFER" ]]; then
   check+=(--transfer --grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}")
 elif [[ -n "$MATERIAL" ]]; then
   check+=(--grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}"
