@@ -9,6 +9,8 @@
 #   scripts/real_cell/plan_remote.sh --fetch  20260929-141203     # a finished run: copy + check only
 #   add --replay to also launch trajectory_replay here. Nothing asks before the arm
 #   moves (the author, 2026-09-29); --confirm brings the yes/N prompts back.
+#   --use-seed N replays seed N instead of the best-scored one; it has to be one
+#   of the accepted seeds (e.g. when the best one passes close to a camera).
 #
 # What runs where:
 #   remote  record_transfer_real.sh (headless Isaac Sim + tamp_server, one trial
@@ -120,7 +122,7 @@ die() { echo "plan_remote: $*" >&2; status "STOPPED: ${1%%$'\n'*}"; exit 1; }
 BEAKER="" BEAKER_Z="" FLASK="" BEAKER2="" BEAKER2_Z="" RECEIVER="" GRASP_MARKER=""
 PLATE1="" PLATE2="" TARGET=flask PERCEIVE=0
 MATERIAL="" GRAMS="" FLOW="" HOME_VIA=moveit RECOVER=1
-MODE=new STAMP="" REPLAY=0 YES=1 SEEDS=() FORCE_RECOVER=()
+MODE=new STAMP="" REPLAY=0 YES=1 SEEDS=() FORCE_RECOVER=() USE_SEED=
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --beaker|--beaker1|--beaker2|--receiver)
@@ -140,6 +142,8 @@ while [[ $# -gt 0 ]]; do
     --attach) MODE=attach STAMP="${2:?--attach RUN_ID}"; shift 2 ;;
     --fetch)  MODE=fetch  STAMP="${2:?--fetch RUN_ID}"; shift 2 ;;
     --replay) REPLAY=1; shift ;;
+    --use-seed) USE_SEED="${2:?--use-seed N}"; shift 2
+                [[ $USE_SEED =~ ^[0-9]+$ ]] || die "--use-seed must be an integer: $USE_SEED" ;;
     --yes)    YES=1; shift ;;
     --confirm) YES=0; shift ;;
     -h|--help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
@@ -379,7 +383,7 @@ compgen -G "$LOCAL/deliver/*.csv" >/dev/null || die "no trajectory was accepted;
 $(grep -A40 '^seed ' "$LOCAL/remote.log" 2>/dev/null | head -40)"
 
 status "fetched run $STAMP; checking the trajectories against the request"
-BEST="$(python3 - "$LOCAL" "$MATCH_TOL_M" <<'PY'
+BEST="$(python3 - "$LOCAL" "$MATCH_TOL_M" "$USE_SEED" <<'PY'
 """Check each meta against the positions the run was asked to plan for, and write
 the cell layout the replay gate compares it with."""
 import glob, json, math, os, re, sys
@@ -445,6 +449,14 @@ for meta_path in sorted(glob.glob(os.path.join(run, "deliver", "*.meta.json"))):
 m = re.search(r"best first: (.*)", open(os.path.join(run, "remote.log"), errors="ignore").read())
 order = re.findall(r"seed (\d+)", m.group(1)) if m else []
 best = next((s for s in order if s in ok), ok[0] if ok else "")
+use = sys.argv[3] if len(sys.argv) > 3 else ""
+if use:
+    if use not in ok:
+        sys.exit("--use-seed %s: not an accepted seed (accepted: %s)" % (use, ", ".join(ok) or "none"))
+    if use != best:
+        print("replaying seed %s as asked (--use-seed), not the best-scored seed %s" % (use, best),
+              file=sys.stderr)
+    best = use
 print(best)
 PY
 )" || die "checking the trajectories failed"
