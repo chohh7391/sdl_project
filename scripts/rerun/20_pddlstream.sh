@@ -47,7 +47,7 @@ if [[ "$HEAD_NOW" != "$BASE" ]]; then
   [[ -z "$OTHER" ]] || rr_die "HEAD changes more than the baseline since $BASE: $(echo $OTHER)"
   # The campaign records under data/rerun/ change during a run (rerun.log, the
   # CSVs, RESULTS.md); they are outputs, not the code the commit describes.
-  [[ -z "$(git -C "$RR_ROOT" status --porcelain --untracked-files=no -- . ':!_2026__IEEE_Access/revision/analysis/data/rerun')" ]] \
+  [[ -z "$(git -C "$RR_ROOT" status --porcelain --untracked-files=no -- . ':(exclude)_2026__IEEE_Access/revision/analysis/data/rerun')" ]] \
     || rr_die "uncommitted changes; the baseline's commit would not describe its code"
   if [[ "$(cat "$RR_OUT/$COMMIT_FILE" 2>/dev/null)" != "$HEAD_NOW" ]]; then
     echo "$HEAD_NOW" > "$RR_OUT/$COMMIT_FILE"

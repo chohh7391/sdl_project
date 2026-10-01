@@ -177,8 +177,8 @@ def main():
                 miss = sorted(set(range(30)) - set(c))
                 fl = sorted(int(seed) for _, seed, p, _ in flags if (p or "") == ps)
                 clean &= not dup and not miss and not fl
-                say("| `%s` | %s | %d | %s | %s | %s |"
-                    % (os.path.basename(f), ps or "-", len(c), dup or "-", miss or "-",
+                say("| `%s/%s` | %s | %d | %s | %s | %s |"
+                    % (sub, os.path.basename(f), ps or "-", len(c), dup or "-", miss or "-",
                        ("**%s**" % fl) if fl else "-"))
             for _, seed, ps, what in flags[:2]:
                 say("|  | foreign process near seed %s: `%s` | | | | |" % (seed, what))

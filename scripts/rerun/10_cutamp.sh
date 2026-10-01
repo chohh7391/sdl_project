@@ -31,7 +31,7 @@ if [[ "$HEAD_NOW" != "$BASE" ]]; then
   [[ -z "$OTHER" ]] || rr_die "HEAD changes more than the perception path since $BASE: $(echo $OTHER)"
   # The campaign records under data/rerun/ change during a run (rerun.log, the
   # CSVs, RESULTS.md); they are outputs, not the code the commit describes.
-  [[ -z "$(git -C "$RR_ROOT" status --porcelain --untracked-files=no -- . ':!_2026__IEEE_Access/revision/analysis/data/rerun')" ]] \
+  [[ -z "$(git -C "$RR_ROOT" status --porcelain --untracked-files=no -- . ':(exclude)_2026__IEEE_Access/revision/analysis/data/rerun')" ]] \
     || rr_die "uncommitted changes; the batches' commit would not describe their code"
   COMMIT_CHANGED=1
   if [[ "$(cat "$RR_OUT/PERCEPTION_COMMIT" 2>/dev/null)" != "$HEAD_NOW" ]]; then
