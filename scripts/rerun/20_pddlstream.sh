@@ -43,9 +43,11 @@ if [[ "$HEAD_NOW" != "$BASE" ]]; then
   # Everything else the tag holds was measured at $BASE, so only the baseline,
   # the campaign scripts and the analysis may have changed since.
   OTHER="$(git -C "$RR_ROOT" diff --name-only "$BASE" "$HEAD_NOW" \
-    | grep -vE '^(experiments/pddlstream/|scripts/rerun/|_2026__IEEE_Access/revision/analysis/[^/]+\.py$|RERUN\.md$)' || true)"
+    | grep -vE '^(experiments/pddlstream/|scripts/rerun/|_2026__IEEE_Access/revision/analysis/[^/]+\.py$|_2026__IEEE_Access/revision/analysis/data/rerun/|RERUN\.md$|\.gitignore$)' || true)"
   [[ -z "$OTHER" ]] || rr_die "HEAD changes more than the baseline since $BASE: $(echo $OTHER)"
-  [[ -z "$(git -C "$RR_ROOT" status --porcelain --untracked-files=no -- .)" ]] \
+  # The campaign records under data/rerun/ change during a run (rerun.log, the
+  # CSVs, RESULTS.md); they are outputs, not the code the commit describes.
+  [[ -z "$(git -C "$RR_ROOT" status --porcelain --untracked-files=no -- . ':!_2026__IEEE_Access/revision/analysis/data/rerun')" ]] \
     || rr_die "uncommitted changes; the baseline's commit would not describe its code"
   if [[ "$(cat "$RR_OUT/$COMMIT_FILE" 2>/dev/null)" != "$HEAD_NOW" ]]; then
     echo "$HEAD_NOW" > "$RR_OUT/$COMMIT_FILE"
