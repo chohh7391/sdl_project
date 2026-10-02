@@ -77,7 +77,7 @@ RIM_RADIUS = 0.025
 #: 2026-09-29). It does not move, so it is drawn whether or not a plan is up.
 CELL_ENV = {"SDL_TABLE_Z_M": "-0.013", "SDL_BEAKER_RISER_M": "0.072",
             "SDL_BEAKER_RISER_XY_M": "0.200", "SDL_BEAKER_RISER_Y_M": "0.070",
-            "SDL_RISER_XY": "0.360,-0.300", "SDL_SCALE_TOP_M": "0.092",
+            "SDL_RISER_XY": "0.354,-0.295", "SDL_SCALE_TOP_M": "0.092",
             "SDL_SCALE_BODY_BEARING_DEG": "180"}
 PAN_XY = (0.520, 0.320)
 FURNITURE_RGBA = (0.62, 0.62, 0.66, 0.55)
