@@ -18,6 +18,8 @@ Both are fixed in a50f925. The batches were then measured again into
 `cutamp/` at that commit (`PERCEPTION_COMMIT`); the ground-truth batches were
 not re-run.
 
-- `cutamp/`, `logs/`: the rows and per-trial logs, unchanged.
+- `cutamp/`: the rows, unchanged. Their per-trial logs are in
+  `../rtx5080_20261001f_logs.tar.gz` (`rtx5080_20261001f/perception_stale/logs/`),
+  which is not in git.
 - `results/`: the perception and state-source reports `90_analyse.sh` wrote
   from them.

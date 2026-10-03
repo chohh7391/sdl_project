@@ -55,6 +55,9 @@ scripts/trials/logs/**
 _2026__IEEE_Access/revision/analysis/data/rerun/*/logs/
 # ...and those of batches set aside after a fix (<tag>/perception_stale/logs/).
 _2026__IEEE_Access/revision/analysis/data/rerun/*/*/logs/
+# A finished campaign's logs, packed into one archive beside its record
+# (<tag>/<tag>_logs.tar.gz) once the raw log folders are cleared away.
+_2026__IEEE_Access/revision/analysis/data/rerun/*/*_logs.tar.gz
 
 # --- LLM model weights and archives -----------------------------------------
 # Fine-tuned adapters / tokenizers / optimizer state. Re-obtain from the
