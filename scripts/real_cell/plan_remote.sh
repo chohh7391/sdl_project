@@ -72,6 +72,11 @@
 #   --material liquid|granular   -> replay_pour_material (granular rolls on j6 with taps)
 #   --grams G                    -> replay_pour_grams
 #   --flow-index F               -> replay_pour_flow_index, 0 (water, dry sugar) .. 1
+#   --pour-timeout S             -> replay_pour_timeout: the pour goal's timeout, and
+#                                how long the task waits for it (0/unset: the
+#                                controller's, 120 s liquid, 300 s granular). A
+#                                thick liquid needs more: syrup at flow_index 1
+#                                took 70 s for 10 g (2026-10-03)
 # Without --material the recorded pour is replayed as recorded, weighing nothing.
 #   --home-via moveit|direct     how the arm is taken to the recording's start pose,
 #                                and to home at the start of a recovery sweep:
@@ -130,7 +135,7 @@ die() { echo "plan_remote: $*" >&2; status "STOPPED: ${1%%$'\n'*}"; exit 1; }
 
 BEAKER="" BEAKER_Z="" FLASK="" BEAKER2="" BEAKER2_Z="" RECEIVER="" GRASP_MARKER=""
 PLATE1="" PLATE2="" TARGET=flask PERCEIVE=0
-MATERIAL="" GRAMS="" FLOW="" HOME_VIA=moveit RECOVER=1
+MATERIAL="" GRAMS="" FLOW="" POUR_TIMEOUT="" HOME_VIA=moveit RECOVER=1
 MODE=new STAMP="" REPLAY=0 YES=1 SEEDS=() FORCE_RECOVER=() USE_SEED= REPEAT=1 GRASP_ONLY=0 MEASURE_ONLY=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -146,6 +151,8 @@ while [[ $# -gt 0 ]]; do
     --material) MATERIAL="${2:?--material liquid|granular}"; shift 2 ;;
     --grams)    GRAMS="${2:?--grams G}"; shift 2 ;;
     --flow-index) FLOW="${2:?--flow-index F}"; shift 2 ;;
+    --pour-timeout) POUR_TIMEOUT="${2:?--pour-timeout S}"; shift 2
+                [[ $POUR_TIMEOUT =~ ^[0-9]+([.][0-9]+)?$ ]] || die "--pour-timeout must be seconds: $POUR_TIMEOUT" ;;
     --home-via) HOME_VIA="${2:?--home-via moveit|direct}"; shift 2
                 [[ $HOME_VIA == moveit || $HOME_VIA == direct ]] || die "--home-via must be moveit or direct" ;;
     --attach) MODE=attach STAMP="${2:?--attach RUN_ID}"; shift 2 ;;
@@ -501,6 +508,7 @@ elif [[ -n "$TRANSFER" ]]; then
   LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=beaker_transfer robot_type:=fr5
           "transfer_plan:=${CSV%.csv}" "replay_pour_material:=$MATERIAL" "replay_pour_grams:=$GRAMS")
   [[ -n "$FLOW" ]] && LAUNCH+=("replay_pour_flow_index:=$FLOW")
+  [[ -n "$POUR_TIMEOUT" ]] && LAUNCH+=("replay_pour_timeout:=$POUR_TIMEOUT")
   echo "pour: $GRAMS g of $MATERIAL by weight, handed to the pouring controller, into the rim at ($RECEIVER)"
 else
 LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=trajectory_replay robot_type:=fr5
@@ -515,6 +523,7 @@ if [[ -n "$MATERIAL" ]]; then
   PUT_BACK=elsewhere; [[ $TARGET == beaker2 ]] && PUT_BACK=start
   LAUNCH+=("replay_pour_put_back:=$PUT_BACK")
   [[ -n "$FLOW" ]] && LAUNCH+=("replay_pour_flow_index:=$FLOW")
+  [[ -n "$POUR_TIMEOUT" ]] && LAUNCH+=("replay_pour_timeout:=$POUR_TIMEOUT")
   echo "pour: $GRAMS g of $MATERIAL by weight, handed to the pouring controller, into the rim at ($RECEIVER)"
 else
   echo "pour: replayed as recorded (no --material), nothing is weighed"
