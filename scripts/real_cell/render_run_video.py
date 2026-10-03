@@ -2,7 +2,7 @@
 """Render a real-cell run's replay bag into one video: cameras, perception, weight.
 
     render_run_video.py RUN_DIR [--out FILE.mp4] [--title TEXT] [--fps 30]
-                        [--speed 1.0] [--start S] [--end S]
+                        [--speed 1.0] [--fast N] [--hold S] [--start S] [--end S]
 
 RUN_DIR is a bag_run.sh directory: its 2_replay bag, plan_remote_2.log (the
 task's steps) and bringup.log (the pouring controller's lines; a live_logs
@@ -16,6 +16,10 @@ bringup log works too, via --bringup). Laid out 1920 x 1080:
 and a bar along the top naming the step the task is in, the pour's own phase
 while it pours. Nothing is computed that the run did not publish: the tags are
 the detector's, the beakers the pose node's, the grams the pour's feedback.
+
+--fast N plays everything but the pour N times faster (the pour, from 3 s
+before it to 2 s after, stays at --speed) and says which in the bar; --hold S
+holds the last frame, with the pour's result, S seconds.
 """
 import argparse
 import bisect
@@ -122,17 +126,28 @@ def task_steps(log_path):
 
 
 def pour_summary(log_path):
-    target, result = None, None
+    """(target grams, material), and one line on what the pour delivered."""
+    target, result, t0 = None, None, None
+    stamp = re.compile(r'\[(\d+\.\d+)\] \[pouring_controller\]')
     for line in open(log_path, errors='ignore'):
+        ts = stamp.search(line)
         m = re.search(r'Pouring ([0-9.]+) g of (liquid|granular media)', line)
         if m:
             target = (float(m.group(1)), 'sugar' if 'granular' in m.group(2) else 'water')
+            t0 = float(ts.group(1)) if ts else None
         m = re.search(r'Poured ([0-9.]+) g in ([0-9.]+) s', line)
-        if m:
-            result = 'poured %s g in %s s' % (m.group(1), m.group(2))
+        if m and target:
+            result = 'poured %s g in %s s (target %g g, %+.2f g)' % (
+                m.group(1), m.group(2), target[0], float(m.group(1)) - target[0])
         m = re.search(r'Aborted: (.*)', line)
         if m and 'pouring_controller' in line:
-            result = m.group(1)[:90]
+            d = re.search(r'delivered ([0-9.]+) g', m.group(1))
+            if d and target:
+                took = ' in %.1f s' % (float(ts.group(1)) - t0) if ts and t0 else ''
+                result = 'poured %s g%s (target %g g, %+.2f g)' % (
+                    d.group(1), took, target[0], float(d.group(1)) - target[0])
+            else:
+                result = m.group(1)[:90]
     return target, result
 
 
@@ -246,6 +261,9 @@ def main():
     ap.add_argument('--bringup', default='', help='the bringup log (default RUN_DIR/bringup.log)')
     ap.add_argument('--fps', type=float, default=30.0)
     ap.add_argument('--speed', type=float, default=1.0, help='playback speed, e.g. 2 for 2x')
+    ap.add_argument('--fast', type=float, default=0.0,
+                    help='playback speed outside the pour (0: --speed throughout)')
+    ap.add_argument('--hold', type=float, default=0.0, help='seconds to hold the last frame')
     ap.add_argument('--start', type=float, default=None, help='seconds into the bag')
     ap.add_argument('--end', type=float, default=None)
     a = ap.parse_args()
@@ -300,9 +318,16 @@ def main():
                            '-pix_fmt', 'bgr24', '-s', '%dx%d' % (W, H), '-r', str(a.fps),
                            '-i', '-', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20',
                            '-pix_fmt', 'yuv420p', out], stdin=subprocess.PIPE)
-    dt_frame = a.speed / a.fps
     t_frame = t_begin
     span = (t_begin, t_end)
+    t_pour = next((s0 for s0, lab in steps if lab == 'Pour'), None)
+    t_after = next((s0 for s0, lab in steps if t_pour is not None and s0 > t_pour), None)
+    fast = a.fast if a.fast > 0.0 and t_pour is not None else a.speed
+
+    def speed_at(t):
+        if t_pour is not None and t_pour - 3.0 <= t <= (t_after or t_end) + 2.0:
+            return a.speed
+        return fast
 
     def image(key):
         if key not in latest:
@@ -339,7 +364,7 @@ def main():
         b, a = held['ee']
         return T[:3, :3] @ b + T[:3, 3], T[:3, :3] @ a
 
-    def render(t):
+    def render(t, badge=True):
         frame = np.full((H, W, 3), BG, np.uint8)
         # --- bar
         cv2.rectangle(frame, (0, 0), (W, BAR), (12, 12, 14), -1)
@@ -356,6 +381,14 @@ def main():
             text(frame, lab, (x, 40), 0.62, FG if on else MUTED, 2 if on else 1)
             x += tw + 34
         text(frame, '%5.1f s' % (t - t_begin), (W - 130, 42), 0.8, MUTED, 2)
+        if badge and fast != a.speed:
+            sp = speed_at(t)
+            badge = '%gx' % sp if sp != 1.0 else 'real time'
+            (bw, _), _ = cv2.getTextSize(badge, FONT, 0.62, 2)
+            bx = W - 160 - bw
+            cv2.rectangle(frame, (bx - 10, 16), (bx + bw + 10, 48),
+                          (60, 60, 66) if sp != 1.0 else (40, 110, 40), -1)
+            text(frame, badge, (bx, 40), 0.62, FG, 2)
 
         # --- side_1, rectified, with tags
         img = image('side_1')
@@ -445,7 +478,7 @@ def main():
     for t, key, msg in read_bag(bag, t_begin, t_end):
         while t_frame <= min(t, t_end):
             ff.stdin.write(render(t_frame).tobytes())
-            t_frame += dt_frame
+            t_frame += speed_at(t_frame) / a.fps
             n += 1
         if t > t_end:
             break
@@ -495,11 +528,18 @@ def main():
             b1_hand = None
     while t_frame <= t_end:
         ff.stdin.write(render(t_frame).tobytes())
-        t_frame += dt_frame
+        t_frame += speed_at(t_frame) / a.fps
         n += 1
+    if a.hold:
+        last = render(min(t_frame, t_end), badge=False)
+        for _ in range(int(round(a.hold * a.fps))):
+            ff.stdin.write(last.tobytes())
+            n += 1
     ff.stdin.close()
     ff.wait()
-    print('wrote %s: %d frames, %.1f s at %gx' % (out, n, n / a.fps, a.speed))
+    print('wrote %s: %d frames, %.1f s (%gx%s%s)' % (
+        out, n, n / a.fps, a.speed, ', %gx outside the pour' % fast if fast != a.speed else '',
+        ', %g s held' % a.hold if a.hold else ''))
 
 
 def rclpy_duration(sec):
