@@ -16,12 +16,16 @@ stream and the URDF:
   return         beaker back on its box: centre within the driver's tolerance
                  of the box centre, upright
   pour           lip error at peak tilt, and the peak tilt
+  posture        every joint, from finger-close to the open after it, inside the
+                 range the plans the cell ran clean held beaker1 in
+                 (held_posture_envelope.json, held_posture.py) by --posture-margin
 
 A recording is ACCEPTED only if all hold: EEF <= --max-eef deg, rim clearance >=
 --min-rim mm, returned upright onto the box, lip error < --max-lip mm, peak tilt
->= --min-tilt deg. --export writes accepted ones as trajectory CSV + meta through
-export_trajectory.py and checks each meta names beaker, the pour target (flask, or
-beaker2 when SCENE_ENV.txt has SDL_TARGET_VESSEL=beaker2), scale and riser.
+>= --min-tilt deg, and the posture inside the envelope (--no-posture skips it).
+--export writes accepted ones as trajectory CSV + meta through export_trajectory.py
+and checks each meta names beaker, the pour target (flask, or beaker2 when
+SCENE_ENV.txt has SDL_TARGET_VESSEL=beaker2), scale and riser.
 
 Real-cell only: these trajectories are for the robot, not for the paper.
 """
@@ -39,6 +43,8 @@ import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts", "trials"))
 from solve_scan_poses import Arm, URDF  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import held_posture  # noqa: E402
 
 GRIP = "gripper_finger1_joint"
 
@@ -125,8 +131,12 @@ def main():
                          "(17 for the flask's 38 mm mouth, 20 for beaker2's 44 mm)")
     ap.add_argument("--min-tilt", type=float, default=53.0,
                     help="[deg] peak pour tilt; below ~53 deg a half-full beaker does not pour")
+    ap.add_argument("--posture-margin", type=float, default=held_posture.DEFAULT_MARGIN,
+                    help="[rad] how far past the clean plans' held posture a joint may go")
+    ap.add_argument("--no-posture", action="store_true", help="skip the held-posture check")
     ap.add_argument("--export", action="store_true")
     a = ap.parse_args()
+    envelope = None if a.no_posture else held_posture.load()
 
     env = scene_env(a.run_dir)
     target = env.get("SDL_TARGET_VESSEL", "flask") or "flask"
@@ -193,6 +203,8 @@ def main():
             lip, tilt = float(r["pour_lip_err_mm"]), float(r["pour_peak_tilt_deg"])
         except (KeyError, ValueError):
             lip, tilt = float("inf"), 0.0
+        held = [c["positions"] for c in cmds if close <= c["t"] <= opn]
+        posture = held_posture.excursions(held, envelope, a.posture_margin) if envelope else {}
         returned = r.get("placed_in_goal") == "True"
         upright = r.get("placed_upright") == "True"
         why = []
@@ -206,6 +218,8 @@ def main():
             why.append("lip")
         if tilt < a.min_tilt:
             why.append("tilt")
+        if posture:
+            why.append("posture(%s)" % " ".join("%s+%.2f" % jv for jv in posture.items()))
         print("%-5s %5.1f°  %6.1f°   %6.1f mm %6.1f mm %6s mm %-7s %6.1f  %5.1f°  %s"
               % (seed, eef, eef_carry, grasp_h, rim, r.get("goal_err_mm", "?"),
                  "yes" if upright else "no", lip, tilt, "ACCEPT" if not why else "reject: " + ",".join(why)))
