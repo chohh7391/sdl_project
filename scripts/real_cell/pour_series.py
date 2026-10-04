@@ -47,6 +47,7 @@ The console does the same, each step when the operator types it:
   close          close the jaws on the vessel held between them, record it, pouring controller on
   open           trajectory controller back on, open the jaws (hold the vessel)
   10, 30, 50 ..  pour that many grams of the current material (Ctrl-C cancels: the vessel is parked)
+  steps [T S W]  T g (50) in steps to S, 2S, .. T g (10) in total, the pan read W s (3) after each
   syrup, water, sugar   change the material
   status, help, q
 It keeps one summary.csv for every material (the label column tells them
@@ -104,7 +105,8 @@ PRESETS = {                      # console material -> (material, flow_index, po
 }
 SUMMARY = ['trial', 'label', 'material', 'flow_index', 'target', 'rep', 'tolerance', 'empty_pan', 'controller_grams',
            'pan_after_10s', 'error_pan', 'elapsed', 'peak_tilt_deg', 'trims', 'afterflow',
-           'completed', 'receiver_x', 'receiver_y', 'started', 'message']
+           'completed', 'receiver_x', 'receiver_y', 'started', 'message',
+           'settle_s', 'run', 'step', 'cum_target', 'cum_pan']
 
 
 def read_plan(plan):
@@ -441,12 +443,14 @@ def open_jaws(node):
 
 
 def pour_once(node, log, label, material, flow_index, timeout, tg, grasp, start_pose, bringup_log='',
-              tolerance=0.0, effective_tolerance=''):
+              tolerance=0.0, effective_tolerance='', settle=SETTLE_AFTER, extra=None):
     """One pour of tg grams into the receiver tag 1 shows now, logged; the summary row, or None.
 
     tolerance is the goal's (0: the controller's weight_tolerance); the
     controller floors it by the material's dose quantum, which
-    effective_tolerance, when known, records.
+    effective_tolerance, when known, records. The pan is read settle seconds
+    after the pour ends. extra, for a step of a stepped pour, is
+    {run, step, cum_target, base}: base is the pan before its first step.
     """
     if bringup_log and os.path.exists(bringup_log):
         lines = [ln for ln in open(bringup_log, errors='ignore') if 'robot queue' in ln]
@@ -526,9 +530,9 @@ def pour_once(node, log, label, material, flow_index, timeout, tg, grasp, start_
         node.wait(h.cancel_goal_async(), 5.0)
         res = node.wait(h.get_result_async(), 60.0)
     done = time.time()
-    print('  pour ended after %.1f s; reading the pan in %.0f s' % (done - started, SETTLE_AFTER))
+    print('  pour ended after %.1f s; reading the pan in %.0f s' % (done - started, settle))
     try:
-        time.sleep(SETTLE_AFTER)
+        time.sleep(settle)
     except KeyboardInterrupt:
         print('  Ctrl-C: reading the pan now')
     after = node.scale_now(stable_for=1.0, timeout=5.0)
@@ -557,17 +561,67 @@ def pour_once(node, log, label, material, flow_index, timeout, tg, grasp, start_
            result.trim_pulses if result else '', round(result.measured_afterflow, 2) if result else '',
            int(result.is_completed) if result else 0, round(r.x, 4), round(r.y, 4),
            time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(started)),
-           (result.message if result else 'no result')[:200]]
+           (result.message if result else 'no result')[:200],
+           settle]
+    if extra:
+        row += [extra['run'], extra['step'], extra['cum_target'], round(after - extra['base'], 2)]
+    else:
+        row += ['', '', '', '']
     log.w.writerow(row)
     log.f.flush()
     print('  -> #%d %s %g g +/- %s g (#%d): controller %s g, pan %.2f g (%+.2f) in %.1f s: %s'
-          % (n, label, tg, effective_tolerance, rep, row[8], after - empty, after - empty - tg, done - started, row[-1][:90]))
+          % (n, label, tg, effective_tolerance, rep, row[8], after - empty, after - empty - tg, done - started,
+             row[SUMMARY.index('message')][:90]))
     return row
+
+
+def pour_steps(node, log, name, grasp, start_pose, bringup_log, tol, effective, refresh,
+               total=50.0, step=10.0, wait=3.0, base=None):
+    """Pour total grams in steps: to step, then 2 x step, ... -- each step to the
+    running total against the pan before the first, so a step's error is not
+    carried into the next -- reading the pan wait seconds after each.
+
+    base, given, is that first empty pan: a stepped pour that stopped part way
+    carries on under the log's last run, its done steps skipped."""
+    material, flow_index, timeout = PRESETS[name]
+    run = time.strftime('%Y%m%d-%H%M%S')
+    if base is None:
+        base = node.scale_now()
+    else:
+        path = os.path.join(log.out, 'summary.csv')
+        runs = [r['run'] for r in csv.DictReader(open(path)) if r.get('run')] if os.path.exists(path) else []
+        if runs:
+            run = runs[-1]
+            print('  carrying on stepped pour %s from an empty pan of %.2f g' % (run, base))
+    n_steps = int(round(total / step))
+    print('  stepped pour %s: %g g in %d steps of %g g, the pan read %g s after each; empty pan %.2f g'
+          % (run, total, n_steps, step, wait, base))
+    for k in range(1, n_steps + 1):
+        cum = step * k
+        inc = round(cum - (node.scale_now() - base), 2)
+        if inc < 0.5:
+            print('  step %d/%d: the pan is already within 0.5 g of %g g; skipped' % (k, n_steps, cum))
+            continue
+        print('\n  step %d/%d: to %g g, %.2f g more' % (k, n_steps, cum, inc))
+        refresh()
+        row = pour_once(node, log, name, material, flow_index, timeout, inc, grasp, start_pose, bringup_log,
+                        tol, effective(name), settle=wait,
+                        extra={'run': run, 'step': k, 'cum_target': cum, 'base': base})
+        if row is None:
+            print('  step %d did not pour; the stepped pour stops here' % k)
+            break
+        if 'cancel' in str(row[SUMMARY.index('message')]).lower():
+            print('  cancelled; the stepped pour stops here')
+            break
+    final = node.scale_now() - base
+    print('\n  stepped pour %s: %.2f g on the pan for %g g (%+.2f)' % (run, final, total, final - total))
 
 
 CONSOLE_HELP = '''  close            close the jaws on the vessel held between them (pouring controller on)
   open             open the jaws -- hold the vessel first (trajectory controller back on)
   10, 30, 50, ..   pour that many grams of the current material; Ctrl-C cancels the pour
+  steps [T S W]    pour T g (50) in steps of S g (10) -- to S, 2S, .. T in total -- W s (3) apart
+  steps T S W B    carry on a stepped pour that stopped, B being its first empty pan (grams)
   syrup, water, sugar   change the material
   tol 0.3          what counts as done, +/- grams (tol 0: the controller's default); floored by the material
   status           material, tolerance, jaws, receiver, pan, pours so far
@@ -642,6 +696,18 @@ def console(node, a):
                     e = effective(nm)
                     print('  %s: +/- %s g%s' % (nm, e, '' if e == '' or tol == 0 or e <= tol
                                                 else '  (asked %g; floored by its dose quantum)' % tol))
+            elif cmd == 'steps' or cmd.startswith('steps '):
+                if grasp is None:
+                    print('  close the jaws first (close): the pouring controller is not on')
+                    continue
+                v = [float(x) for x in cmd.split()[1:5]]
+                total, step, wait = (v + [50.0, 10.0, 3.0][len(v):])[:3]
+                base = v[3] if len(v) > 3 else None
+                if not (0.0 < step <= total <= 200.0 and 0.0 <= wait <= 60.0):
+                    print('  steps wants 0 < step <= total <= 200 g and a wait of 0-60 s')
+                    continue
+                pour_steps(node, log, name, grasp, start_pose, a.bringup_log, tol, effective, refresh,
+                           total, step, wait, base)
             elif cmd in ('close', 'c'):
                 grasp = close_jaws(node)
                 print('  jaws closed; pouring controller on')
