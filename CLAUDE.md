@@ -142,8 +142,3 @@ The manuscript and the response use two LaTeX markers. Both are defined in the p
 - Chat equations: plain-text Unicode, no LaTeX block math (per global guidance).
 - When in doubt about whether a change belongs in this revision, check it against the
   concern it serves in PLAN.md before writing it.
-
----
-
-@./.conventions/project.md
-@./.conventions/session-log.md
