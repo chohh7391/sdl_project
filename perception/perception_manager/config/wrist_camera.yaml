@@ -1,0 +1,24 @@
+# The wrist camera's mount, in ONE place: isaacsim/scripts/standalone/task.py
+# places the simulated camera from it, perception_manager.launch.py publishes the
+# matching wrist3_link -> camera_3 transform from it, and
+# scripts/trials/solve_scan_poses.py solves the recovery viewpoints with it.
+#
+# The D435's optical frame (ROS convention: +z along the optical axis, +y down
+# the image) in wrist3_link, from the printed mount's CAD
+# (hardware/fr5_d435_mount/README.md, "카메라 프레임"): 0.22 m out along the tool
+# axis, 0.05038 m to the +Y side, tilted 8 deg about X, so the optical axis is
+# (0, -0.1392, 0.9903) in wrist3_link -- 8 deg in from the tool axis.
+parent: wrist3_link
+frame: camera_3
+xyz: [0.0, 0.05038, 0.22]
+rpy: [0.1396, 0.0, 0.0]
+
+# Tag edge this camera's detector is given [m]. The fixed cameras use 0.0781
+# (apriltag_ros/cfg/tags_36h11.yaml), measured from their 1.6-1.8 m views; the
+# rendered black square is in fact the nominal 0.080, and the detector puts
+# each edge ~1 px short, which at 37-44 px is the 2.4% that measurement found.
+# From 0.33-0.48 m the same pixel is 0.5-0.8% of a 139-212 px edge: measured
+# on 2026-09-30 at five wrist views, the detected edges match 0.080 within
+# 0.4-1.2 px and 0.0781 is 2.3-4.5 px too short, which put the wrist camera's
+# objects 4-8 mm off against 1.5-3 mm for the fixed pair.
+tag_size: 0.080

@@ -1,0 +1,2 @@
+timestamp,seed,task,robot_cfg,plan_success,planning_time_s,num_satisfying,execute_success,max_transport_tilt_deg,failure_reason,beaker_xy,flask_xy,poured,final_tilt_deg,final_xy,placed_upright,placed_in_goal,task_success,target_obj,goal_err_mm,aux_check,pour_peak_tilt_deg,pour_lip_err_mm,pour_lip_err_along_mm,pour_lip_err_perp_mm,pour_start_lip_err_mm,pour_lip_height_mm
+2026-09-29T23:22:17,0,transfer,fr5_ag95,True,14.46,396,True,3.79,,0.5007;0.1977,0.5273;0.3632,True,0.00,0.3458;-0.3417,True,True,True,beaker,9.3,,60.02,13.5,-10.3,8.7,16.9,63.3

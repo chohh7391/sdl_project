@@ -1,0 +1,26 @@
+
+=== stir_perception_rep0.csv : 30 trials ===
+  seeds 0..29, 30 distinct
+
+RATES
+  task success                  30/30  = 100.0%  [95% CI  88.6, 100.0]   <- headline [stir]: vessel upright on the stirrer + stir bar inside it
+  planning success              30/30  = 100.0%  [95% CI  88.6, 100.0]
+  trajectory ran to completion  30/30  = 100.0%  [95% CI  88.6, 100.0]   (NOT a task-success criterion)
+  flask upright after release   30/30  = 100.0%  [95% CI  88.6, 100.0]
+  flask inside goal region      30/30  = 100.0%  [95% CI  88.6, 100.0]
+  pour step executed             0/30  =   0.0%  [95% CI  -0.0,  11.4]
+  task-specific extra condition  30/30  = 100.0%  [95% CI  88.6, 100.0]
+  placement error from goal centre [mm]: n=30 min 0.8  median 5.4  max 24.4
+
+PLANNING
+  time [s]                     n=30  min 12.12  median 12.46  mean 12.98  sd 2.01  max 20.83 
+  time <= 180 s                 30/30  = 100.0%  [95% CI  88.6, 100.0]
+  satisfying particles         n=30  min 598.00  median 709.50  mean 716.17  sd 54.42  max 825.00 
+
+CARRIED-VESSEL TILT (executed, simulator measurement)
+  transport max [deg]          n=30  min 1.27  median 2.33  mean 2.64  sd 1.11  max 5.97 
+  transport <= 5 deg            29/30  =  96.7%  [95% CI  83.3,  99.4]
+  final tilt after release [deg] n=30  min 0.00  median 0.01  mean 0.01  sd 0.01  max 0.02 
+
+FAILURES
+  none recorded

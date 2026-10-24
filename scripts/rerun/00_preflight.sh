@@ -70,7 +70,8 @@ fi
 echo "-- scene (must be the paper's, not the real cell's)"
 rr_conda_sdl
 SCENE_OUT="$(cd "$RR_ROOT" && PYTHONPATH="$RR_ROOT/TAMP/tamp/src:$RR_ROOT/TAMP/cuTAMP" python - <<'PY' 2>&1
-import math
+import math, os, yaml
+root = os.getcwd()
 from envs.constants import (glassware_set, vessel_dims, TABLE_Z_OFFSET,
                             BEAKER_RISER_M, vessel_height_override)
 from envs.utils import ENTITIES
@@ -84,9 +85,14 @@ checks = [
     ("bench offset", TABLE_Z_OFFSET, 0.0),
     ("beaker riser", BEAKER_RISER_M, 0.0),
     ("table pose z", ENTITIES["table"].pose[2], -0.01),
-    ("grasp beta min [deg]", round(math.degrees(samplers.BETA_MIN), 6), 10.0),
-    ("grasp beta max [deg]", round(math.degrees(samplers.BETA_MAX), 6), 35.0),
+    ("grasp beta min [deg]", round(math.degrees(samplers.BETA_MIN), 6), 0.0),
+    ("grasp beta max [deg]", round(math.degrees(samplers.BETA_MAX), 6), 18.0),
     ("grasp height bias", samplers.GRASP_H_FRAC, 0.0),
+    ("wrist camera", os.environ.get("SDL_WRIST_CAMERA", "1") == "1", True),
+    ("tag plate heights", yaml.safe_load(open(os.path.join(
+        root, "perception/perception_manager/config/tag_mount.yaml"))), {"beaker": 0.18, "flask": 0.2}),
+    ("wrist camera mount", [round(v, 5) for v in yaml.safe_load(open(os.path.join(
+        root, "perception/perception_manager/config/wrist_camera.yaml")))["xyz"]], [0.0, 0.05038, 0.22]),
     ("transfer entities", get_environment_spec("transfer").entities, ("beaker", "flask", "magnet")),
     ("transfer statics", get_environment_spec("transfer").statics,
      ("table", "goal_region", "stirrer", "magnet")),
@@ -133,6 +139,13 @@ fi
   && ok ".venv-pddl: pybullet" || bad ".venv-pddl with pybullet missing"
 [[ -x "$RR_ROOT/experiments/pddlstream/downward/builds/release/bin/downward" ]] \
   && ok "Fast Downward built" || bad "Fast Downward not built (experiments/pddlstream/downward/build.py)"
+# The runner imports untracked PDDLStream files (motion_planners, the upstream
+# examples); a clone lacks them, and without this check the whole baseline
+# stage fails in a second after cuTAMP's hours.
+( cd "$RR_ROOT/experiments/pddlstream" && PYTHONPATH=. "$RR_ROOT/.venv-pddl/bin/python" \
+    examples/pybullet/fr5_paired/run_paired_trials.py --help ) >/dev/null 2>&1 \
+  && ok "PDDLStream runner imports" \
+  || bad "PDDLStream runner does not import -- untracked PDDLStream files missing (RERUN.md section 3.6)"
 [[ -f "$RR_ANALYSIS/data/seed_layouts.json" ]] \
   && ok "seed_layouts.json (the 30 layouts PDDLStream shares with Isaac Sim)" || bad "seed_layouts.json missing"
 [[ -d "$RR_ROOT/third_party/LabUtopia" ]] \
@@ -204,22 +217,27 @@ default_of() { grep -hoE "environ\.get\(\"$1\", \"[^\"]*\"\)" "$RR_ROOT"/TAMP/ta
   echo "| cuRobo | $CUROBO |"
   echo "| declared budgets | $(cat "$RR_OUT/BUDGETS") s |"
   echo "| cuTAMP repetitions | ${RERUN_REPS:-3} x 30 layouts per task |"
-  echo "| PDDLStream | ${RERUN_PDDL_STREAMS:-5} planner seeds x 30 layouts, max ${RERUN_PDDL_MAX_TIME:-180} s |"
+  echo "| cuTAMP planning | restarts until the largest budget (SDL_PLAN_BUDGET_S=$MAXB, set per trial by 10_cutamp.sh); up to $(grep -oE '^CUROBO_CANDIDATES = [0-9]+' "$RR_ROOT/TAMP/tamp/scripts/server/tamp_server.py" | grep -oE '[0-9]+$') satisfying particles tried in cuRobo per optimization, >= $(grep -oE '^CUROBO_CANDIDATE_MIN_DIST_RAD = [0-9.]+' "$RR_ROOT/TAMP/tamp/scripts/server/tamp_server.py" | grep -oE '[0-9.]+$') rad apart |"
+  echo "| PDDLStream | ${RERUN_PDDL_STREAMS:-5} planner seeds x 30 layouts, max ${RERUN_PDDL_MAX_TIME:-180} s; $([[ "${RERUN_PDDL_RESTART:-1}" == 1 ]] && echo 'adaptive algorithm, restarted with fresh samples until the limit is spent (RERUN_PDDL_RESTART=1)' || echo 'adaptive algorithm, one solve() per trial, no restart (RERUN_PDDL_RESTART=0)') |"
   echo "| GPU exclusive at start | yes (pre-flight found no other compute process) |"
   echo
   echo "## Behaviour switches, at their code defaults (no SDL_* variable was set)"
   echo
-  echo "Pour continuations and the recovery ladder were added AFTER the 2026-09-12/13"
-  echo "campaign, so this run measures them and that campaign did not. The other rows"
-  echo "describe the same scene that campaign ran."
+  echo "Pour continuations, the recovery ladder and the planning hold were added AFTER"
+  echo "the 2026-09-12/13 campaign, so this run measures them and that campaign did not."
+  echo "The other rows describe the same scene that campaign ran."
   echo
   echo "| switch | default | added |"
   echo "|---|---|---|"
   echo "| SDL_POUR_CONTINUATIONS | $(default_of SDL_POUR_CONTINUATIONS) | 09-14, re-seeded pour-path continuation |"
   echo "| SDL_RECOVERY | $(default_of SDL_RECOVERY) | 09-16, wait for a re-detection before a missed tag fails |"
-  echo "| SDL_RECOVERY_RETREAT | $(default_of SDL_RECOVERY_RETREAT) | 09-16, retreat to home and look again |"
-  echo "| SDL_RECOVERY_SCAN | $(default_of SDL_RECOVERY_SCAN) | off: needs the wrist camera |"
+  echo "| SDL_RECOVERY_RETREAT | $(default_of SDL_RECOVERY_RETREAT) | 09-16, retreat to home and look again; off since 09-30 (never moved; the scan replaces it) |"
+  echo "| SDL_RECOVERY_SCAN | $(default_of SDL_RECOVERY_SCAN) | 09-30, carry the wrist camera over six viewpoints until it sees the tag; latch that pose |"
+  echo "| SDL_WRIST_CAMERA | $(default_of SDL_WRIST_CAMERA) | 09-30, D435 on the wrist (perception_manager config/wrist_camera.yaml) |"
+  echo "| SDL_VERIFY_BEFORE_EXECUTION | $(default_of SDL_VERIFY_BEFORE_EXECUTION) | 09-30, fixed cameras look again after planning; a vessel > $(default_of SDL_VERIFY_TOL_M) m off is re-planned once |"
+  echo "| SDL_PLAN_HOLD_SIM | $(default_of SDL_PLAN_HOLD_SIM) | 09-28, the simulator stops stepping (physics + rendering) while cuTAMP plans |"
   echo "| SDL_UPRIGHT_TRANSPORT | $(default_of SDL_UPRIGHT_TRANSPORT) | upright bound on carry segments |"
+  echo "| SDL_UPRIGHT_TILT_TOL_DEG | $(default_of SDL_UPRIGHT_TILT_TOL_DEG) | 09-29, 15 -> 5 deg: the paper's theta_max for the held vessel's tilt from vertical |"
   echo "| SDL_TAG_MOUNT | $(default_of SDL_TAG_MOUNT) | 09-12, tags on a raised mount |"
   echo "| SDL_GLASSWARE | $(default_of SDL_GLASSWARE) | the paper's glassware |"
   echo
@@ -237,7 +255,7 @@ if [[ $SMOKE -eq 1 ]]; then
   mkdir -p "$RR_OUT/smoke"
   rm -f "$RR_OUT/smoke/transfer_smoke.csv"
   SDL_STATE_SOURCE=ground_truth CSV="$RR_OUT/smoke/transfer_smoke.csv" TASK=transfer \
-    ROBOT=fr5_ag95 LOGDIR="$RR_OUT/logs/smoke" PLAN_TIMEOUT=600 \
+    ROBOT=fr5_ag95 LOGDIR="$RR_OUT/logs/smoke" PLAN_TIMEOUT=600 PLAN_BUDGET_S="$MAXB" \
     bash "$RR_ROOT/scripts/run_trials.sh" 0 > "$RR_OUT/logs/smoke.out" 2>&1
   python3 "$RR_ANALYSIS/summarize_trials.py" "$RR_OUT/smoke/transfer_smoke.csv" --budget 600 2>&1 \
     | grep -E "task success|planning success|time \[s\]"

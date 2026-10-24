@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<!-- The FR5 arm's kinematic chain only (base_link .. wrist3_link, joints j1..j6),
+     cut from TAMP/tamp/content/assets/robot/dcp_description/urdf/robot/fr5_ag95.urdf
+     with its origins, axes and limits unchanged and no geometry. It is the same
+     arm under every tool, and robot_state_publisher needs no more than this to
+     put wrist3_link, and the wrist camera on it, into TF. -->
+<robot name="fr5_arm">
+  <link name="base_link" />
+  <joint name="j1" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="shoulder_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0543" upper="3.0543" effort="150" velocity="3.15" />
+  </joint>
+  <link name="shoulder_link" />
+  <joint name="j2" type="revolute">
+    <origin xyz="0 0 0.152" rpy="1.5708 0 0" />
+    <parent link="shoulder_link" />
+    <child link="upperarm_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-4.6251" upper="1.4835" effort="150" velocity="3.15" />
+  </joint>
+  <link name="upperarm_link" />
+  <joint name="j3" type="revolute">
+    <origin xyz="-0.425 0 0" rpy="0 0 0" />
+    <parent link="upperarm_link" />
+    <child link="forearm_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.8274" upper="2.8274" effort="150" velocity="3.15" />
+  </joint>
+  <link name="forearm_link" />
+  <joint name="j4" type="revolute">
+    <origin xyz="-0.39501 0 0" rpy="0 0 0" />
+    <parent link="forearm_link" />
+    <child link="wrist1_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-4.6251" upper="1.4835" effort="28" velocity="3.2" />
+  </joint>
+  <link name="wrist1_link" />
+  <joint name="j5" type="revolute">
+    <origin xyz="0 0 0.1021" rpy="1.5708 0 0" />
+    <parent link="wrist1_link" />
+    <child link="wrist2_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0543" upper="3.0543" effort="28" velocity="3.2" />
+  </joint>
+  <link name="wrist2_link" />
+  <joint name="j6" type="revolute">
+    <origin xyz="0 0 0.102" rpy="-1.5708 0 0" />
+    <parent link="wrist2_link" />
+    <child link="wrist3_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0543" upper="3.0543" effort="28" velocity="3.2" />
+  </joint>
+  <link name="wrist3_link" />
+</robot>

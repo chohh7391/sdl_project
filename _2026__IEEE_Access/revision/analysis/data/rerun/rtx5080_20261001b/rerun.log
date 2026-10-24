@@ -1,0 +1,127 @@
+[2026-09-28 23:07:39] BEGIN transfer_ground_truth_rep0
+[2026-09-28 23:54:51] END   transfer_ground_truth_rep0 (done)
+[2026-09-28 23:54:51] BEGIN move_ground_truth_rep0
+[2026-09-29 00:29:12] END   move_ground_truth_rep0 (done)
+[2026-09-29 00:29:12] BEGIN stir_ground_truth_rep0
+[2026-09-29 01:19:49] END   stir_ground_truth_rep0 (done)
+[2026-09-29 01:19:49] BEGIN transfer_ground_truth_rep1
+[2026-09-29 02:07:01] END   transfer_ground_truth_rep1 (done)
+[2026-09-29 02:07:01] BEGIN move_ground_truth_rep1
+[2026-09-29 02:41:12] END   move_ground_truth_rep1 (done)
+[2026-09-29 02:41:12] BEGIN stir_ground_truth_rep1
+[2026-09-29 03:29:25] END   stir_ground_truth_rep1 (done)
+[2026-09-29 03:29:25] BEGIN transfer_ground_truth_rep2
+[2026-09-29 04:17:29] END   transfer_ground_truth_rep2 (done)
+[2026-09-29 04:17:29] BEGIN move_ground_truth_rep2
+[2026-09-29 04:51:31] END   move_ground_truth_rep2 (done)
+[2026-09-29 04:51:31] BEGIN stir_ground_truth_rep2
+[2026-09-29 05:40:40] END   stir_ground_truth_rep2 (done)
+[2026-09-29 05:40:40] BEGIN transfer_perception_rep0
+[2026-09-29 06:47:35] END   transfer_perception_rep0 (done)
+[2026-09-29 06:47:35] BEGIN transfer_perception_rep1
+[2026-09-29 07:55:39] END   transfer_perception_rep1 (done)
+[2026-09-29 07:55:39] BEGIN transfer_perception_rep2
+[2026-09-29 09:03:11] END   transfer_perception_rep2 (done)
+[2026-09-29 09:03:11] cuTAMP campaign finished
+[2026-09-29 09:03:11] BEGIN pddlstream_transfer_ps0
+[2026-09-29 09:03:11] END   pddlstream_transfer_ps0 (incomplete)
+[2026-09-29 09:03:11] BEGIN pddlstream_transfer_ps1
+[2026-09-29 09:03:11] END   pddlstream_transfer_ps1 (incomplete)
+[2026-09-29 09:03:11] BEGIN pddlstream_transfer_ps2
+[2026-09-29 09:03:11] END   pddlstream_transfer_ps2 (incomplete)
+[2026-09-29 09:03:11] BEGIN pddlstream_transfer_ps3
+[2026-09-29 09:03:11] END   pddlstream_transfer_ps3 (incomplete)
+[2026-09-29 09:03:11] BEGIN pddlstream_transfer_ps4
+[2026-09-29 09:03:11] END   pddlstream_transfer_ps4 (incomplete)
+[2026-09-29 09:03:11] BEGIN pddlstream_move_ps0
+[2026-09-29 09:03:12] END   pddlstream_move_ps0 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_move_ps1
+[2026-09-29 09:03:12] END   pddlstream_move_ps1 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_move_ps2
+[2026-09-29 09:03:12] END   pddlstream_move_ps2 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_move_ps3
+[2026-09-29 09:03:12] END   pddlstream_move_ps3 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_move_ps4
+[2026-09-29 09:03:12] END   pddlstream_move_ps4 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_stir_ps0
+[2026-09-29 09:03:12] END   pddlstream_stir_ps0 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_stir_ps1
+[2026-09-29 09:03:12] END   pddlstream_stir_ps1 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_stir_ps2
+[2026-09-29 09:03:12] END   pddlstream_stir_ps2 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_stir_ps3
+[2026-09-29 09:03:12] END   pddlstream_stir_ps3 (incomplete)
+[2026-09-29 09:03:12] BEGIN pddlstream_stir_ps4
+[2026-09-29 09:03:13] END   pddlstream_stir_ps4 (incomplete)
+[2026-09-29 09:03:13] PDDLStream campaign finished
+[2026-09-29 09:03:13] BEGIN llm_xdl_generator
+[2026-09-29 09:06:13] END   llm_xdl_generator (done)
+[2026-09-29 09:06:13] BEGIN llm_ar_heldout_split2400
+[2026-09-29 09:07:28] END   llm_ar_heldout_split2400 (done)
+[2026-09-29 09:07:28] BEGIN llm_ar_unseen_control_in_distribution
+[2026-09-29 09:07:59] END   llm_ar_unseen_control_in_distribution (done)
+[2026-09-29 09:07:59] BEGIN llm_ar_unseen_L1_unseen_class
+[2026-09-29 09:09:55] END   llm_ar_unseen_L1_unseen_class (done)
+[2026-09-29 09:09:55] BEGIN llm_ar_unseen_L2_unseen_layout
+[2026-09-29 09:10:11] END   llm_ar_unseen_L2_unseen_layout (done)
+[2026-09-29 09:10:11] BEGIN llm_ar_unseen_L3_unseen_pair
+[2026-09-29 09:10:36] END   llm_ar_unseen_L3_unseen_pair (done)
+[2026-09-29 09:10:36] LLM experiments finished
+[2026-09-29 09:10:36] campaign rtx5080_20261001b: run_all.sh finished -- read /home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001b/RESULTS.md, audit first
+[2026-09-29 09:12:01] BEGIN transfer_ground_truth_rep0
+[2026-09-29 09:13:53] END   transfer_ground_truth_rep0 (done)
+[2026-09-29 09:13:53] BEGIN move_ground_truth_rep0
+[2026-09-29 09:15:02] END   move_ground_truth_rep0 (done)
+[2026-09-29 09:15:02] BEGIN stir_ground_truth_rep0
+[2026-09-29 09:18:44] END   stir_ground_truth_rep0 (done)
+[2026-09-29 09:18:44] skip transfer_ground_truth_rep1 (complete)
+[2026-09-29 09:18:45] skip move_ground_truth_rep1 (complete)
+[2026-09-29 09:18:45] skip stir_ground_truth_rep1 (complete)
+[2026-09-29 09:18:45] skip transfer_ground_truth_rep2 (complete)
+[2026-09-29 09:18:45] skip move_ground_truth_rep2 (complete)
+[2026-09-29 09:18:45] skip stir_ground_truth_rep2 (complete)
+[2026-09-29 09:18:45] BEGIN transfer_perception_rep0
+[2026-09-29 09:21:03] END   transfer_perception_rep0 (done)
+[2026-09-29 09:21:03] BEGIN transfer_perception_rep1
+[2026-09-29 09:23:24] END   transfer_perception_rep1 (done)
+[2026-09-29 09:23:24] BEGIN transfer_perception_rep2
+[2026-09-29 09:25:27] END   transfer_perception_rep2 (done)
+[2026-09-29 09:25:27] cuTAMP campaign finished
+[2026-09-29 09:25:27] BEGIN pddlstream_transfer_ps0
+[2026-09-29 09:50:34] END   pddlstream_transfer_ps0 (done)
+[2026-09-29 09:50:34] BEGIN pddlstream_transfer_ps1
+[2026-09-29 10:03:50] END   pddlstream_transfer_ps1 (done)
+[2026-09-29 10:03:50] BEGIN pddlstream_transfer_ps2
+[2026-09-29 10:22:51] END   pddlstream_transfer_ps2 (done)
+[2026-09-29 10:22:51] BEGIN pddlstream_transfer_ps3
+[2026-09-29 10:34:05] END   pddlstream_transfer_ps3 (done)
+[2026-09-29 10:34:05] BEGIN pddlstream_transfer_ps4
+[2026-09-29 10:53:58] END   pddlstream_transfer_ps4 (done)
+[2026-09-29 10:53:58] BEGIN pddlstream_move_ps0
+[2026-09-29 10:54:03] END   pddlstream_move_ps0 (done)
+[2026-09-29 10:54:03] BEGIN pddlstream_move_ps1
+[2026-09-29 10:54:08] END   pddlstream_move_ps1 (done)
+[2026-09-29 10:54:08] BEGIN pddlstream_move_ps2
+[2026-09-29 10:54:13] END   pddlstream_move_ps2 (done)
+[2026-09-29 10:54:13] BEGIN pddlstream_move_ps3
+[2026-09-29 10:54:18] END   pddlstream_move_ps3 (done)
+[2026-09-29 10:54:18] BEGIN pddlstream_move_ps4
+[2026-09-29 10:54:23] END   pddlstream_move_ps4 (done)
+[2026-09-29 10:54:23] BEGIN pddlstream_stir_ps0
+[2026-09-29 10:54:53] END   pddlstream_stir_ps0 (done)
+[2026-09-29 10:54:53] BEGIN pddlstream_stir_ps1
+[2026-09-29 10:55:26] END   pddlstream_stir_ps1 (done)
+[2026-09-29 10:55:26] BEGIN pddlstream_stir_ps2
+[2026-09-29 10:55:58] END   pddlstream_stir_ps2 (done)
+[2026-09-29 10:55:58] BEGIN pddlstream_stir_ps3
+[2026-09-29 10:56:36] END   pddlstream_stir_ps3 (done)
+[2026-09-29 10:56:36] BEGIN pddlstream_stir_ps4
+[2026-09-29 10:57:18] END   pddlstream_stir_ps4 (done)
+[2026-09-29 10:57:18] PDDLStream campaign finished
+[2026-09-29 10:57:19] skip ar_heldout_split2400 (done)
+[2026-09-29 10:57:19] skip ar_unseen_control_in_distribution (done)
+[2026-09-29 10:57:19] skip ar_unseen_L1_unseen_class (done)
+[2026-09-29 10:57:19] skip ar_unseen_L2_unseen_layout (done)
+[2026-09-29 10:57:19] skip ar_unseen_L3_unseen_pair (done)
+[2026-09-29 10:57:19] LLM experiments finished
+[2026-09-29 10:57:20] campaign rtx5080_20261001b: run_all.sh finished -- read /home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001b/RESULTS.md, audit first

@@ -25,17 +25,22 @@ from cutamp.utils.shapes import MultiSphere
 # also the end-effector attitude the whole manipulation holds. The inclination
 # is fixed when the grasp is sampled and the arm keeps it from the moment the
 # fingers close to the moment they open, so a trial's EEF angle to the ground is
-# a single number drawn from this band -- measured over nine recorded solves,
-# 10.2 to 34.7 deg, exactly spanning it. Narrowing the band towards 0 buys a
-# level gripper at a cost in IK feasibility that the docstring below quantifies;
-# it is left to the caller rather than guessed at.
+# a single number drawn from this band (nine recorded solves at the earlier
+# 10-35 deg band gave 10.2 to 34.7 deg, exactly spanning it).
+#
+# 0-18 deg since 09-29: the paper's SidePick yaw candidates {+-pi/2, +-pi/2.5}
+# are a level gripper and one tilted 18 deg, so the band now spans exactly the
+# attitudes the paper describes, sampled continuously. It was 10-35 deg, centred
+# on the better IK feasibility measured near 30 deg (see the docstring below);
+# the lower end of the new band costs some of that, and the planner's cuRobo
+# candidates and restarts are what absorb it.
 #: Fraction of the feasible pinch-height band to discard from the BOTTOM, so the
 #: grasp sits higher up the vessel. 0 = the whole band (the default, and what
 #: every measurement so far used); 0.5 = the upper half.
 GRASP_H_FRAC = float(_os.environ.get("SDL_GRASP_H_FRAC", "0.0"))
 
-BETA_MIN = float(_os.environ.get("SDL_GRASP_BETA_MIN_DEG", "10.0")) * torch.pi / 180.0
-BETA_MAX = float(_os.environ.get("SDL_GRASP_BETA_MAX_DEG", "35.0")) * torch.pi / 180.0
+BETA_MIN = float(_os.environ.get("SDL_GRASP_BETA_MIN_DEG", "0.0")) * torch.pi / 180.0
+BETA_MAX = float(_os.environ.get("SDL_GRASP_BETA_MAX_DEG", "18.0")) * torch.pi / 180.0
 
 Grasp4DOF = Place4DOF = Float[torch.Tensor, "n 4"]
 Grasp6DOF = Place6DOF = Float[torch.Tensor, "n 6"]
@@ -150,8 +155,9 @@ def grasp_side_sampler(
     constrains the 5 cm pre-grasp pose that cuRobo then has to reach, and a purely
     horizontal approach retreats radially straight out of the workspace. Measured
     over the 30 seeds, grasp+pre-grasp IK both succeed for 46.9% of samples at
-    beta=0 but 69.2% at beta=30 deg (81.6-82.1% for the grasp alone), so the band
-    below is centred there. A 180 deg wrist flip was measured too and did not
+    beta=0 but 69.2% at beta=30 deg (81.6-82.1% for the grasp alone), which is
+    why the band used to be 10-35 deg; it is now 0-18 deg, the paper's range
+    (see BETA_MIN above). A 180 deg wrist flip was measured too and did not
     help, so it is deliberately not sampled.
 
     Tool frame of a sample: ``+z`` is the approach axis, radially outward and

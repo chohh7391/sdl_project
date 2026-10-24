@@ -1,0 +1,899 @@
+Skipping import of cpp extensions due to incompatible torch version 2.7.0+cu128 for torchao version 0.16.0             Please see https://github.com/pytorch/ao/issues/2919 for more info
+WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:
+    PyTorch 2.10.0+cu128 with CUDA 1208 (you have 2.7.0+cu128)
+    Python  3.10.19 (you have 3.10.19)
+  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)
+  Memory-efficient attention, SwiGLU, sparse and more won't be available.
+  Set XFORMERS_MORE_DETAILS=1 for more details
+Unsloth 2025.10.8 patched 16 layers with 0 QKV layers, 0 O layers and 0 MLP layers.
+🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+========
+Switching to PyTorch attention since your Xformers is broken.
+========
+
+Unsloth: Xformers was not installed correctly.
+Please install xformers separately first.
+Then confirm if it's correctly installed by running:
+python -m xformers.info
+
+Longer error message:
+xFormers can't load C++/CUDA extensions. xFormers was built for:
+    PyTorch 2.10.0+cu128 with CUDA 1208 (you have 2.7.0+cu128)
+    Python  3.10.19 (you have 3.10.19)
+  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)
+  Memory-efficient attention, SwiGLU, sparse and more won't be available.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+⏳ Loading model...
+==((====))==  Unsloth 2025.10.8: Fast Llama patching. Transformers: 4.56.2.
+   \\   /|    NVIDIA GeForce RTX 5080. Num GPUs = 1. Max memory: 15.447 GB. Platform: Linux.
+O^O/ \_/ \    Torch: 2.7.0+cu128. CUDA: 12.0. CUDA Toolkit: 12.8. Triton: 3.3.0
+\        /    Bfloat16 = TRUE. FA [Xformers = None. FA2 = False]
+ "-____-"     Free license: http://github.com/unslothai/unsloth
+Unsloth: Fast downloading is enabled - ignore downloading bars which are red colored!
+✅ Model loaded.
+🔥 GPU Warming up...
+✅ Warm-up complete.
+
+============================================================
+▶️ [실험 1&2] Language Command to XDL 시작
+============================================================
+[1/100] ✅ Valid
+📌 [Instruction]: Place 25 mL of water into flask_B. Agitate flask_B for 2 min. Pour 25 mL from flask_B into beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="25 mL" />
+  <Stir vessel="flask_B" time="2 min" />
+  <Transfer from_vessel="flask_B" to_vessel="beaker_B" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[2/100] ✅ Valid
+📌 [Instruction]: Add 50 mL of water to beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="50 mL" />
+
+</procedure>
+-------------------------------------------------------
+[3/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of water into flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[4/100] ✅ Valid
+📌 [Instruction]: Add 50 mL of water to flask_A. Wash flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="50 mL" />
+  <CleanVessel vessel="flask_A" />
+</procedure>
+-------------------------------------------------------
+[5/100] ✅ Valid
+📌 [Instruction]: Add 10 mL of ethanol to flask_B. Place bottle_A on plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="10 mL" />
+  <Move object="bottle_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[6/100] ✅ Valid
+📌 [Instruction]: Add 10 mL of ethanol to flask_B. Wash flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="10 mL" />
+  <CleanVessel vessel="flask_B" />
+
+</procedure>
+-------------------------------------------------------
+[7/100] ✅ Valid
+📌 [Instruction]: Introduce 50 mL of ethanol into the flask_B. Send 25 mL from flask_B to beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="50 mL" />
+  <Transfer from_vessel="flask_B" to_vessel="beaker_B" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[8/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of ethanol into flask_A. Relocate box_A onto plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="50 mL" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[9/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Pour 25 mL of water into beaker_B. Send 50 mL from beaker_B to flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="25 mL" />
+  <Transfer from_vessel="beaker_B" to_vessel="flask_B" volume="50 mL" />
+</procedure>
+⚠️ [Error Message]: Cannot Transfer 50 mL from beaker_B, which holds 25 mL
+-------------------------------------------------------
+[10/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of water into flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[11/100] ✅ Valid
+📌 [Instruction]: Place 25 mL of ethanol into flask_A. Set the temperature of flask_A to 60 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="25 mL" />
+  <HeatChill vessel="flask_A" temp="60 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[12/100] ✅ Valid
+📌 [Instruction]: Add 10 mL of water to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[13/100] ✅ Valid
+📌 [Instruction]: Place 10 mL of water into beaker_B. Move bottle_A to plate_B. Put bottle_A on top of plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+  <Move object="bottle_A" place="plate_B" />
+  <Move object="bottle_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[14/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of water into flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[15/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of ethanol into the beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="ethanol" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[16/100] ✅ Valid
+📌 [Instruction]: Pour 50 mL of ethanol into flask_B. Transfer 10 mL from flask_B to flask_A. Bring flask_A to 0 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="50 mL" />
+  <Transfer from_vessel="flask_B" to_vessel="flask_A" volume="10 mL" />
+  <HeatChill vessel="flask_A" temp="0 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[17/100] ✅ Valid
+📌 [Instruction]: Pour 25 mL of ethanol into beaker_A. Place box_A on plate_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+  <Move object="box_A" place="plate_A" />
+
+</procedure>
+-------------------------------------------------------
+[18/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Place 10 mL of water into flask_B. Pour 25 mL from flask_B into flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="10 mL" />
+  <Transfer from_vessel="flask_B" to_vessel="flask_A" volume="25 mL" />
+</procedure>
+⚠️ [Error Message]: Cannot Transfer 25 mL from flask_B, which holds 10 mL
+-------------------------------------------------------
+[19/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of water into flask_A. Send 10 mL from flask_A to beaker_B. Perform cleaning on beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="10 mL" />
+  <Transfer from_vessel="flask_A" to_vessel="beaker_B" volume="10 mL" />
+  <CleanVessel vessel="beaker_B" />
+</procedure>
+-------------------------------------------------------
+[20/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of water into flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[21/100] ✅ Valid
+📌 [Instruction]: Add 10 mL of water to flask_A. Mix the contents of flask_A for 2 min. Bring flask_A to 0 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="10 mL" />
+  <Stir vessel="flask_A" time="2 min" />
+  <HeatChill vessel="flask_A" temp="0 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[22/100] ✅ Valid
+📌 [Instruction]: Introduce 10 mL of water into the flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[23/100] ✅ Valid
+📌 [Instruction]: Add 25 mL of ethanol to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[24/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Add 50 mL of ethanol to beaker_A. Perform cleaning on beaker_A. Transfer 25 mL from beaker_A to beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="50 mL" />
+  <CleanVessel vessel="beaker_A" />
+  <Transfer from_vessel="beaker_A" to_vessel="beaker_B" volume="25 mL" />
+</procedure>
+⚠️ [Error Message]: Cannot Transfer from empty vessel: beaker_A
+-------------------------------------------------------
+[25/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of water into beaker_B. Relocate bottle_A onto plate_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+  <Move object="bottle_A" place="plate_A" />
+
+</procedure>
+-------------------------------------------------------
+[26/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of water into the flask_B. Stir flask_B for 1 min.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="25 mL" />
+  <Stir vessel="flask_B" time="1 min" />
+</procedure>
+-------------------------------------------------------
+[27/100] ✅ Valid
+📌 [Instruction]: Introduce 10 mL of water into the beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[28/100] ✅ Valid
+📌 [Instruction]: Add 50 mL of water to flask_A. Stir the solution in flask_A for 30 s. Transfer 25 mL from flask_A to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="50 mL" />
+  <Stir vessel="flask_A" time="30 s" />
+  <Transfer from_vessel="flask_A" to_vessel="beaker_A" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[29/100] ✅ Valid
+📌 [Instruction]: Add 50 mL of water to beaker_A. Heat beaker_A to 60 C. Adjust beaker_A to 60 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="50 mL" />
+  <HeatChill vessel="beaker_A" temp="60 C" active="true" />
+  <Stir vessel="beaker_A" time="1 min" />
+  <HeatChill vessel="beaker_A" temp="60 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[30/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of water into the beaker_A. Stir beaker_A for 1 min. Bring beaker_A to 25 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="25 mL" />
+  <Stir vessel="beaker_A" time="1 min" />
+  <HeatChill vessel="beaker_A" temp="25 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[31/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of water into the flask_A. Agitate flask_A for 2 min.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="25 mL" />
+  <Stir vessel="flask_A" time="2 min" />
+</procedure>
+-------------------------------------------------------
+[32/100] ✅ Valid
+📌 [Instruction]: Introduce 10 mL of ethanol into the flask_B. Stir flask_B for 30 s. Bring flask_B to 0 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="10 mL" />
+  <Stir vessel="flask_B" time="30 s" />
+  <HeatChill vessel="flask_B" temp="0 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[33/100] ✅ Valid
+📌 [Instruction]: Place 10 mL of ethanol into flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[34/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Introduce 50 mL of water into the beaker_B. Wash beaker_B. Heat beaker_B to 60 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="50 mL" />
+  <CleanVessel vessel="beaker_B" />
+  <HeatChill vessel="beaker_B" temp="60 C" active="true" />
+</procedure>
+⚠️ [Error Message]: Cannot HeatChill empty vessel: beaker_B
+-------------------------------------------------------
+[35/100] ✅ Valid
+📌 [Instruction]: Introduce 50 mL of ethanol into the beaker_A. Perform cleaning on beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="50 mL" />
+  <CleanVessel vessel="beaker_A" />
+</procedure>
+-------------------------------------------------------
+[36/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Add 25 mL of ethanol to beaker_B. Pour 50 mL from beaker_B into beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="ethanol" volume="25 mL" />
+  <Transfer from_vessel="beaker_B" to_vessel="beaker_A" volume="50 mL" />
+</procedure>
+⚠️ [Error Message]: Cannot Transfer 50 mL from beaker_B, which holds 25 mL
+-------------------------------------------------------
+[37/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of water into the flask_A. Set the temperature of flask_A to 25 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="25 mL" />
+  <HeatChill vessel="flask_A" temp="25 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[38/100] ✅ Valid
+📌 [Instruction]: Introduce 50 mL of ethanol into the beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[39/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of water into beaker_B. Agitate beaker_B for 2 min. Send 10 mL from beaker_B to flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+  <Stir vessel="beaker_B" time="2 min" />
+  <Transfer from_vessel="beaker_B" to_vessel="flask_A" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[40/100] ✅ Valid
+📌 [Instruction]: Introduce 50 mL of water into the flask_A. Stir the solution in flask_A for 1 min. Agitate flask_A for 2 min.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="50 mL" />
+  <Stir vessel="flask_A" time="1 min" />
+  <Stir vessel="flask_A" time="2 min" />
+</procedure>
+-------------------------------------------------------
+[41/100] ✅ Valid
+📌 [Instruction]: Place 10 mL of ethanol into flask_B. Set the temperature of flask_B to 0 C. Send 10 mL from flask_B to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="10 mL" />
+  <HeatChill vessel="flask_B" temp="0 C" active="true" />
+  <Transfer from_vessel="flask_B" to_vessel="beaker_A" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[42/100] ✅ Valid
+📌 [Instruction]: Add 25 mL of water to beaker_A. Mix the contents of beaker_A for 30 s. Stir beaker_A for 1 min.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="25 mL" />
+  <Stir vessel="beaker_A" time="30 s" />
+  <Stir vessel="beaker_A" time="1 min" />
+
+</procedure>
+-------------------------------------------------------
+[43/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of ethanol into beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="ethanol" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[44/100] ✅ Valid
+📌 [Instruction]: Pour 25 mL of water into flask_B. Wash flask_B. Place bottle_A on plate_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="25 mL" />
+  <CleanVessel vessel="flask_B" />
+  <Move object="bottle_A" place="plate_A" />
+</procedure>
+-------------------------------------------------------
+[45/100] ✅ Valid
+📌 [Instruction]: Pour 25 mL of ethanol into beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[46/100] ✅ Valid
+📌 [Instruction]: Place 10 mL of water into beaker_B. Stir beaker_B for 1 min.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+  <Stir vessel="beaker_B" time="1 min" />
+</procedure>
+-------------------------------------------------------
+[47/100] ✅ Valid
+📌 [Instruction]: Add 25 mL of ethanol to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[48/100] ❌ Invalid (Invalid operator reference)
+----------------------------------------
+📌 [Instruction]: Add 50 mL of ethanol to flask_A. Rinse and clean flask_A. Wash flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="50 mL" />
+  <CleanVessel vessel="flask_A" />
+  <Move object="flask_A" place="flask_B" />
+</procedure>
+⚠️ [Error Message]: Invalid object in Move: flask_A
+-------------------------------------------------------
+[49/100] ✅ Valid
+📌 [Instruction]: Pour 50 mL of water into flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[50/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of water into the flask_A. Mix the contents of flask_A for 2 min. Put bottle_A on top of plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="25 mL" />
+  <Stir vessel="flask_A" time="2 min" />
+  <Move object="bottle_A" place="plate_B" />
+
+</procedure>
+-------------------------------------------------------
+[51/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of ethanol into flask_A. Transfer 10 mL from flask_A to flask_B. Agitate flask_B for 1 min.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="10 mL" />
+  <Transfer from_vessel="flask_A" to_vessel="flask_B" volume="10 mL" />
+  <Stir vessel="flask_B" time="1 min" />
+</procedure>
+-------------------------------------------------------
+[52/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of water into flask_B. Put box_A on top of plate_A. Perform cleaning on flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="50 mL" />
+  <Move object="box_A" place="plate_A" />
+  <CleanVessel vessel="flask_B" />
+</procedure>
+-------------------------------------------------------
+[53/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of ethanol into flask_A. Stir flask_A for 1 min. Bring flask_A to 0 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="50 mL" />
+  <Stir vessel="flask_A" time="1 min" />
+  <HeatChill vessel="flask_A" temp="0 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[54/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of ethanol into flask_A. Move bottle_A to plate_A. Set the temperature of flask_A to 0 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="10 mL" />
+  <Move object="bottle_A" place="plate_A" />
+  <HeatChill vessel="flask_A" temp="0 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[55/100] ✅ Valid
+📌 [Instruction]: Pour 50 mL of ethanol into flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[56/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of ethanol into beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[57/100] ✅ Valid
+📌 [Instruction]: Introduce 10 mL of ethanol into the flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[58/100] ✅ Valid
+📌 [Instruction]: Add 10 mL of water to beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+
+</procedure>
+-------------------------------------------------------
+[59/100] ✅ Valid
+📌 [Instruction]: Add 50 mL of ethanol to flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[60/100] ✅ Valid
+📌 [Instruction]: Add 25 mL of ethanol to flask_B. Move bottle_A to plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="25 mL" />
+  <Move object="bottle_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[61/100] ✅ Valid
+📌 [Instruction]: Add 10 mL of water to beaker_A. Move bottle_A to plate_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="10 mL" />
+  <Move object="bottle_A" place="plate_A" />
+
+</procedure>
+-------------------------------------------------------
+[62/100] ✅ Valid
+📌 [Instruction]: Add 25 mL of water to flask_B. Rinse and clean flask_B. Relocate box_A onto plate_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="25 mL" />
+  <CleanVessel vessel="flask_B" />
+  <Move object="box_A" place="plate_A" />
+</procedure>
+-------------------------------------------------------
+[63/100] ✅ Valid
+📌 [Instruction]: Pour 50 mL of ethanol into flask_A. Put box_A on top of plate_B. Send 10 mL from flask_A to flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="50 mL" />
+  <Move object="box_A" place="plate_B" />
+  <Transfer from_vessel="flask_A" to_vessel="flask_B" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[64/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Place 10 mL of water into flask_B. Send 10 mL from flask_B to flask_A. Pour 25 mL from flask_A into flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="10 mL" />
+  <Transfer from_vessel="flask_B" to_vessel="flask_A" volume="10 mL" />
+  <Transfer from_vessel="flask_A" to_vessel="flask_B" volume="25 mL" />
+</procedure>
+⚠️ [Error Message]: Cannot Transfer 25 mL from flask_A, which holds 10 mL
+-------------------------------------------------------
+[65/100] ✅ Valid
+📌 [Instruction]: Pour 50 mL of ethanol into flask_B. Move box_A to plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="50 mL" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[66/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of ethanol into flask_A. Adjust flask_A to 60 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="10 mL" />
+  <HeatChill vessel="flask_A" temp="60 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[67/100] ✅ Valid
+📌 [Instruction]: Introduce 10 mL of ethanol into the flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[68/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of water into beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[69/100] ✅ Valid
+📌 [Instruction]: Place 25 mL of ethanol into beaker_A. Stir beaker_A for 1 min. Put bottle_A on top of plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+  <Stir vessel="beaker_A" time="1 min" />
+  <Move object="bottle_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[70/100] ✅ Valid
+📌 [Instruction]: Introduce 50 mL of water into the flask_B. Rinse and clean flask_B. Relocate box_A onto plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="50 mL" />
+  <CleanVessel vessel="flask_B" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[71/100] ✅ Valid
+📌 [Instruction]: Pour 25 mL of water into beaker_A. Place box_A on plate_A. Stir the solution in beaker_A for 30 s.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="25 mL" />
+  <Stir vessel="beaker_A" time="30 s" />
+  <Move object="box_A" place="plate_A" />
+</procedure>
+-------------------------------------------------------
+[72/100] ✅ Valid
+📌 [Instruction]: Place 10 mL of water into beaker_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[73/100] ✅ Valid
+📌 [Instruction]: Pour 25 mL of ethanol into beaker_B. Put box_A on top of plate_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="ethanol" volume="25 mL" />
+  <Move object="box_A" place="plate_A" />
+
+</procedure>
+-------------------------------------------------------
+[74/100] ✅ Valid
+📌 [Instruction]: Add 10 mL of water to beaker_B. Agitate beaker_B for 30 s.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+  <Stir vessel="beaker_B" time="30 s" />
+</procedure>
+-------------------------------------------------------
+[75/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of water into flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[76/100] ✅ Valid
+📌 [Instruction]: Place 50 mL of water into flask_B. Agitate flask_B for 2 min.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="50 mL" />
+  <Stir vessel="flask_B" time="2 min" />
+</procedure>
+-------------------------------------------------------
+[77/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of ethanol into the beaker_A. Bring beaker_A to 60 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+  <HeatChill vessel="beaker_A" temp="60 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[78/100] ✅ Valid
+📌 [Instruction]: Place 10 mL of water into beaker_B. Relocate bottle_A onto plate_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="10 mL" />
+  <Move object="bottle_A" place="plate_A" />
+</procedure>
+-------------------------------------------------------
+[79/100] ✅ Valid
+📌 [Instruction]: Pour 25 mL of water into beaker_A. Adjust beaker_A to 25 C. Put box_A on top of plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="25 mL" />
+  <HeatChill vessel="beaker_A" temp="25 C" active="true" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[80/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Pour 25 mL of water into flask_B. Send 50 mL from flask_B to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="25 mL" />
+  <Transfer from_vessel="flask_B" to_vessel="beaker_A" volume="50 mL" />
+</procedure>
+⚠️ [Error Message]: Cannot Transfer 50 mL from flask_B, which holds 25 mL
+-------------------------------------------------------
+[81/100] ✅ Valid
+📌 [Instruction]: Add 50 mL of ethanol to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[82/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Pour 10 mL of water into beaker_A. Send 25 mL from beaker_A to flask_A. Bring flask_A to 25 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="10 mL" />
+  <Transfer from_vessel="beaker_A" to_vessel="flask_A" volume="25 mL" />
+  <HeatChill vessel="flask_A" temp="25 C" active="true" />
+</procedure>
+⚠️ [Error Message]: Cannot Transfer 25 mL from beaker_A, which holds 10 mL
+-------------------------------------------------------
+[83/100] ✅ Valid
+📌 [Instruction]: Pour 25 mL of ethanol into flask_A. Send 25 mL from flask_A to beaker_A. Stir the solution in beaker_A for 30 s.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="25 mL" />
+  <Transfer from_vessel="flask_A" to_vessel="beaker_A" volume="25 mL" />
+  <Stir vessel="beaker_A" time="30 s" />
+</procedure>
+-------------------------------------------------------
+[84/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of water into the beaker_A. Put box_A on top of plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="25 mL" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[85/100] ✅ Valid
+📌 [Instruction]: Add 50 mL of ethanol to flask_A. Send 25 mL from flask_A to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="50 mL" />
+  <Transfer from_vessel="flask_A" to_vessel="beaker_A" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[86/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of water into the beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="25 mL" />
+
+</procedure>
+-------------------------------------------------------
+[87/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of ethanol into the beaker_A. Place box_A on plate_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+  <Move object="box_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[88/100] ✅ Valid
+📌 [Instruction]: Place 25 mL of ethanol into beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[89/100] ✅ Valid
+📌 [Instruction]: Add 10 mL of water to flask_A. Perform cleaning on flask_A. Rinse and clean flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="10 mL" />
+  <CleanVessel vessel="flask_A" />
+  <CleanVessel vessel="flask_A" />
+
+</procedure>
+-------------------------------------------------------
+[90/100] ✅ Valid
+📌 [Instruction]: Pour 10 mL of water into flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="10 mL" />
+</procedure>
+-------------------------------------------------------
+[91/100] ✅ Valid
+📌 [Instruction]: Pour 25 mL of ethanol into beaker_A. Perform cleaning on beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="25 mL" />
+  <CleanVessel vessel="beaker_A" />
+</procedure>
+-------------------------------------------------------
+[92/100] ✅ Valid
+📌 [Instruction]: Introduce 10 mL of water into the flask_B. Mix the contents of flask_B for 2 min.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="water" volume="10 mL" />
+  <Stir vessel="flask_B" time="2 min" />
+</procedure>
+-------------------------------------------------------
+[93/100] ✅ Valid
+📌 [Instruction]: Add 50 mL of ethanol to flask_B.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[94/100] ✅ Valid
+📌 [Instruction]: Add 25 mL of water to flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="25 mL" />
+</procedure>
+-------------------------------------------------------
+[95/100] ✅ Valid
+📌 [Instruction]: Introduce 50 mL of ethanol into the flask_B. Send 50 mL from flask_B to beaker_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_B" reagent="ethanol" volume="50 mL" />
+  <Transfer from_vessel="flask_B" to_vessel="beaker_A" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[96/100] ✅ Valid
+📌 [Instruction]: Introduce 25 mL of water into the beaker_A. Put bottle_A on top of plate_B. Stir beaker_A for 30 s.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="water" volume="25 mL" />
+  <Stir vessel="beaker_A" time="30 s" />
+  <Move object="bottle_A" place="plate_B" />
+</procedure>
+-------------------------------------------------------
+[97/100] ✅ Valid
+📌 [Instruction]: Add 25 mL of ethanol to flask_A. Adjust flask_A to 60 C. Perform cleaning on flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="ethanol" volume="25 mL" />
+  <HeatChill vessel="flask_A" temp="60 C" active="true" />
+  <CleanVessel vessel="flask_A" />
+</procedure>
+-------------------------------------------------------
+[98/100] ✅ Valid
+📌 [Instruction]: Introduce 50 mL of water into the beaker_B. Heat beaker_B to 0 C.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_B" reagent="water" volume="50 mL" />
+  <HeatChill vessel="beaker_B" temp="0 C" active="true" />
+</procedure>
+-------------------------------------------------------
+[99/100] ✅ Valid
+📌 [Instruction]: Pour 50 mL of ethanol into beaker_A. Adjust beaker_A to 0 C. Send 50 mL from beaker_A to flask_A.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="beaker_A" reagent="ethanol" volume="50 mL" />
+  <HeatChill vessel="beaker_A" temp="0 C" active="true" />
+  <Transfer from_vessel="beaker_A" to_vessel="flask_A" volume="50 mL" />
+</procedure>
+-------------------------------------------------------
+[100/100] ❌ Invalid (Physically infeasible sequence)
+----------------------------------------
+📌 [Instruction]: Add 25 mL of water to flask_A. Rinse and clean flask_A. Mix the contents of flask_A for 30 s.
+🤖 [Generated XML]:
+<procedure>
+<Add vessel="flask_A" reagent="water" volume="25 mL" />
+  <CleanVessel vessel="flask_A" />
+  <Stir vessel="flask_A" time="30 s" />
+</procedure>
+⚠️ [Error Message]: Cannot Stir empty vessel: flask_A
+-------------------------------------------------------
+wrote generations to /home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001f/llm/xdl_generations.json
+
+============================================================
+▶️ [실험 3] Validator Accuracy 시작
+============================================================
+
+
+################################################################################
+### 논문 결과 출력 ###
+################################################################################
+
+[Table 4.2.1]
+Attempts: 100 | Success: 90 | Fail: 10 | Rate: 90.0%
+Avg Inference Time: 1.2925s
+
+[Table 4.2.2-1] Error Analysis
+- Physically infeasible sequence: 9 cases (e.g., Cannot Transfer 50 mL from beaker_B, which holds 2)
+- Invalid operator reference    : 1 cases (e.g., Invalid object in Move: flask_A)
+
+[Table 4.2.2-2] Confusion Matrix
+TP: 4 | FN: 0
+FP: 0 | TN: 8
+Accuracy: 100.00%

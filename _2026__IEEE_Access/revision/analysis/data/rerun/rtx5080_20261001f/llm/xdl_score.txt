@@ -1,0 +1,71 @@
+== all instructions
+instructions scored: 100   generations parsed as <procedure>: 100.0% [96.3, 100.0]
+
+  exact procedure match    96.0% [90.2, 98.4]   (all steps, all fields)
+  step count correct       99.0% [94.6, 99.8]
+  operator sequence        96.0% [90.2, 98.4]   (right operators in the right order)
+  operator multiset        98.0% [93.0, 99.4]   (right operators, order ignored)
+
+  per-step operator        97.1% [93.8, 98.7]   (n=205 steps)
+  object fields           100.0% [98.4, 100.0]   (n=242)
+  reagent fields          100.0% [96.3, 100.0]   (n=100)
+  quantity fields         100.0% [97.7, 100.0]   (n=161)
+  schema-only fields      100.0% [82.4, 100.0]   (n=18, HeatChill active)
+
+  per-operator step accuracy (all fields of that step correct):
+    Add          100.0% [96.3, 100.0]   (n=100)
+    CleanVessel  100.0% [80.6, 100.0]   (n=16)
+    HeatChill    100.0% [82.4, 100.0]   (n=18)
+    Move         100.0% [85.1, 100.0]   (n=22)
+    Stir         100.0% [85.1, 100.0]   (n=22)
+    Transfer     100.0% [84.5, 100.0]   (n=21)
+
+  ordering errors (right operators, wrong order): 2
+
+train/test overlap: 27/100 test instructions appear verbatim in procedure_instruction_v1.jsonl
+
+== UNSEEN in training (n=73)
+instructions scored: 73   generations parsed as <procedure>: 100.0% [95.0, 100.0]
+
+  exact procedure match    94.5% [86.7, 97.8]   (all steps, all fields)
+  step count correct       98.6% [92.6, 99.8]
+  operator sequence        94.5% [86.7, 97.8]   (right operators in the right order)
+  operator multiset        97.3% [90.5, 99.2]   (right operators, order ignored)
+
+  per-step operator        96.5% [92.6, 98.4]   (n=171 steps)
+  object fields           100.0% [98.2, 100.0]   (n=205)
+  reagent fields          100.0% [95.0, 100.0]   (n=73)
+  quantity fields         100.0% [97.1, 100.0]   (n=130)
+  schema-only fields      100.0% [82.4, 100.0]   (n=18, HeatChill active)
+
+  per-operator step accuracy (all fields of that step correct):
+    Add          100.0% [95.0, 100.0]   (n=73)
+    CleanVessel  100.0% [80.6, 100.0]   (n=16)
+    HeatChill    100.0% [82.4, 100.0]   (n=18)
+    Move         100.0% [83.2, 100.0]   (n=19)
+    Stir         100.0% [82.4, 100.0]   (n=18)
+    Transfer     100.0% [84.5, 100.0]   (n=21)
+
+  ordering errors (right operators, wrong order): 2
+
+== SEEN verbatim in training (n=27)
+instructions scored: 27   generations parsed as <procedure>: 100.0% [87.5, 100.0]
+
+  exact procedure match   100.0% [87.5, 100.0]   (all steps, all fields)
+  step count correct      100.0% [87.5, 100.0]
+  operator sequence       100.0% [87.5, 100.0]   (right operators in the right order)
+  operator multiset       100.0% [87.5, 100.0]   (right operators, order ignored)
+
+  per-step operator       100.0% [89.8, 100.0]   (n=34 steps)
+  object fields           100.0% [90.6, 100.0]   (n=37)
+  reagent fields          100.0% [87.5, 100.0]   (n=27)
+  quantity fields         100.0% [89.0, 100.0]   (n=31)
+  schema-only fields         n/a           (n=0, HeatChill active)
+
+  per-operator step accuracy (all fields of that step correct):
+    Add          100.0% [87.5, 100.0]   (n=27)
+    Move         100.0% [43.9, 100.0]   (n=3)
+    Stir         100.0% [51.0, 100.0]   (n=4)
+
+  ordering errors (right operators, wrong order): 0
+

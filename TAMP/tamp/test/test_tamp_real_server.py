@@ -34,6 +34,11 @@ INTENDED_OVERRIDES = {
     '_arm_q',
     '_execute_trajectory_step',
     '_finish_execution',
+    # nothing to hold on hardware: the plan runs beside a plant that does not render
+    '_hold_plant_for_planning',
+    # cho_object_pose has no per-camera frames: every observation the recovery
+    # scan and the check before execution ask for is its fused pose.
+    '_observe',
     '_perception_pose',
     '_publish_arm_command',
     '_start_execution',
@@ -157,12 +162,12 @@ def test_both_plants_track_whether_the_gripper_is_holding():
             '%s.execute_gripper_action never sets self._holding' % cls.__name__)
 
 
-def test_the_scan_rung_is_off_until_there_is_a_camera_on_the_arm():
-    # This cell has two fixed cameras and no wrist camera, so sweeping the arm
-    # observes the same two viewpoints it started from. Defaulting the rung on
-    # would spend tens of seconds of motion per failed localization and recover
-    # nothing.
-    assert BASE.RECOVERY_SCAN is False
+def test_the_scan_rung_is_off_on_the_real_cell():
+    # The simulated cell carries a wrist camera (camera_3) and scans by default.
+    # On the physical plant occlusion recovery belongs to cho_robot_project, and
+    # a sweep of the real arm must be asked for, never inherited.
+    assert BASE.RECOVERY_SCAN is True
+    assert REAL.RECOVERY_SCAN is False
 
 
 def test_the_real_server_has_no_planner_config_of_its_own():

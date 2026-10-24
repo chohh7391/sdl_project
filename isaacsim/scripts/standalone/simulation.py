@@ -8,7 +8,7 @@ from std_msgs.msg import Float32, Float32MultiArray, String
 from geometry_msgs.msg import Wrench
 from tamp_interfaces.srv import ToolChange, GetRobotInfo, GetToolInfo
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy
-import sys, os
+import sys, os, time
 
 ROBOT_STAGE_PATH = "/World/Robot"
 ROOT_JOINT_PATH = ROBOT_STAGE_PATH + "/root_joint"
@@ -76,9 +76,11 @@ class Simulation(Node):
 
         self.simulation_app.update()
 
-        # initialize camera
-        for i in range(2):
-            self.initialize_camera(self.task.cameras[i])
+        # initialize camera -- every one the task built, the wrist camera too:
+        # it has the same D435 intrinsics, and left uninitialised it renders
+        # with Isaac's default aperture instead of the K its camera_info states.
+        for camera in self.task.cameras:
+            self.initialize_camera(camera)
         
         self.robot = self.world.scene.get_object("fr5")
         if self.robot is None:
@@ -97,9 +99,9 @@ class Simulation(Node):
         # action graphs
         # SDL_CAMERAS=0 skips the rendered-camera graph entirely. The two
         # 1280x720 cameras render continuously on the same GPU that cuTAMP
-        # optimises on, so they are part of the measured planning latency; a
-        # ground-truth-state run does not need them, and this makes the cost
-        # measurable instead of assumed.
+        # optimises on (outside planning, which holds stepping -- see
+        # hold_for_planning_cb); a ground-truth-state run does not need them,
+        # and this makes the cost measurable instead of assumed.
         # Whatever the task actually built, so adding a wrist camera is one
         # switch (SDL_WRIST_CAMERA) rather than an edit in three places.
         camera_paths = list(getattr(self.task, "camera_prim_paths",
@@ -118,9 +120,16 @@ class Simulation(Node):
         else:
             print("[Sim] SDL_CAMERAS=0: rendered cameras disabled")
         self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-        # TF for every camera, including the wrist one, so perception can
-        # transform its detections into base_link like the fixed cameras'.
-        target_prim_paths = list(camera_paths)
+        # TF for the cameras that stand in the cell. A camera ON the arm is left
+        # out: after a tool change rebuilds the world, ROS2PublishTransformTree
+        # crashes the simulator (segfault on the first /tf subscriber) with a
+        # target inside the robot, and a wrist camera's transform is the arm's
+        # forward kinematics plus a fixed mount anyway. perception_manager's
+        # launch publishes it that way -- robot_state_publisher on the joint
+        # states, then the mount from config/wrist_camera.yaml -- as the real
+        # cell does.
+        target_prim_paths = [p for p in camera_paths
+                             if not p.startswith(ROBOT_STAGE_PATH + "/")]
         self.tf_graph = self.create_tf_graph(
             target_prim_paths=target_prim_paths,
             parent_prim_path=ROBOT_STAGE_PATH + "/base_link",
@@ -177,6 +186,11 @@ class Simulation(Node):
         self.get_robot_info_srv = self.create_service(GetRobotInfo, "get_robot_info", self.get_robot_info_cb)
         self.get_tool_info_srv = self.create_service(GetToolInfo, "get_tool_info", self.get_tool_info_cb)
         self.tool_change_srv = self.create_service(ToolChange, "tool_change", self.tool_change_cb)
+
+        # Set by tamp_server around each plan; see hold_for_planning_cb.
+        self._held_for_planning = False
+        self._held_since = None
+        self.hold_for_planning_srv = self.create_service(SetBool, "isaac_hold_for_planning", self.hold_for_planning_cb)
 
         self.ft_pub = self.create_publisher(Wrench, "raw_ft_data", 10)
         self.scale_pub = self.create_publisher(Float32, "raw_scale_data", 10)
@@ -470,6 +484,9 @@ class Simulation(Node):
 
     def step_cb(self):
 
+        if self._held_for_planning:
+            return
+
         if self.simulation_app.is_running():
 
             # step simulation
@@ -502,6 +519,31 @@ class Simulation(Node):
         else:
             self.get_logger().info("Quit ROS2 Node")
             rclpy.try_shutdown()
+
+    def hold_for_planning_cb(self, request, response):
+        """Stop stepping the scene (data=True) or resume it (data=False).
+
+        cuTAMP optimises on the GPU this scene renders on. Measured on the
+        RTX 5080 with an idle scene (2026-09-28): 98 % GPU utilisation while
+        stepping, 24-25 % with the timeline paused through
+        set_simulation_state (step_cb still renders every tick), 6 % held
+        here, 8-13 % with no simulator at all. So the planner holds stepping
+        itself -- no physics, no rendering, no action-graph publishing -- and
+        the timeline stays playing, so resuming continues the same physics
+        state. The services of this node keep answering while held; the timer
+        callback returns at once.
+        """
+        hold = bool(request.data)
+        if hold and not self._held_for_planning:
+            self._held_since = time.time()
+            self.get_logger().info("stepping held for planning")
+        elif not hold and self._held_for_planning:
+            self.get_logger().info("stepping resumed after %.2f s held for planning"
+                                   % (time.time() - self._held_since))
+        self._held_for_planning = hold
+        response.success = True
+        response.message = "held" if hold else "stepping"
+        return response
 
     def publish_ft(self, ft_data: np.ndarray):
         
@@ -881,7 +923,41 @@ class Simulation(Node):
             self.timer.cancel()
             self.world.stop()
 
+            # A camera on the arm is a prim under the robot that the scene
+            # registry does not own, so world.clear() leaves it -- and with it
+            # /World/Robot -- on the stage. The rebuilt robot then gets a unique
+            # name (/World/Robot_1), the wrist camera is re-created on the dead
+            # /World/Robot, and the TF graph's base_link is gone (the simulator
+            # segfaulted on the next /tf subscriber). Remove it first.
+            # The camera graph's render products hold the camera prims, so the
+            # graph goes first; it is rebuilt below.
+            from isaacsim.core.utils.prims import delete_prim, is_prim_path_valid
+            if is_prim_path_valid("/ActionGraph/MultiCameraData"):
+                delete_prim("/ActionGraph/MultiCameraData")
+            self.camera_data_graph = None
+            self.simulation_app.update()
+            # The wrist camera's sensor object keeps its render product and
+            # data callbacks alive and re-authors its prim on the next update,
+            # which re-creates /World/Robot/wrist3_link before the new robot is
+            # added. Destroy it, then its prim.
+            for cam, cam_path in zip(list(getattr(self.task, "cameras", [])),
+                                     list(getattr(self.task, "camera_prim_paths", []))):
+                if cam_path.startswith(ROBOT_STAGE_PATH + "/"):
+                    try:
+                        cam.destroy()
+                    except Exception as exc:
+                        self.get_logger().warning("destroying %s: %s" % (cam_path, exc))
+                    if is_prim_path_valid(cam_path):
+                        delete_prim(cam_path)
+
             self.world.clear()
+            # Whatever still holds the old robot's path (the wrist camera's
+            # render product keeps an over on it), clear the path itself so the
+            # rebuilt robot is /World/Robot again.
+            if is_prim_path_valid(ROBOT_STAGE_PATH):
+                self.get_logger().info(
+                    "tool change: %s outlived world.clear(); deleting it" % ROBOT_STAGE_PATH)
+                delete_prim(ROBOT_STAGE_PATH)
 
             self.simulation_app.update()
             
@@ -894,8 +970,8 @@ class Simulation(Node):
             self.simulation_app.update()
 
             # initialize camera
-            for i in range(2):
-                self.initialize_camera(self.task.cameras[i])
+            for camera in self.task.cameras:
+                self.initialize_camera(camera)
 
             self.robot = self.world.scene.get_object("fr5")
             
@@ -905,15 +981,23 @@ class Simulation(Node):
 
             self.world.initialize_physics()
 
-            # action graphs
-            camera_paths = ["/World/camera_1", "/World/camera_2"]
-            camera_names = ["camera_1", "camera_2"]
-            self.camera_data_graph = self.create_ros_camera_graph(
-            camera_paths=camera_paths, camera_names=camera_names,
-            width=self.task.camera_info.width, height=self.task.camera_info.height)
-            self.og.Controller.evaluate_sync(self.camera_data_graph)
+            # action graphs -- from the cameras the task rebuilt, as at start-up.
+            # This used to name camera_1 and camera_2 outright, so the wrist
+            # camera, which the rebuilt robot carries again, lost its images
+            # and its TF at the first tool change (every trial starts with one)
+            # and SDL_CAMERAS=0 was ignored.
+            camera_paths = list(self.task.camera_prim_paths)
+            camera_names = list(self.task.camera_names)
+            self.camera_data_graph = None
+            if os.environ.get("SDL_CAMERAS", "1").strip() != "0":
+                self.camera_data_graph = self.create_ros_camera_graph(
+                    camera_paths=camera_paths, camera_names=camera_names,
+                    width=self.task.camera_info.width,
+                    height=self.task.camera_info.height)
+                self.og.Controller.evaluate_sync(self.camera_data_graph)
             self.robot_control_graph = self.create_robot_control_graph(articulation_root_path=ROOT_JOINT_PATH)
-            target_prim_paths = [f"/World/camera_{i}" for i in range(1, 3)]
+            target_prim_paths = [p for p in camera_paths
+                                 if not p.startswith(ROBOT_STAGE_PATH + "/")]
             self.tf_graph = self.create_tf_graph(
                 target_prim_paths=target_prim_paths,
                 parent_prim_path=ROBOT_STAGE_PATH + "/base_link",

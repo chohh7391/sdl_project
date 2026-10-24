@@ -1,0 +1,30 @@
+[2026-09-29 23:23:48] BEGIN transfer_ground_truth_rep0
+[2026-09-30 00:10:35] END   transfer_ground_truth_rep0 (done)
+[2026-09-30 00:10:35] BEGIN move_ground_truth_rep0
+[2026-09-30 00:44:45] END   move_ground_truth_rep0 (done)
+[2026-09-30 00:44:45] BEGIN stir_ground_truth_rep0
+[2026-09-30 01:36:13] END   stir_ground_truth_rep0 (done)
+[2026-09-30 01:36:13] BEGIN transfer_perception_rep0
+[2026-09-30 02:43:06] END   transfer_perception_rep0 (done)
+[2026-09-30 02:43:06] cuTAMP campaign finished
+[2026-09-30 02:43:06] BEGIN pddlstream_transfer_ps0
+[2026-09-30 02:56:37] END   pddlstream_transfer_ps0 (done)
+[2026-09-30 02:56:37] BEGIN pddlstream_move_ps0
+[2026-09-30 02:56:42] END   pddlstream_move_ps0 (done)
+[2026-09-30 02:56:42] BEGIN pddlstream_stir_ps0
+[2026-09-30 02:57:11] END   pddlstream_stir_ps0 (done)
+[2026-09-30 02:57:11] PDDLStream campaign finished
+[2026-09-30 02:57:12] BEGIN llm_xdl_generator
+[2026-09-30 02:59:33] END   llm_xdl_generator (done)
+[2026-09-30 02:59:33] BEGIN llm_ar_heldout_split2400
+[2026-09-30 03:00:26] END   llm_ar_heldout_split2400 (done)
+[2026-09-30 03:00:26] BEGIN llm_ar_unseen_control_in_distribution
+[2026-09-30 03:00:57] END   llm_ar_unseen_control_in_distribution (done)
+[2026-09-30 03:00:57] BEGIN llm_ar_unseen_L1_unseen_class
+[2026-09-30 03:02:53] END   llm_ar_unseen_L1_unseen_class (done)
+[2026-09-30 03:02:54] BEGIN llm_ar_unseen_L2_unseen_layout
+[2026-09-30 03:03:09] END   llm_ar_unseen_L2_unseen_layout (done)
+[2026-09-30 03:03:09] BEGIN llm_ar_unseen_L3_unseen_pair
+[2026-09-30 03:03:35] END   llm_ar_unseen_L3_unseen_pair (done)
+[2026-09-30 03:03:35] LLM experiments finished
+[2026-09-30 03:03:35] campaign rtx5080_20261001e: run_all.sh finished -- read /home/home/sdl_ws/src/sdl_project/_2026__IEEE_Access/revision/analysis/data/rerun/rtx5080_20261001e/RESULTS.md, audit first

@@ -2,10 +2,13 @@
 """Paired cuTAMP vs PDDLStream comparison over REPEATED runs, per budget.
 
 Inputs (one directory each):
-  cuTAMP      <task>_ground_truth_rep<r>.csv   30 layouts per file, one file per
-              repetition r = 0, 1, 2, ... (scripts/trials/trial_driver.py rows)
+  cuTAMP      <task>_<state>_rep<r>.csv   30 layouts per file, one file per
+              repetition r = 0, 1, 2, ... (scripts/trials/trial_driver.py rows);
+              --state ground_truth (default) or perception
   PDDLStream  pddlstream_<task>_5streams.csv   30 layouts x N planner seeds, the
-              seed in the `planner_seed` column (run_paired_trials.py rows)
+              seed in the `planner_seed` column (run_paired_trials.py rows); for
+              the perception state, the directory 20_pddlstream.sh wrote with
+              RERUN_PDDL_STATE=perception (pddlstream_perception/)
 
 Pairing: cuTAMP repetition r is paired with PDDLStream planner seed r on the
 same 30 layouts, for every r both planners have. Each exact McNemar test is
@@ -16,7 +19,10 @@ Pooled success rates use every trial of each planner (all cuTAMP repetitions,
 all PDDLStream seeds) with a Wilson 95% interval. A success that arrives after
 the budget is an unsolved, censored observation under that budget, for both
 planners alike, and the restricted mean time to solution comes from the
-Kaplan-Meier estimate over the budget.
+Kaplan-Meier estimate over the budget, as do the times by which 25/50/75% of
+the runs were solved (NR: never reached within the budget). The spread of the
+solved runs alone (mean, SD, quartiles) is reported beside them, labelled as
+such: it describes only the runs that succeeded.
 
 compare_planners.py answers the same question for ONE run per planner; it keys
 results by seed and refuses files with several rows per seed, which is why
@@ -30,6 +36,7 @@ import csv
 import glob
 import os
 import re
+import statistics
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -40,10 +47,10 @@ def _truthy(v):
     return str(v).strip() in ("1", "True", "true")
 
 
-def load_cutamp_reps(d, task):
-    """{rep: {seed: (ok, t)}} from <task>_ground_truth_rep<r>.csv."""
+def load_cutamp_reps(d, task, state="ground_truth"):
+    """{rep: {seed: (ok, t)}} from <task>_<state>_rep<r>.csv."""
     reps = {}
-    for f in sorted(glob.glob(os.path.join(d, "%s_ground_truth_rep*.csv" % task))):
+    for f in sorted(glob.glob(os.path.join(d, "%s_%s_rep*.csv" % (task, state)))):
         m = re.search(r"_rep(\d+)\.csv$", f)
         if not m:
             continue
@@ -100,7 +107,7 @@ def layouts(paths):
     return out
 
 
-def check_same_layouts(task, cu_dir, pd_dir):
+def check_same_layouts(task, cu_dir, pd_dir, state="ground_truth"):
     """Refuse to pair planners that did not see the same scenes.
 
     The pairing is only meaningful if layout s is the same scene for both: the
@@ -108,9 +115,16 @@ def check_same_layouts(task, cu_dir, pd_dir):
     randomizer (or to anything its overlap test depends on) would silently pair
     different scenes. Both runners record where the vessels were, so compare.
     """
-    cu = layouts(sorted(glob.glob(os.path.join(cu_dir, "%s_ground_truth_rep*.csv" % task))))
-    pd = layouts([os.path.join(pd_dir, "pddlstream_%s_5streams.csv" % task)])
+    cu = layouts(sorted(glob.glob(os.path.join(cu_dir, "%s_%s_rep*.csv" % (task, state)))))
+    pd_file = os.path.join(pd_dir, "pddlstream_%s_5streams.csv" % task)
+    pd = layouts([pd_file])
     bad = []
+    if state != "ground_truth":
+        # ...and the baseline was given the state of THIS cuTAMP state's trials
+        for r in csv.DictReader(open(pd_file)):
+            if r.get("state_source", "ground_truth") != state:
+                bad.append("seed %s: PDDLStream row is from the %s state"
+                           % (r["seed"], r.get("state_source") or "ground_truth"))
     for s in sorted(set(cu) & set(pd)):
         for i, name in enumerate(("beaker", "flask")):
             a, b = cu[s][i], pd[s][i]
@@ -126,18 +140,40 @@ def within(res, budget):
     return {s: (ok and t is not None and t <= budget, t) for s, (ok, t) in res.items()}
 
 
-def rmst(trials, budget):
+def _km(trials, budget):
     times, ev = [], []
     for ok, t in trials:
         if ok:
             times.append(min(t, budget)); ev.append(1)
         else:
             times.append(budget); ev.append(0)
-    return km_rmst(times, ev, budget)[0]
+    return km_rmst(times, ev, budget)
+
+
+def rmst(trials, budget):
+    return _km(trials, budget)[0]
+
+
+def km_quartiles(trials, budget):
+    """Times by which 25/50/75% of the runs were solved; None if not within the budget."""
+    curve = _km(trials, budget)[2]
+    return [next((t for t, s in curve if s <= 1.0 - q + 1e-12), None) for q in (0.25, 0.5, 0.75)]
+
+
+def _q(t):
+    return "NR" if t is None else "%.1f" % t
 
 
 def solved_times(res_list):
     return sorted(t for res in res_list for ok, t in res.values() if ok and t is not None)
+
+
+def spread(ts):
+    """Solved-only spread: mean, SD (n-1), median and quartiles (linear interpolation)."""
+    if len(ts) == 1:
+        return ts[0], 0.0, ts[0], ts[0], ts[0]
+    q1, med, q3 = statistics.quantiles(ts, n=4, method="inclusive")
+    return statistics.mean(ts), statistics.stdev(ts), med, q1, q3
 
 
 def main():
@@ -148,18 +184,21 @@ def main():
     ap.add_argument("--budgets", default="60,120,180",
                     help="comma-separated wall-clock budgets [s], DECLARED before the run")
     ap.add_argument("--tasks", default="transfer,move,stir")
+    ap.add_argument("--state", default="ground_truth", choices=("ground_truth", "perception"),
+                    help="which cuTAMP state to pair; PDDLStream rows must be from the same")
     ap.add_argument("--out", default=None, help="also write the report here (markdown)")
     a = ap.parse_args()
     budgets = [float(b) for b in a.budgets.split(",") if b.strip()]
 
     lines = []
     say = lines.append
-    say("# Planner comparison (cuTAMP vs PDDLStream)\n")
+    say("# Planner comparison (cuTAMP vs PDDLStream)%s\n"
+        % ("" if a.state == "ground_truth" else ", %s state" % a.state))
     say("cuTAMP: `%s`  \nPDDLStream: `%s`  \nbudgets (declared): %s s\n"
         % (a.cutamp, a.pddlstream, ", ".join("%.0f" % b for b in budgets)))
 
     for task in [t.strip() for t in a.tasks.split(",") if t.strip()]:
-        cu = load_cutamp_reps(a.cutamp, task)
+        cu = load_cutamp_reps(a.cutamp, task, a.state)
         pd = load_pddl_streams(a.pddlstream, task)
         say("\n## %s\n" % task)
         if not cu or not pd:
@@ -167,21 +206,22 @@ def main():
                 % (len(cu), len(pd)))
             continue
         pairs = sorted(set(cu) & set(pd))
-        n_same = check_same_layouts(task, a.cutamp, a.pddlstream)
+        n_same = check_same_layouts(task, a.cutamp, a.pddlstream, a.state)
         say("cuTAMP repetitions %s, PDDLStream planner seeds %s; paired on %s. "
             "Layouts checked identical on all %d shared seeds.\n"
             % (sorted(cu), sorted(pd), pairs, n_same))
 
         cs, ps = solved_times(cu.values()), solved_times(pd.values())
-        if cs:
-            say("- cuTAMP solved-only planning time: median %.2f s, range %.2f-%.2f s (n=%d)"
-                % (cs[len(cs) // 2], cs[0], cs[-1], len(cs)))
-        if ps:
-            say("- PDDLStream solved-only planning time: median %.2f s, range %.2f-%.2f s (n=%d)"
-                % (ps[len(ps) // 2], ps[0], ps[-1], len(ps)))
+        for name, ts in (("cuTAMP", cs), ("PDDLStream", ps)):
+            if ts:
+                mean, sd, med, q1, q3 = spread(ts)
+                say("- %s solved-only planning time (n=%d): mean %.2f s, SD %.2f s, "
+                    "median %.2f s [IQR %.2f-%.2f], range %.2f-%.2f s"
+                    % (name, len(ts), mean, sd, med, q1, q3, ts[0], ts[-1]))
         say("")
-        say("| budget | cuTAMP success [Wilson 95%] | RMST | PDDLStream success [Wilson 95%] | RMST |")
-        say("|---|---|---|---|---|")
+        say("| budget | cuTAMP success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] "
+            "| PDDLStream success [Wilson 95%] | RMST | KM 25/50/75% solved by [s] |")
+        say("|---|---|---|---|---|---|---|")
         per_budget = []
         for budget in budgets:
             cu_trials = [v for r in cu for v in within(cu[r], budget).values()]
@@ -190,9 +230,12 @@ def main():
             kp, np_ = sum(v[0] for v in pd_trials), len(pd_trials)
             lc, hc = wilson(kc, nc)
             lp, hp = wilson(kp, np_)
-            say("| %.0f s | %d/%d = %.1f%% [%.1f, %.1f] | %.1f s | %d/%d = %.1f%% [%.1f, %.1f] | %.1f s |"
+            say("| %.0f s | %d/%d = %.1f%% [%.1f, %.1f] | %.1f s | %s "
+                "| %d/%d = %.1f%% [%.1f, %.1f] | %.1f s | %s |"
                 % (budget, kc, nc, 100.0 * kc / nc, lc, hc, rmst(cu_trials, budget),
-                   kp, np_, 100.0 * kp / np_, lp, hp, rmst(pd_trials, budget)))
+                   " / ".join(_q(t) for t in km_quartiles(cu_trials, budget)),
+                   kp, np_, 100.0 * kp / np_, lp, hp, rmst(pd_trials, budget),
+                   " / ".join(_q(t) for t in km_quartiles(pd_trials, budget))))
             rows = []
             for r in pairs:
                 c, p = within(cu[r], budget), within(pd[r], budget)

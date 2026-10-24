@@ -1,0 +1,26 @@
+
+=== transfer_ground_truth_rep2.csv : 30 trials ===
+  seeds 0..29, 30 distinct
+
+RATES
+  task success                  27/30  =  90.0%  [95% CI  74.4,  96.5]   <- headline [transfer]: poured + placed upright in the goal region
+  planning success              29/30  =  96.7%  [95% CI  83.3,  99.4]
+  trajectory ran to completion  29/30  =  96.7%  [95% CI  83.3,  99.4]   (NOT a task-success criterion)
+  beaker upright after release  27/30  =  90.0%  [95% CI  74.4,  96.5]
+  beaker inside goal region     27/30  =  90.0%  [95% CI  74.4,  96.5]
+  pour step executed            29/30  =  96.7%  [95% CI  83.3,  99.4]
+  placement error from goal centre [mm]: n=29 min 5.2  median 12.6  max 188.1
+
+PLANNING
+  time [s]                     n=29  min 14.00  median 14.14  mean 19.21  sd 9.74  max 43.26 
+  time <= 180 s                 29/29  = 100.0%  [95% CI  88.3, 100.0]
+  satisfying particles         n=29  min 189.00  median 457.00  mean 438.45  sd 95.02  max 598.00 
+
+CARRIED-VESSEL TILT (executed, simulator measurement)
+  transport max [deg]          n=29  min 1.61  median 3.50  mean 7.64  sd 16.69  max 91.57 
+  transport <= 5 deg            20/29  =  69.0%  [95% CI  50.8,  82.7]
+  final tilt after release [deg] n=29  min 0.00  median 0.00  mean 6.21  sd 23.21  max 90.00 
+
+FAILURES
+    2x task_incomplete:beaker_not_upright
+    1x plan_planner_exception:RuntimeError

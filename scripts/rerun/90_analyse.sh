@@ -15,6 +15,20 @@ python3 "$A/planner_comparison.py" --cutamp "$RR_OUT/cutamp" --pddlstream "$RR_O
   --budgets "$BUDGETS" --out "$RES/planner.md" > /dev/null 2> "$RES/planner.err" \
   || echo "planner comparison failed: $(cat "$RES/planner.err")" > "$RES/planner.md"
 
+# The same comparison in the perception state, and PDDLStream's own two states,
+# once 20_pddlstream.sh has run with RERUN_PDDL_STATE=perception.
+if [[ -d "$RR_OUT/pddlstream_perception" ]]; then
+  python3 "$A/planner_comparison.py" --state perception --cutamp "$RR_OUT/cutamp" \
+    --pddlstream "$RR_OUT/pddlstream_perception" --budgets "$BUDGETS" \
+    --out "$RES/planner_perception.md" > /dev/null 2> "$RES/planner_perception.err" \
+    || echo "planner comparison (perception) failed: $(cat "$RES/planner_perception.err")" > "$RES/planner_perception.md"
+  python3 "$A/pddlstream_state.py" "$RR_OUT" --budgets "$BUDGETS" --out "$RES/pddlstream_state.md" > /dev/null 2>&1 \
+    || echo "PDDLStream state report failed" > "$RES/pddlstream_state.md"
+fi
+
+python3 "$A/planner_attempts.py" "$RR_OUT" --out "$RES/attempts.md" > /dev/null 2>&1 \
+  || echo "attempt report failed" > "$RES/attempts.md"
+
 for csv in "$RR_OUT"/cutamp/*.csv; do
   [[ -f "$csv" ]] || continue
   python3 "$A/summarize_trials.py" "$csv" --budget "$MAXB" > "$RES/trials_$(basename "$csv" .csv).txt" 2>&1
@@ -24,6 +38,9 @@ python3 "$A/paired_outcome.py" --field task_success \
   --a "$RR_OUT/cutamp/transfer_ground_truth_rep*.csv" --label-a ground_truth \
   --b "$RR_OUT/cutamp/transfer_perception_rep*.csv"   --label-b perception \
   > "$RES/state_source.md" 2>&1
+
+python3 "$A/perception_state.py" "$RR_OUT" --out "$RES/perception_state.md" > /dev/null 2>&1 \
+  || echo "perception state report failed" > "$RES/perception_state.md"
 
 for csv in "$RR_OUT"/cutamp/transfer_ground_truth_rep*.csv; do
   [[ -f "$csv" ]] || continue
@@ -56,6 +73,15 @@ L="$RR_OUT/llm"
   echo
   echo "\`scripts/rerun/90_analyse.sh\`가 $(date '+%F %T')에 생성했습니다. 손으로 고치지 말고 다시 생성하세요."
   echo "환경과 코드는 [RUN_INFO.md](RUN_INFO.md), 절차와 원고 반영 위치는 저장소 루트의 \`RERUN.md\`에 있습니다."
+  if [[ -f "$RR_OUT/PERCEPTION_COMMIT" ]]; then
+    echo "인식 상태 배치는 태그 커밋이 아니라 \`$(cat "$RR_OUT/PERCEPTION_COMMIT")\`에서 다시 쟀습니다. 정답 상태 배치는 태그 커밋 그대로입니다(RUN_INFO.md 끝)."
+  fi
+  if [[ -f "$RR_OUT/PDDL_PERCEPTION_COMMIT" ]]; then
+    echo "PDDLStream의 인식 상태 실행은 \`$(cat "$RR_OUT/PDDL_PERCEPTION_COMMIT")\`에서 쟀습니다. 입력은 인식 상태 cuTAMP 시행이 계획에 쓴 위치입니다(RUN_INFO.md 끝)."
+  fi
+  if [[ -f "$RR_OUT/PDDL_COMMIT" ]]; then
+    echo "PDDLStream은 태그 커밋이 아니라 \`$(cat "$RR_OUT/PDDL_COMMIT")\`에서 다시 쟀습니다. 그 사이 바뀐 것은 기준선과 분석뿐입니다(RUN_INFO.md 끝)."
+  fi
   echo
   if [[ $AUDIT_RC -eq 0 ]]; then
     echo "> **감사: CLEAN.** 모든 배치가 끝났고, 실행 중 GPU를 공유한 프로세스가 없었고, 논문 scene에서 돌았습니다."
@@ -67,8 +93,18 @@ L="$RR_OUT/llm"
   echo; echo "---"; echo
   sed 's/^# /## /' "$RES/planner.md"
   echo; echo "---"; echo
+  if [[ -f "$RES/planner_perception.md" ]]; then
+    sed 's/^# /## /' "$RES/planner_perception.md"
+    echo; echo "---"; echo
+    sed 's/^# /## /' "$RES/pddlstream_state.md"
+    echo; echo "---"; echo
+  fi
+  sed 's/^# /## /; s/^## /### /' "$RES/attempts.md"
+  echo; echo "---"; echo
   echo "## End-to-end Transfer: 정답 상태 vs 인식 상태"
   sed 's/^# /### /' "$RES/state_source.md"
+  echo; echo "---"; echo
+  sed 's/^# /## /; s/^## \([a-z]\)/### \1/' "$RES/perception_state.md"
   echo; echo "---"; echo
   echo "## 시행 요약 (예산 ${MAXB} s)"
   for f in "$RES"/trials_*.txt; do
