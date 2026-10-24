@@ -1,0 +1,9 @@
+# task_params of sdl_perceived_replay (sdl_cell_tasks/tasks/fr5/perceived_replay.py, DEFAULTS).
+#   ros2 launch cho_task_manager run_task_manager.launch.py robot_type:=fr5 task:=sdl_perceived_replay \
+#     object_pose_config:=$(ros2 pkg prefix --share sdl_cell_tasks)/config/perception/vessel_detect.yaml \
+#     object_pose_cameras_config:=... task_params:=<this file>
+# The recording is the node's replay_trajectory:= (empty: the cell's recording, traj_level_seed2); the
+# cameras check its layout, and replay_layout:= is optional.
+# Watch only vessels that STAY PUT: the cell's recording carries the beaker to the flask, so the flask.
+replay_watch: [flask]
+replay_drift_tolerance: null    # [m] a watched vessel may move; null: the layout gate's 15 mm

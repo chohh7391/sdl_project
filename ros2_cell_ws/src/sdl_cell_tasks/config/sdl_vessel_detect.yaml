@@ -1,0 +1,4 @@
+# task_params of sdl_vessel_detect (sdl_cell_tasks/tasks/fr5/vessel_detect.py): it takes none.
+#   ros2 launch cho_task_manager run_task_manager.launch.py robot_type:=fr5 task:=sdl_vessel_detect \
+#     object_pose_config:=$(ros2 pkg prefix --share sdl_cell_tasks)/config/perception/vessel_detect.yaml
+{}

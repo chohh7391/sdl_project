@@ -1,0 +1,9 @@
+# task_params of sdl_occlusion_recovery (sdl_cell_tasks/tasks/fr5/occlusion_recovery.py, DEFAULTS).
+#   ros2 launch cho_task_manager run_task_manager.launch.py robot_type:=fr5 task:=sdl_occlusion_recovery \
+#     object_pose_config:=$(ros2 pkg prefix --share sdl_cell_tasks)/config/perception/mujoco_sdl_cell.yaml \
+#     object_pose_cameras_config:=<the cell's camera table> task_params:=<this file>
+# This one is the MuJoCo cell's; the real bench's sweep table is config/sweep/fr5_bench.yaml, with the
+# object table config/perception/vessel_detect.yaml.
+sweep_config: config/sweep/fr5_mujoco_cell.yaml    # relative: under share/sdl_cell_tasks; required
+sweep_mode: single_pass                            # single_pass, or per_object
+visibility_topic: /perception/object_visibility    # where cho_object_pose says what each camera sees

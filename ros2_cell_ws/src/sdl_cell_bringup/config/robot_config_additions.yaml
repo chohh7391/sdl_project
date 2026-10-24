@@ -1,0 +1,17 @@
+# What this cell adds to the core's robot registry (cho_robot_config/config/).
+#
+# The cell's bringup loads arm controllers the core does not know about. Each
+# claims the arm's command interfaces like the registry's own, so every
+# exclusive switch has to take it down -- the core's included, such as
+# guarded_mission()'s abort to the hold controller. The registry's
+# controllers.additional_arm is that list, and the core's FR5 entry has none.
+#
+# At build time scripts/make_robot_config.py copies the installed core registry
+# into share/sdl_cell_bringup/robot_config/, adds these names, and validates the
+# result with cho_robot_config. Sourcing this workspace points
+# CHO_ROBOT_CONFIG_DIR there (env-hooks/), so every process started from it
+# reads the cell's registry. Nothing else in the core's entries changes.
+#
+# <robot_type>: {additional_arm: [<controller>, ...]}
+fr5:
+  additional_arm: [pouring_controller]

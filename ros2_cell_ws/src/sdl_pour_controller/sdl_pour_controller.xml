@@ -1,0 +1,7 @@
+<library path="sdl_pour_controller">
+    <class name="sdl_pour_controller/PouringController"
+           type="sdl_pour_controller::PouringController"
+           base_class_type="controller_interface::ControllerInterface">
+        <description>Scale-closed adaptive pouring controller for the FAIRINO FR5</description>
+    </class>
+</library>

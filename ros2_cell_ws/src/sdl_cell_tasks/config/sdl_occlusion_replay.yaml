@@ -1,0 +1,10 @@
+# task_params of sdl_occlusion_replay (sdl_cell_tasks/tasks/fr5/occlusion_replay.py, DEFAULTS): the
+# recovery's, as sdl_occlusion_recovery takes them.
+#   ros2 launch cho_task_manager run_task_manager.launch.py robot_type:=fr5 task:=sdl_occlusion_replay \
+#     home_via:=direct replay_layout:=<the cell's own layout file> \
+#     object_pose_config:=... object_pose_cameras_config:=... task_params:=<this file>
+# The recording is the node's replay_trajectory:= (empty: the cell's recording, traj_level_seed2, which
+# assumes the bench's layout and so needs replay_layout:=).
+sweep_config: config/sweep/fr5_mujoco_cell.yaml    # relative: under share/sdl_cell_tasks; required
+sweep_mode: single_pass                            # single_pass, or per_object
+visibility_topic: /perception/object_visibility

@@ -1,0 +1,4 @@
+# generated from sdl_cell_bringup/env-hooks/robot_config.sh.in
+# The cell's robot registry (config/robot_config_additions.yaml), for every
+# process started from a shell that sourced this workspace.
+export CHO_ROBOT_CONFIG_DIR="$AMENT_CURRENT_PREFIX/share/@PROJECT_NAME@/robot_config"

@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>sdl_cell_tasks</name>
+  <version>0.1.0</version>
+  <description>The FR5 chemistry-bench task trees, registered with cho_task_manager: the pour-splicing replay, vessel detection, occlusion sweeps and the perception-gated replays; the glassware meshes, sweep tables and the pour and scale tools.</description>
+  <maintainer email="chohh7391@gmail.com">Hyunho Cho</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>action_msgs</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>cho_control_tools</exec_depend>
+  <exec_depend>cho_interfaces</exec_depend>
+  <exec_depend>cho_object_pose</exec_depend>
+  <exec_depend>cho_robot_config</exec_depend>
+  <exec_depend>cho_task_manager</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>hansung_scale_msgs</exec_depend>
+  <exec_depend>py_trees</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <!-- The cell's robot registry: its environment hook points CHO_ROBOT_CONFIG_DIR
+       at a copy of the core's with pouring_controller in fr5's additional_arm, which
+       sdl_trajectory_replay refuses to pour without. -->
+  <exec_depend>sdl_cell_bringup</exec_depend>
+  <exec_depend>sdl_cell_interfaces</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>python3-pytest</test_depend>
+  <!-- scripts/solve_sweep_raster.py and its test build the FR5 description. -->
+  <test_depend>cho_bringup_fr5</test_depend>
+  <test_depend>cho_description_fr5</test_depend>
+  <test_depend>pinocchio</test_depend>
+  <test_depend>xacro</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
