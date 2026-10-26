@@ -126,7 +126,9 @@ def planning_card(run):
     m = re.search(r'=== planning on (\S+), run (\S+), seeds ([0-9 ]+):', log1)
     seeds = re.findall(r'^=== seed (\d+)\s+(\d\d:\d\d:\d\d)', log1, re.M)
     acc = re.search(r'accepted (\d+); best first: ([^\n]*)', log1)
-    used = re.search(r'transfer_plan:=\S*_seed(\d+)', log2)
+    # plan_remote.sh's 'plan: <run>/deliver/traj_realcell_seed<N>' line; transfer_plan:= in
+    # the logs of runs from before the cell's tasks took a task_params file.
+    used = re.search(r'(?:^plan: |transfer_plan:=)\S*_seed(\d+)', log2, re.M)
     if m:
         lines.append('run %s: seeds %s planned in Isaac Sim with cuTAMP' % (m.group(2), m.group(3).strip()))
     if seeds:

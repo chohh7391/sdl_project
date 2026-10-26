@@ -69,7 +69,7 @@ def colour(rgb, a=1.0):
 
 
 #: The receiver's outer rim radius, as the pouring controller is configured
-#: (controllers.yaml geometry.receiver_radius).
+#: (sdl_cell_bringup config/real/pouring_controller.yaml geometry.receiver_radius).
 RIM_RADIUS = 0.025
 
 
@@ -153,13 +153,14 @@ class Monitor:
                 lambda m, n=name: self.perceived.__setitem__(
                     n, (m.pose.position.x, m.pose.position.y, node.get_clock().now())), 10)
         try:
-            from cho_interfaces.msg import ScaleReading
+            from sdl_cell_interfaces.msg import ScaleReading
             from rclpy.qos import qos_profile_sensor_data
             node.create_subscription(ScaleReading, "/scale/reading",
                                      lambda m: setattr(self, "scale", (m.grams, m.stable)),
                                      qos_profile_sensor_data)
         except ImportError:
-            node.get_logger().warn("cho_interfaces not sourced: no balance reading in the status")
+            node.get_logger().warn("sdl_cell_interfaces not sourced (ros2_cell_ws): no balance reading "
+                                   "in the status")
         node.create_timer(1.0, self.reload_if_changed)
         node.create_timer(0.5, self.publish_status)
 
@@ -284,7 +285,7 @@ class Monitor:
             path.append(s)
         if self.receiver_rim is not None:
             # The receiver's rim as the pour goal will carry it: a ring at the
-            # rim's height, its outer radius (controllers.yaml receiver_radius).
+            # rim's height, its outer radius (pouring_controller.yaml receiver_radius).
             ring = Marker()
             ring.header.frame_id, ring.header.stamp = self.frame, stamp
             ring.ns, ring.id, ring.type, ring.action = "pour target", 100, Marker.LINE_STRIP, Marker.ADD

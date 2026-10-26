@@ -62,7 +62,7 @@ TOPICS=(
 
 set +u
 source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
+source "${CELL_WS:-$ROOT/ros2_cell_ws}/install/setup.bash"   # the cell overlay; brings the core's
 set -u
 
 BAG_PID=""

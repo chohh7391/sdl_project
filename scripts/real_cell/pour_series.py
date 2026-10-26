@@ -76,8 +76,10 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from rclpy.signals import SignalHandlerOptions
 
 from builtin_interfaces.msg import Duration as DurationMsg
-from cho_interfaces.action import Gripper, Pour
-from cho_interfaces.msg import ObjectVisibilityArray, ScaleReading
+from cho_interfaces.action import Gripper
+from cho_interfaces.msg import ObjectVisibilityArray
+from sdl_cell_interfaces.action import Pour
+from sdl_cell_interfaces.msg import ScaleReading
 from controller_manager_msgs.srv import SwitchController
 from control_msgs.action import FollowJointTrajectory
 from geometry_msgs.msg import PoseStamped
@@ -139,7 +141,8 @@ class Series(Node):
         self.create_subscription(ObjectVisibilityArray, '/perception/object_visibility', self._on_vis, rel)
         self.switch = self.create_client(SwitchController, '/controller_manager/switch_controller')
         self.jtc = ActionClient(self, FollowJointTrajectory, '/%s/follow_joint_trajectory' % JTC)
-        self.gripper = ActionClient(self, Gripper, '/controller_action_server/gripper_controller')
+        # The core's action contract (cho_robot_project v0.1.0): /<controller>/gripper.
+        self.gripper = ActionClient(self, Gripper, '/gripper_controller/gripper')
         self.pour = ActionClient(self, Pour, '/controller_action_server/pouring_controller')
         self.tf = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf, self)

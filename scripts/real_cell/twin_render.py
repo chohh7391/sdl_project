@@ -196,7 +196,7 @@ class TwinRenderer:
             self.parts.append((g.name, _Mesh(tris), color))
         self.wrist3 = self.model.getFrameId('wrist3_link')
         # the jaws, which the URDF has no visual for: AG-95 fingers ~16 x 24 mm,
-        # 110 mm along the approach from 0.205 m (controllers.yaml hand_boxes)
+        # 110 mm along the approach from 0.205 m (pouring_controller.yaml hand_boxes)
         self.jaw = _Mesh(_box((0.0, -0.012, 0.2054), (0.016, 0.012, 0.3158)))
         self.beaker = _Mesh(_cylinder(BEAKER_R, BEAKER_H, z0=0.0, capped=False))
         self.beaker_floor = _Mesh(_cylinder(BEAKER_R, 0.002, z0=0.0))

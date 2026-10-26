@@ -11,7 +11,7 @@ plan_remote.sh --perceive can read the result.
 
 The poses come from cho_object_pose (the AprilTag pose node), which already
 applies each tag's mount offset: its xy IS the vessel centre, and on the
-two-beaker cell's tables (cho_task_manager config/perception/pour_beakers.yaml)
+two-beaker cell's tables (sdl_cell_tasks config/perception/pour_beakers.yaml)
 its z is the tag's height, which is level with the vessel's bottom. BEARING is
 the direction from the vessel's axis to its tag, i.e. which way the mount's
 plate points: the tables put the vessel along the tag's own -y as printed, so
@@ -30,7 +30,7 @@ and says the bearing is then only known modulo 180 deg.
 Default topics:
   beaker1  /perception/object_pose/held_beaker   the beaker that is held and
            poured: the pouring controller reads its marker from this topic
-           (controllers.yaml vessel_pose_topic), so the table publishes the
+           (pouring_controller.yaml vessel_pose_topic), so the table publishes the
            source beaker's tag there and one pose node serves both
   beaker2  /perception/object_pose/beaker2
 

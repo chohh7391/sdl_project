@@ -7,11 +7,12 @@
 #   scripts/real_cell/plan_remote.sh --perceive --beakers --material liquid --grams 20 4
 #   scripts/real_cell/plan_remote.sh --attach 20260929-141203     # re-join after the ssh dropped
 #   scripts/real_cell/plan_remote.sh --fetch  20260929-141203     # a finished run: copy + check only
-#   add --replay to also launch trajectory_replay here. Nothing asks before the arm
+#   add --replay to also launch the replay here (the cell's sdl_beaker_transfer,
+#   or sdl_trajectory_replay). Nothing asks before the arm
 #   moves (the author, 2026-09-29); --confirm brings the yes/N prompts back.
 #   --use-seed N replays seed N instead of the best-scored one; it has to be one
 #   of the accepted seeds (e.g. when the best one passes close to a camera).
-#   --grasp-only replays only the plan's grasp of beaker1 (task grasp_trial:
+#   --grasp-only replays only the plan's grasp of beaker1 (task sdl_grasp_trial:
 #   reach, close, check the jaws stopped on it, open, back off, home), for a
 #   perception-to-grasp trial series; no --material is needed.
 #   --measure-only perceives (and recovers, with --recover) and stops there:
@@ -26,8 +27,9 @@
 #           per seed) -> score_real_trajectories.py --export. Detached from the
 #           ssh session, so a dropped connection does not kill a 15-minute batch.
 #   local   copy deliver/ back, check every meta was planned against the positions
-#           given here, write the cell layout the replay gate reads, and print (or
-#           run) the trajectory_replay launch.
+#           given here, write the cell layout the replay gate reads and the task's
+#           task_params file, and print (or run) the replay launch. The tasks are
+#           ros2_cell_ws's (sdl_cell_tasks), run through the core's task manager.
 #
 # Scene (base_link metres). WHERE THE BEAKERS ARE comes from perception only
 # (--perceive, required): no option or default gives a beaker's position.
@@ -51,9 +53,9 @@
 #                   its base -> SDL_TAG_PLATES. Unset: straight away from the robot.
 #   --perceive      measure beaker1 and beaker2, with their plate bearings, with
 #                   THIS machine's standing cameras, side_1 and side_2 fused by the
-#                   pose node (running on cho_task_manager's pour_beakers.yaml).
+#                   pose node (running on sdl_cell_tasks' pour_beakers.yaml).
 #                   A beaker neither can see -- occluded, or out of view -- is
-#                   found by OCCLUSION RECOVERY: cho_task_manager occlusion_recovery
+#                   found by OCCLUSION RECOVERY: sdl_occlusion_recovery
 #                   rasters the wrist camera over the bench (the arm moves; asked
 #                   first) while measure_vessels.py --latch catches the pose.
 #   --no-recover    fail instead of recovering
@@ -61,7 +63,7 @@
 #                   though the standing cameras -- or the pose node's HELD pose, kept
 #                   while nothing moved the vessel -- report it: e.g. when side_1 and
 #                   side_2 disagree on it and only one of them is publishing. Repeatable.
-#   Only the vessels being recovered are swept for (a subset of CHO_SWEEP), and
+#   Only the vessels being recovered are swept for (a subset of CELL_SWEEP), and
 #   only poses the wrist camera itself measured count (measure_vessels.py --camera
 #   wrist, decode margin >= RECOVERY_MIN_MARGIN, the sweep table's 55).
 # Omitted positions take record_transfer_real.sh's defaults, and the check below
@@ -90,14 +92,16 @@
 #   SDL_PLAN_ROOT    the sdl_project checkout on the remote; relative = under its $HOME
 #                    (default sdl_ws/src/sdl_project)
 #   REAL_CELL_RUNS   runs directory on BOTH sides; relative = under $HOME (default real_cell_runs)
-#   CHO_WS           local ROS 2 workspace holding cho_task_manager (default ~/ros2_ws)
-#   REPLAY_ARGS      extra launch args for the replay, e.g. "home_via:=direct"
+#   CELL_WS          local overlay workspace with the cell's packages, built on the core
+#                    (default: this checkout's ros2_cell_ws; its setup.bash brings the core's)
+#   REPLAY_ARGS      extra launch args for the replay, e.g. "replay_speed_scale:=0.2"
 #   BEAKER2_ON_PAN_M how far beaker2's centre may sit off the pan centre, along x
 #                    and along y (0.040: pan half-width 65 mm less the beaker's 25)
 #   BEAKER2_HEIGHT_M beaker2's height, bottom to rim (0.070)
 #   FLASK_RIM_Z_M    the flask cell's rim height (0.180)
-#   CHO_TABLE, CHO_SWEEP   the pose node's object table and the recovery raster
-#                    (default: cho_task_manager's pour_beakers.yaml, fr5_bench_beakers.yaml)
+#   CELL_TABLE, CELL_SWEEP the pose node's object table and the recovery raster
+#                    (default: sdl_cell_tasks' config/perception/pour_beakers.yaml,
+#                    config/sweep/fr5_bench_beakers.yaml)
 #   RECOVERY_WAIT_S  longest a recovery may take (360)
 #   RECOVERY_MIN_MARGIN  the wrist's decode margin a recovered pose needs (55)
 #   ALLOW_COMMIT_MISMATCH=1   plan on a remote checkout that is not this HEAD
@@ -113,10 +117,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HOST="${SDL_PLAN_HOST:-100.95.230.128}"
 ROOT_R="${SDL_PLAN_ROOT:-sdl_ws/src/sdl_project}"
 RUNS="${REAL_CELL_RUNS:-real_cell_runs}"
-CHO_WS="${CHO_WS:-$HOME/ros2_ws}"
-CHO_TP="${CHO_SRC:-$CHO_WS/src/cho_robot_project}/cho_task_manager/config"
-CHO_TABLE="${CHO_TABLE:-$CHO_TP/perception/pour_beakers.yaml}"    # the pose node's table
-CHO_SWEEP="${CHO_SWEEP:-$CHO_TP/sweep/fr5_bench_beakers.yaml}"    # the recovery raster
+CELL_WS="${CELL_WS:-$ROOT/ros2_cell_ws}"
+CELL_TP="$CELL_WS/src/sdl_cell_tasks/config"
+CELL_TABLE="${CELL_TABLE:-$CELL_TP/perception/pour_beakers.yaml}"    # the pose node's table
+CELL_SWEEP="${CELL_SWEEP:-$CELL_TP/sweep/fr5_bench_beakers.yaml}"    # the recovery raster
 # Planned vs. requested position: both are the same numbers passed through the
 # scene, so anything beyond rounding means the request did not reach the planner.
 MATCH_TOL_M=0.002
@@ -183,7 +187,7 @@ esac
 
 if [[ $MODE == new && $PERCEIVE == 1 ]]; then
   names=(beaker1); [[ $TARGET == beaker2 ]] && names+=(beaker2)
-  ros_env() { set +u; source /opt/ros/humble/setup.bash && source "$CHO_WS/install/setup.bash"; }
+  ros_env() { set +u; source /opt/ros/humble/setup.bash && source "$CELL_WS/install/setup.bash"; }
   echo "=== perceiving ${names[*]} with the standing cameras (side_1 + side_2, fused)"
   status "perceiving ${names[*]} with side_1 + side_2 (fused)"
   measured="$(ros_env && python3 "$ROOT/scripts/real_cell/measure_vessels.py" "${names[@]}")"
@@ -199,7 +203,7 @@ if [[ $MODE == new && $PERCEIVE == 1 ]]; then
   done
   if [[ ${#missing[@]} -gt 0 ]]; then
     # Occluded, or out of both standing cameras' view: the wrist camera goes and
-    # looks (cho_task_manager occlusion_recovery), on the pose node already
+    # looks (sdl_occlusion_recovery), on the pose node already
     # running, while measure_vessels latches each vessel the moment the wrist
     # holds it in view. This MOVES THE ARM.
     [[ $RECOVER == 1 ]] || die "not perceived: ${missing[*]} (and --no-recover was given)"
@@ -207,7 +211,7 @@ if [[ $MODE == new && $PERCEIVE == 1 ]]; then
     status "occlusion recovery: the wrist camera looks for ${missing[*]}"
     if [[ $YES != 1 ]]; then
       [[ -t 0 ]] || die "occlusion recovery moves the arm; run interactively or pass --yes"
-      echo "The arm will move: to its home pose (a straight joint move), then a raster over"
+      echo "The arm will move: to its home pose ($HOME_VIA), then a raster over"
       echo "the bench with the tool ~0.55 m up and the wrist camera looking down, then home."
       read -r -p "Area clear, e-stop in reach? [yes/N] " ans
       [[ "$ans" == yes ]] || die "occlusion recovery not confirmed; nothing moved"
@@ -219,7 +223,7 @@ if [[ $MODE == new && $PERCEIVE == 1 ]]; then
     # Sweep only for the vessels being recovered: the raster ends once they are
     # found, and it does not go looking for a vessel that is already measured.
     rsweep="$LOCAL_RUNS/live_logs/sweep_$rstamp.yaml"
-    python3 - "$CHO_SWEEP" "$rsweep" "${missing[@]}" <<'PY' || die "could not write the recovery's sweep table"
+    python3 - "$CELL_SWEEP" "$rsweep" "${missing[@]}" <<'PY' || die "could not write the recovery's sweep table"
 import sys, yaml
 src, dst, names = sys.argv[1], sys.argv[2], sys.argv[3:]
 table = yaml.safe_load(open(src))
@@ -233,9 +237,13 @@ PY
         --latch --seconds "${RECOVERY_WAIT_S:-360}" \
         --camera wrist --min-margin "${RECOVERY_MIN_MARGIN:-55}") > "$rout" 2>> "$rlog" &
     mpid=$!
+    # The recovery's task_params: that sweep table, on the pose node's own table.
+    rparams="$LOCAL_RUNS/live_logs/recovery_$rstamp.task_params.yaml"
+    printf 'sweep_config: %s\nvessel_table: %s\n' "$rsweep" "$CELL_TABLE" > "$rparams" \
+      || die "could not write the recovery's task_params"
     (ros_env && exec timeout "${RECOVERY_WAIT_S:-360}" ros2 launch cho_task_manager \
-        run_task_manager.launch.py task:=occlusion_recovery robot_type:=fr5 \
-        "vessel_table:=$CHO_TABLE" "sweep_config:=$rsweep" "home_via:=$HOME_VIA") >> "$rlog" 2>&1
+        run_task_manager.launch.py task:=sdl_occlusion_recovery robot_type:=fr5 \
+        "task_params:=$rparams" "home_via:=$HOME_VIA") >> "$rlog" 2>&1
     echo "recovery tree: $(grep -a -o 'Task finished with status: [A-Za-z.]*' "$rlog" | tail -1)" \
       "(log $rlog)"
     for _ in $(seq 1 10); do kill -0 "$mpid" 2>/dev/null || break; sleep 1; done
@@ -459,7 +467,7 @@ for meta_path in sorted(glob.glob(os.path.join(run, "deliver", "*.meta.json"))):
         lines.append("  %s:\n    xy: [%.4f, %.4f]" % (name, x, y))
         if name not in ("beaker", "flask", "beaker2") and lay[name].get("yaw_deg") is not None:
             lines.append("    yaw_deg: %.1f" % lay[name]["yaw_deg"])
-    # The pour the plan was made for, where cho_task_manager's beaker_transfer
+    # The pour the plan was made for, where sdl_cell_tasks' sdl_beaker_transfer
     # reads it: beaker2's rim and beaker1's bottom centre as perception gave them
     # to the planner, and beaker1 set back where it was taken from.
     rim, marker = asked.get("RECEIVER_RIM", ""), asked.get("GRASP_MARKER", "")
@@ -495,62 +503,52 @@ echo
 echo "=== ready: $CSV"
 echo "the physical objects must stand here (base_link, m):"
 awk '/^  [a-z]/ { keep = /^  (beaker|beaker2|riser|flask|scale|tag_beaker|tag_beaker2):/ } keep' "$CELL"
-# The two-beaker cell's own task when it pours: beaker_transfer reads the
-# trajectory, the cell and the pour target from the plan's files.
+# The two-beaker cell's own task when it pours: sdl_beaker_transfer reads the
+# trajectory, the cell and the pour target from the plan's files. Each task's
+# own parameters go in a task_params file beside the plan, which check_replay.py
+# writes from the very tree it builds below.
 TRANSFER=""
 [[ -n "$MATERIAL" && $TARGET == beaker2 ]] && grep -q '^pour:' "$CELL" && TRANSFER=1
+PARAMS="${CSV%.csv}.task_params.yaml"
+check=(python3 "$ROOT/scripts/real_cell/check_replay.py" "${CSV%.csv}" --home-via "$HOME_VIA"
+       --repeat "$REPEAT" --write-params "$PARAMS")
 if [[ $GRASP_ONLY == 1 ]]; then
   [[ -z "$MATERIAL" && $REPEAT == 1 ]] || die "--grasp-only grasps and lets go; it pours nothing (no --material, --repeat)"
-  LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=grasp_trial robot_type:=fr5
-          "transfer_plan:=${CSV%.csv}")
+  LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=sdl_grasp_trial robot_type:=fr5)
+  check+=(--grasp-only)
   echo "grasp only: reach, close on beaker1, check, open, back off, home"
 elif [[ -n "$TRANSFER" ]]; then
-  LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=beaker_transfer robot_type:=fr5
-          "transfer_plan:=${CSV%.csv}" "replay_pour_material:=$MATERIAL" "replay_pour_grams:=$GRAMS")
-  [[ -n "$FLOW" ]] && LAUNCH+=("replay_pour_flow_index:=$FLOW")
-  [[ -n "$POUR_TIMEOUT" ]] && LAUNCH+=("replay_pour_timeout:=$POUR_TIMEOUT")
+  LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=sdl_beaker_transfer robot_type:=fr5)
+  check+=(--transfer --grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}")
+  [[ -n "$POUR_TIMEOUT" ]] && check+=(--pour-timeout "$POUR_TIMEOUT")
   echo "pour: $GRAMS g of $MATERIAL by weight, handed to the pouring controller, into the rim at ($RECEIVER)"
 else
-LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=trajectory_replay robot_type:=fr5
+LAUNCH=(ros2 launch cho_task_manager run_task_manager.launch.py task:=sdl_trajectory_replay robot_type:=fr5
         "replay_trajectory:=$CSV" "replay_meta:=$META" "replay_layout:=$CELL")
 if [[ -n "$MATERIAL" ]]; then
-  LAUNCH+=("replay_pour_material:=$MATERIAL" "replay_pour_grams:=$GRAMS"
-           "replay_pour_receiver:=$RECEIVER")
-  [[ -n "$GRASP_MARKER" ]] && LAUNCH+=("replay_pour_grasp_marker:=$GRASP_MARKER")
   # The two-beaker transfer sets beaker1 back where it took it from, so the pose
   # node holds the pose it had (the wrist's, if a recovery measured it) again
   # rather than believing whatever a standing camera makes of its tag next.
   PUT_BACK=elsewhere; [[ $TARGET == beaker2 ]] && PUT_BACK=start
-  LAUNCH+=("replay_pour_put_back:=$PUT_BACK")
-  [[ -n "$FLOW" ]] && LAUNCH+=("replay_pour_flow_index:=$FLOW")
-  [[ -n "$POUR_TIMEOUT" ]] && LAUNCH+=("replay_pour_timeout:=$POUR_TIMEOUT")
+  check+=(--grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}"
+          --receiver "$RECEIVER" --grasp-marker "$GRASP_MARKER" --put-back "$PUT_BACK")
+  [[ -n "$POUR_TIMEOUT" ]] && check+=(--pour-timeout "$POUR_TIMEOUT")
   echo "pour: $GRAMS g of $MATERIAL by weight, handed to the pouring controller, into the rim at ($RECEIVER)"
 else
   echo "pour: replayed as recorded (no --material), nothing is weighed"
 fi
 fi
-LAUNCH+=("home_via:=$HOME_VIA" ${REPLAY_ARGS:-})
+LAUNCH+=("task_params:=$PARAMS" "home_via:=$HOME_VIA" ${REPLAY_ARGS:-})
 if [[ $REPEAT != 1 ]]; then
   [[ -n "$MATERIAL" ]] || die "--repeat $REPEAT repeats a pour, and there is none without --material"
-  LAUNCH+=("replay_pour_repeat:=$REPEAT")
   echo "pour: $REPEAT trials, each after the first on scripts/real_cell/next_trial.sh"
 fi
-# Build the replay tree here, without ticking it: whatever cho_task_manager
-# refuses at build time (layout gate, pour splice, velocity limits) is refused
-# before anyone is asked to stand back from the arm.
-check=(python3 "$ROOT/scripts/real_cell/check_replay.py" "${CSV%.csv}" --home-via "$HOME_VIA"
-       --repeat "$REPEAT")
-if [[ $GRASP_ONLY == 1 ]]; then
-  check+=(--grasp-only)
-elif [[ -n "$TRANSFER" ]]; then
-  check+=(--transfer --grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}")
-elif [[ -n "$MATERIAL" ]]; then
-  check+=(--grams "$GRAMS" --material "$MATERIAL" --flow-index "${FLOW:-0}"
-          --receiver "$RECEIVER" --grasp-marker "$GRASP_MARKER"
-          --put-back "$([[ $TARGET == beaker2 ]] && echo start || echo elsewhere)")
-fi
-(set +u; source /opt/ros/humble/setup.bash && source "$CHO_WS/install/setup.bash" && cd /tmp && "${check[@]}") \
+# Build the replay tree here, without ticking it: whatever the task refuses at
+# build time (layout gate, pour splice, velocity limits) is refused before
+# anyone is asked to stand back from the arm.
+(set +u; source /opt/ros/humble/setup.bash && source "$CELL_WS/install/setup.bash" && cd /tmp && "${check[@]}") \
   || die "the replay tree does not build for this trajectory (see above); nothing moved"
+echo "plan: ${CSV%.csv} (task_params $PARAMS)"
 echo
 echo "with the real bringup running (home_via:=moveit needs bringup_real_moveit; on"
 echo "bringup_real_robot use --home-via direct), the scale relay and the pose node:"
@@ -568,7 +566,7 @@ fi
 # NOT set -u around these: the ROS setup scripts read unbound variables.
 set +u
 source /opt/ros/humble/setup.bash
-source "$CHO_WS/install/setup.bash"
+source "$CELL_WS/install/setup.bash"
 status "REPLAYING run $STAMP seed $BEST on the FR5${MATERIAL:+, pouring $GRAMS g of $MATERIAL by weight into the rim at ($RECEIVER)}"
 "${LAUNCH[@]}"
 rc=$?
