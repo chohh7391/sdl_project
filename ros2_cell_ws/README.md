@@ -88,6 +88,11 @@ The recording and how it is replayed are the node's own arguments, as for the co
 (required when the recording assumes a layout), `home_via:=`, `replay_speed_scale:=`. Each example file in
 `sdl_cell_tasks/config/` lists its task's parameters with their meaning; a key a task does not take is refused.
 
+## Session log
+
+[SESSION_LOG.md](SESSION_LOG.md): the cell's state and the record of its sessions (pouring, the scale, the
+cameras and their fusion, the recovery sweep), in Korean.
+
 ## Not in this workspace
 
 The laptop's real-cell additions to its cho_robot_project checkout, which never reached GitHub: the
