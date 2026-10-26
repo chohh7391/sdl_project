@@ -8,3 +8,4 @@
 sweep_config: config/sweep/fr5_mujoco_cell.yaml    # relative: under share/sdl_cell_tasks; required
 sweep_mode: single_pass                            # single_pass, or per_object
 visibility_topic: /perception/object_visibility
+vessel_table: null                                 # the object table to look for; null: vessel_detect.yaml's

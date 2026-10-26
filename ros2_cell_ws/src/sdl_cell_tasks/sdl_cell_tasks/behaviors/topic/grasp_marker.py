@@ -27,6 +27,13 @@ Both are taken from messages that arrive AFTER this behaviour starts, and it is
 placed after the gripper settle, so neither describes the jaws mid-stroke or an
 arm still arriving. The joints are reordered from /joint_states into the
 registry's joint order, which is the controller's.
+
+Given a ``marker`` -- the vessel's position as perception measured it before
+the task was planned, which is where the plan grasps it -- that position is
+used and only the joints are latched. It is the pose the arm was sent to, and
+nothing has moved the vessel since: a standing camera that re-measures it on
+its own from a poor view (a sugar-filled beaker hides its tag from side_1; the
+two side cameras disagree by 14 mm) would put the pour's lip somewhere else.
 """
 
 import math
@@ -57,9 +64,17 @@ class GraspMarkerSampleBehavior(py_trees.behaviour.Behaviour):
         joint_states_topic: str = '/joint_states',
         timeout_sec: float = 5.0,
         namespace: str = TASK_NAMESPACE,
+        marker: list = None,
     ):
         super().__init__(name)
-        if not marker_topic:
+        if marker is not None:
+            marker = [float(v) for v in marker]
+            if len(marker) != 3 or not all(math.isfinite(v) for v in marker):
+                raise ValueError(
+                    f'[{name}] marker must be three finite numbers, the vessel\'s position '
+                    f'in the base frame; got {marker!r}')
+        self.marker = marker
+        if not marker_topic and marker is None:
             raise ValueError(f'[{name}] marker_topic is required')
         if not required_frame:
             raise ValueError(
@@ -82,10 +97,12 @@ class GraspMarkerSampleBehavior(py_trees.behaviour.Behaviour):
     def setup(self, **kwargs):
         self.node = kwargs['node']
         group = ReentrantCallbackGroup()
-        # cho_object_pose publishes with the default, reliable QoS.
-        self.node.create_subscription(
-            PoseStamped, self.marker_topic, self._on_marker,
-            QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE), callback_group=group)
+        if self.marker is None:
+            # cho_object_pose publishes with the default, reliable QoS.
+            self.node.create_subscription(
+                PoseStamped, self.marker_topic, self._on_marker,
+                QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE),
+                callback_group=group)
         self.node.create_subscription(
             JointState, self.joint_states_topic, self._on_joints, qos_profile_sensor_data,
             callback_group=group)
@@ -115,6 +132,8 @@ class GraspMarkerSampleBehavior(py_trees.behaviour.Behaviour):
         return positions if all(math.isfinite(q) for q in positions) else None
 
     def update(self):
+        if self.marker is not None:
+            return self._update_given_marker()
         marker, joints = self._marker, self._joint_positions()
         if marker is None or joints is None:
             clock = self.node.get_clock()
@@ -151,6 +170,27 @@ class GraspMarkerSampleBehavior(py_trees.behaviour.Behaviour):
         self.node.get_logger().info(
             f'[{self.name}] grasp measured: marker at [{p.x:+.4f}, {p.y:+.4f}, {p.z:+.4f}] m '
             f"in '{frame}' with the arm at [{', '.join('%+.4f' % q for q in joints)}] rad")
+        return py_trees.common.Status.SUCCESS
+
+    def _update_given_marker(self):
+        """Latch the joints only: the marker is the perceived position given."""
+        joints = self._joint_positions()
+        if joints is None:
+            clock = self.node.get_clock()
+            self._deadline = arm(self._deadline, clock, self.timeout_sec)
+            if self._deadline is not None and clock.now() > self._deadline:
+                self.node.get_logger().error(
+                    f'[{self.name}] grasp not measured within {self.timeout_sec:.0f} s: '
+                    f'no complete {self.joint_states_topic} for {self.joint_names}')
+                return py_trees.common.Status.FAILURE
+            return py_trees.common.Status.RUNNING
+        setattr(self.board, GRASP_JOINTS_KEY, joints)
+        setattr(self.board, GRASP_MARKER_KEY, list(self.marker))
+        x, y, z = self.marker
+        self.node.get_logger().info(
+            f'[{self.name}] grasp measured: marker at the perceived [{x:+.4f}, {y:+.4f}, '
+            f"{z:+.4f}] m in '{self.required_frame}' with the arm at "
+            f"[{', '.join('%+.4f' % q for q in joints)}] rad")
         return py_trees.common.Status.SUCCESS
 
     def terminate(self, new_status):

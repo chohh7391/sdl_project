@@ -1,0 +1,153 @@
+{
+ "seed": "4",
+ "tool": "fr5_ag95",
+ "recorded_utc": "2026-09-23T13:28:49Z",
+ "joint_names": [
+  "j1",
+  "j2",
+  "j3",
+  "j4",
+  "j5",
+  "j6"
+ ],
+ "waypoints": 920,
+ "duration_s": 41.354,
+ "home_arm_rad": [
+  0.1547,
+  -1.046,
+  -2.0138,
+  -1.7163,
+  1.6075,
+  -0.0431
+ ],
+ "layout_the_trajectory_assumes": {
+  "beaker": {
+   "xy": [
+    0.584,
+    -0.298
+   ],
+   "yaw_deg": 133.8
+  },
+  "flask": {
+   "xy": [
+    0.52,
+    0.32
+   ],
+   "yaw_deg": -8.2
+  },
+  "magnet": {
+   "xy": [
+    -0.307,
+    0.4449
+   ],
+   "yaw_deg": 174.3
+  },
+  "box": {
+   "xy": [
+    -0.1392,
+    -0.5279
+   ],
+   "yaw_deg": 154.4
+  },
+  "stirrer": {
+   "xy": [
+    -0.1822,
+    0.6109
+   ],
+   "yaw_deg": 73.8
+  },
+  "riser": {
+   "xy": [
+    0.584,
+    -0.298
+   ],
+   "yaw_deg": 0.0,
+   "dims": [
+    0.05,
+    0.05,
+    0.05
+   ]
+  },
+  "scale": {
+   "xy": [
+    0.5328,
+    0.3279
+   ],
+   "yaw_deg": 31.6,
+   "dims": [
+    0.25,
+    0.2,
+    0.09
+   ]
+  }
+ },
+ "gripper_events": [
+  {
+   "t_s": 7.302,
+   "event": "close"
+  },
+  {
+   "t_s": 33.48,
+   "event": "open"
+  }
+ ],
+ "operations": [
+  {
+   "t_s": 3.763,
+   "op": "Pick"
+  },
+  {
+   "t_s": 6.314,
+   "op": ""
+  },
+  {
+   "t_s": 8.244,
+   "op": "Move_to_Surface"
+  },
+  {
+   "t_s": 10.792,
+   "op": "Move_to_Surface"
+  },
+  {
+   "t_s": 16.581,
+   "op": "Move_to_Surface"
+  },
+  {
+   "t_s": 19.132,
+   "op": "pouring"
+  },
+  {
+   "t_s": 24.048,
+   "op": "Place"
+  },
+  {
+   "t_s": 26.598,
+   "op": "Place"
+  },
+  {
+   "t_s": 29.998,
+   "op": "Place"
+  },
+  {
+   "t_s": 32.548,
+   "op": ""
+  },
+  {
+   "t_s": 34.434,
+   "op": "Place"
+  },
+  {
+   "t_s": 36.982,
+   "op": "Place"
+  },
+  {
+   "t_s": 41.436,
+   "op": "idle"
+  }
+ ],
+ "replay_notes": [
+  "Positions are absolute joint angles in radians for j1..j6, sampled at the rate the planner published them; t_s is seconds from the first command.",
+  "The arm is position-controlled and senses nothing during replay: the vessels must be at the layout above or the pour misses.",
+  "Gripper events are recovered from the simulated finger joint, not from the gripper command channel, which is a service rather than a topic; treat the times as approximate and drive the real gripper from them rather than replaying finger angles."
+ ]
+}

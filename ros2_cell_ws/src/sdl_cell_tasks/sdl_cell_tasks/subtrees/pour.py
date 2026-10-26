@@ -57,6 +57,25 @@ is that the arm really is back there (/joint_states, 0.01 rad), because the
 trajectory controller would take the next waypoint from wherever it actually
 is. With ``required`` a failed pour fails the mission instead, and the guarded
 root leaves the arm on the hold controller, vessel in hand.
+
+Three things a two-beaker plan says about its pour, which a task may pass
+(``sdl_beaker_transfer`` passes all three, from the plan):
+
+* ``receiver`` -- the rim centre of the vessel poured into, base frame [m], as
+  perception measured it. The goal carries it (Pour.action
+  ``receiver_rim_center``). A controller under ``pour_geometry: measured``, the
+  real cell's, lays its lip path out around it and refuses a goal without it;
+  under ``joint`` (the MuJoCo cell's) it is not used, which is why it is not
+  required here.
+* ``grasp_marker`` -- the held vessel's position as perception measured it before
+  the plan was made: the grasp is measured with it and the joints only, so a
+  standing camera that re-measures the vessel from a poor view cannot move the
+  pour's lip.
+* ``put_back`` -- where the vessel is set down after the pour: ``start``, where it
+  was taken from, or ``elsewhere``. After that release the pose node is told
+  which (``place_children``), as it was told the robot took the vessel when the
+  jaws closed (``grasp_measure_children``); see behaviors/service/release_held_pose.py
+  for what that needs of the pose node.
 """
 
 import math
@@ -70,6 +89,7 @@ from cho_task_manager.behaviors.service import (
 from cho_task_manager.behaviors.topic import JointStateCheckBehavior
 from cho_task_manager.utils.controller_names import arm_joint_names, arm_model
 from sdl_cell_tasks.behaviors.action import MATERIALS, PourActionBehavior
+from sdl_cell_tasks.behaviors.service import HeldPoseServiceBehavior, ReleaseHeldPoseBehavior
 from sdl_cell_tasks.behaviors.topic import GraspMarkerSampleBehavior, ScaleLatchBehavior
 from sdl_cell_tasks.behaviors.topic.grasp_marker import GRASP_JOINTS_KEY, GRASP_MARKER_KEY
 from sdl_cell_tasks.utils.pour_controller import checked_pour_controller
@@ -83,19 +103,31 @@ DEFAULT_MARKER_TOPIC = '/perception/object_pose/held_beaker'
 #: Say this instead of a topic to leave the measuring to the controller, at the pour.
 MARKER_AT_POUR = 'none'
 
+#: Where the replay sets the poured vessel down: where it took it from (the
+#: two-beaker transfer returns beaker1 to its mount), or somewhere else.
+PUT_BACK_START = 'start'
+PUT_BACK_ELSEWHERE = 'elsewhere'
+PUT_BACK = (PUT_BACK_START, PUT_BACK_ELSEWHERE)
+
 #: Seconds the pour behaviour waits on top of the goal's own timeout: measuring
 #: the vessel (up to 5 s), the alignment (about 20 cm at 20 mm/s from a recorded
 #: pre-pour pose) and the way back, none of which the law's timeout counts.
 POUR_OVERHEAD_SEC = 90.0
 #: The controller's default goal timeout, when the tree does not set one.
 DEFAULT_POUR_TIMEOUT_SEC = 120.0
+#: The same for a granular goal: the real cell's granular.timeout. Waiting the
+#: liquid's 120 s gave up on a 30 g sugar pour at 210 s (2026-10-01), 6 s after
+#: it had reached 30.10 g and while it was handing the beaker back, and left
+#: the arm holding it over the receiver.
+DEFAULT_GRANULAR_POUR_TIMEOUT_SEC = 300.0
 
 
 class PourRequest:
     """What to pour, as a task was asked for it."""
 
     def __init__(self, target_grams, container, material='liquid', flow_index=0.0,
-                 timeout=0.0, marker_topic=DEFAULT_MARKER_TOPIC, required=False):
+                 timeout=0.0, marker_topic=DEFAULT_MARKER_TOPIC, required=False,
+                 receiver_rim=None, grasp_marker=None, put_back=PUT_BACK_ELSEWHERE):
         self.target_grams = target_grams
         #: Grams, or CONTAINER_AUTO.
         self.container = container
@@ -108,6 +140,15 @@ class PourRequest:
         self.marker_topic = marker_topic
         #: Whether a pour that misses its target stops the replay.
         self.required = required
+        #: The receiver's rim centre, base frame [m], where perception put the
+        #: vessel poured into; None sends a goal without one.
+        self.receiver_rim = list(receiver_rim) if receiver_rim is not None else None
+        #: The held vessel's position as perception measured it before planning
+        #: (base frame, m), used as the grasp's marker; None reads marker_topic.
+        self.grasp_marker = list(grasp_marker) if grasp_marker is not None else None
+        #: Where the vessel is set down after the pour: PUT_BACK_START (where it
+        #: was taken from) or PUT_BACK_ELSEWHERE.
+        self.put_back = put_back
 
     def as_dict(self):
         return {
@@ -118,6 +159,9 @@ class PourRequest:
             'timeout': self.timeout,
             'marker_topic': self.marker_topic,
             'required': self.required,
+            'receiver_rim': self.receiver_rim,
+            'grasp_marker': self.grasp_marker,
+            'put_back': self.put_back,
         }
 
 
@@ -130,6 +174,9 @@ POUR_PARAM_DEFAULTS = {
     'replay_pour_timeout': 0.0,
     'replay_pour_marker_topic': DEFAULT_MARKER_TOPIC,
     'replay_pour_required': False,
+    'replay_pour_receiver': None,
+    'replay_pour_grasp_marker': None,
+    'replay_pour_put_back': PUT_BACK_ELSEWHERE,
 }
 
 
@@ -155,8 +202,12 @@ def parse_pour_request(params, prefix='replay_pour_'):
     ``material`` (``liquid`` or ``granular``), ``flow_index`` (0..1),
     ``timeout`` (seconds; 0 leaves it to the controller) and ``marker_topic``
     (the held vessel's marker, measured right after the jaws close; ``none`` to
-    have the controller measure it at the pour instead) and ``required`` (a
-    pour that misses its target stops the replay; by default it carries on).
+    have the controller measure it at the pour instead), ``required`` (a
+    pour that misses its target stops the replay; by default it carries on),
+    ``receiver`` and ``grasp_marker`` (``x, y, z`` in the arm's base frame [m],
+    a list of three numbers or a ``"x,y,z"`` string; unset: none) and
+    ``put_back`` (``start`` or ``elsewhere``, the default) -- see the module
+    docstring for those three.
     """
     grams = _amount(params, prefix + 'grams')
     if not math.isfinite(grams) or grams < 0.0:
@@ -197,27 +248,84 @@ def parse_pour_request(params, prefix='replay_pour_'):
     required = str(params.get(prefix + 'required') or 'false').strip().lower()
     if required not in ('true', 'false'):
         raise ValueError('%srequired must be true or false; got %r' % (prefix, required))
+    receiver_rim = _point(params, prefix + 'receiver')
+    grasp_marker = _point(params, prefix + 'grasp_marker')
+    put_back = str(params.get(prefix + 'put_back') or PUT_BACK_ELSEWHERE).strip().lower()
+    if put_back not in PUT_BACK:
+        raise ValueError('%sput_back must be one of %s: where the vessel is set down after the '
+                         'pour; got %r' % (prefix, list(PUT_BACK), put_back))
     return PourRequest(grams, container, material, flow_index, timeout, marker_topic,
-                       required == 'true')
+                       required == 'true', receiver_rim, grasp_marker, put_back)
+
+
+def _point(params, key):
+    """``x, y, z`` under *key* as three floats, or None when it is not set.
+
+    A YAML list of three numbers, or a string ``"x,y,z"`` (spaces work too).
+    """
+    raw = params.get(key)
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return None
+    values = raw.replace(',', ' ').split() if isinstance(raw, str) else raw
+    try:
+        point = [float(v) for v in values if not isinstance(v, bool)]
+    except (TypeError, ValueError):
+        point = []
+    if len(point) != 3 or not all(math.isfinite(v) for v in point):
+        raise ValueError('%s must be three numbers, x,y,z in metres; got %r' % (key, raw))
+    return point
 
 
 def grasp_measure_children(robot_config, request, prefix=''):
     """What goes right after the jaws close on the vessel that will be poured.
 
-    Never fails the replay: an unmeasured grasp is measured at the pour instead.
+    The grasp is measured off the vessel's pose (or the perceived position the
+    plan was made for, ``grasp_marker``), and then the pose node is told the
+    robot has taken it: a pose it was holding for the vessel while no camera saw
+    it (``hold_unseen``) described the vessel at rest, and from here on the
+    robot is moving it.
+
+    Never fails the replay: an unmeasured grasp is measured at the pour instead,
+    and a pose node holding nothing has nothing to release.
     """
-    if request.marker_topic is None:
+    if request.marker_topic is None and request.grasp_marker is None:
         return []
     sampler = GraspMarkerSampleBehavior(
         name='%sMeasure_Grasp' % prefix,
         marker_topic=request.marker_topic,
         required_frame=arm_model(robot_config)['arm_base_link'],
         joint_names=arm_joint_names(robot_config),
+        marker=request.grasp_marker,
     )
     # The sampler logs why it saw nothing; the pour behaviour then says the
     # controller will measure the marker itself.
+    return [
+        py_trees.decorators.FailureIsSuccess(
+            name='%sMeasure_Grasp_Or_At_Pour' % prefix, child=sampler),
+        py_trees.decorators.FailureIsSuccess(
+            name='%sRelease_Held_Pose_Or_None' % prefix,
+            child=ReleaseHeldPoseBehavior(
+                name='%sRelease_Held_Pose' % prefix,
+                pose_topic=request.marker_topic or DEFAULT_MARKER_TOPIC)),
+    ]
+
+
+def place_children(request, prefix=''):
+    """What goes right after the jaws open on the poured vessel, setting it down.
+
+    The pose node was told the robot took it; now it is told where it went --
+    back where it was taken from (``restore``: the pose held before holds again)
+    or elsewhere (``resume``: the next measurement is believed). Never fails
+    the replay, for the same reason the release does not.
+    """
+    if request.marker_topic is None and request.grasp_marker is None:
+        return []
+    verb = 'restore' if request.put_back == PUT_BACK_START else 'resume'
     return [py_trees.decorators.FailureIsSuccess(
-        name='%sMeasure_Grasp_Or_At_Pour' % prefix, child=sampler)]
+        name='%s%s_Held_Pose_Or_None' % (prefix, verb.capitalize()),
+        child=HeldPoseServiceBehavior(
+            name='%s%s_Held_Pose' % (prefix, verb.capitalize()),
+            pose_topic=request.marker_topic or DEFAULT_MARKER_TOPIC, verb=verb))]
 
 
 def pour_handover_children(robot_config, request, return_controller, pour_controller,
@@ -245,9 +353,11 @@ def pour_handover_children(robot_config, request, return_controller, pour_contro
     else:
         container = {'container_grams': request.container}
     grasp = ({'grasp_joints_key': GRASP_JOINTS_KEY, 'grasp_marker_key': GRASP_MARKER_KEY}
-             if request.marker_topic is not None else {})
+             if request.marker_topic is not None or request.grasp_marker is not None else {})
 
-    goal_timeout = request.timeout or DEFAULT_POUR_TIMEOUT_SEC
+    goal_timeout = request.timeout or (
+        DEFAULT_GRANULAR_POUR_TIMEOUT_SEC if request.material == 'granular'
+        else DEFAULT_POUR_TIMEOUT_SEC)
     children.extend([
         SwitchControllerServiceBehavior(
             name='%sSwitch_To_%s' % (prefix, pour),
@@ -268,6 +378,7 @@ def pour_handover_children(robot_config, request, return_controller, pour_contro
         pour_timeout=request.timeout,
         timeout_sec=goal_timeout + POUR_OVERHEAD_SEC,
         pour_reference_joints=pour_reference,
+        receiver_rim_center=request.receiver_rim,
         **container,
         **grasp,
     )
@@ -299,11 +410,17 @@ def pour_handover_children(robot_config, request, return_controller, pour_contro
 __all__ = [
     'CONTAINER_AUTO',
     'CONTAINER_KEY',
+    'DEFAULT_GRANULAR_POUR_TIMEOUT_SEC',
     'DEFAULT_MARKER_TOPIC',
+    'DEFAULT_POUR_TIMEOUT_SEC',
     'MARKER_AT_POUR',
     'POUR_PARAM_DEFAULTS',
+    'PUT_BACK',
+    'PUT_BACK_ELSEWHERE',
+    'PUT_BACK_START',
     'PourRequest',
     'grasp_measure_children',
     'parse_pour_request',
+    'place_children',
     'pour_handover_children',
 ]

@@ -32,6 +32,19 @@ and ``subtrees/pour.py`` for the hand-over.
                     -> Pour -> Verify_Back_At_Pour_Start -> switch back -> verify
     4_Finish        back to the start pose, parked on the hold controller
 
+The replay's clock is set by the moves it replays, after the splice
+(``replay.retimed``): the pour the controller makes instead is not replayed, so
+its recorded samples do not stretch everything else.
+
+``replay_pour_repeat`` N (default 1) pours N times there, one trial after
+another, for a pour's statistics: the arm stays at the pour's start with the
+vessel in the jaws, and before every pour after the first it holds still until
+the operator says go (``ros2 topic pub --once /real_cell/trial_go
+std_msgs/msg/Empty``) -- time to refill the poured vessel or empty the
+receiver. Each pour reads the receiver first (``replay_pour_container: auto``,
+required), so a receiver that kept the last pour's grams is no reason to empty
+it.
+
 The recording, its layout and how it is replayed are the core node's
 parameters, read as the core's replay reads them: ``replay_trajectory`` (empty:
 the cell's recording, ``traj_level_seed2`` in cho_task_manager's installed
@@ -52,9 +65,12 @@ workspace's registry makes it (sdl_cell_bringup); the tree is refused otherwise.
 import py_trees
 
 from cho_task_manager.subtrees import guarded_mission
+from sdl_cell_tasks.behaviors.topic import OperatorGoBehavior
 from sdl_cell_tasks.subtrees.pour import (
+    CONTAINER_AUTO,
     grasp_measure_children,
     parse_pour_request,
+    place_children,
     POUR_PARAM_DEFAULTS,
     pour_handover_children,
 )
@@ -64,6 +80,7 @@ from sdl_cell_tasks.tasks.fr5.replay import (
     replay_children,
     replay_plan,
     replay_summary,
+    retimed,
 )
 from sdl_cell_tasks.utils.params import task_params
 from sdl_cell_tasks.utils.pour_controller import checked_pour_controller, DEFAULT_POUR_CONTROLLER
@@ -76,6 +93,7 @@ TASK_NAME = 'sdl_trajectory_replay'
 DEFAULTS = {
     'pour_controller': DEFAULT_POUR_CONTROLLER,
     **POUR_PARAM_DEFAULTS,
+    'replay_pour_repeat': 1,
 }
 
 
@@ -84,34 +102,79 @@ def trajectory_replay_params(robot_config):
     return task_params(robot_config, TASK_NAME, DEFAULTS)
 
 
+def pour_repeat(params, pour_request):
+    """``replay_pour_repeat``: how many times the pour is made, 1 unless asked."""
+    raw = params.get('replay_pour_repeat', 1)
+    try:
+        value = float(raw) if not isinstance(raw, bool) else 0.0
+    except (TypeError, ValueError):
+        value = 0.0
+    repeat = int(value) if value.is_integer() else 0
+    if repeat < 1:
+        raise ValueError('replay_pour_repeat must be a whole number of pours, 1 or more; '
+                         'got %r' % (raw,))
+    if repeat > 1:
+        if pour_request is None:
+            raise ValueError('replay_pour_repeat %d asks for pours, and no pour was asked for '
+                             '(replay_pour_grams)' % repeat)
+        if pour_request.container != CONTAINER_AUTO:
+            raise ValueError(
+                'replay_pour_repeat %d needs replay_pour_container: auto -- each pour after the '
+                'first starts on a receiver that holds the ones before it, so its zero has to '
+                'be read, not given (%r)' % (repeat, pour_request.container))
+    return repeat
+
+
 def create_sdl_trajectory_replay_tree(robot_config) -> py_trees.behaviour.Behaviour:
     """Check the recording and the pour, home, replay with the pour handed over, hand back."""
-    params = trajectory_replay_params(robot_config)
+    return build_trajectory_replay(robot_config, trajectory_replay_params(robot_config))
+
+
+def build_trajectory_replay(robot_config, params, task=TASK_NAME,
+                            root_name='SDL_Trajectory_Replay_Root'):
+    """The replay tree from *params* already checked against a task's DEFAULTS.
+
+    Shared with ``sdl_beaker_transfer``, which is this replay with its
+    recording, layout and pour target taken from a plan.
+    """
     # Before anything else: every switch into and out of the pour controller,
     # and the guarded root's abort, rely on the registry knowing it.
     pour_controller = checked_pour_controller(robot_config, params['pour_controller'])
     pour_request = parse_pour_request(params)
+    repeat = pour_repeat(params, pour_request)
 
-    plan = replay_plan(robot_config, TASK_NAME)
+    plan = replay_plan(robot_config, task)
     segments = plan.segments
     if pour_request is not None:
         # Refused here, before a node exists, like the layout: a recording whose
         # pour cannot be handed over cleanly is not replayed with a gap in it.
         segments = splice_pour(plan.recording, segments)
+        # Measured on the moves that are replayed, after the splice.
+        plan = retimed(plan, segments)
 
     def pour_children(index, segment):
-        return pour_handover_children(
-            robot_config, pour_request, plan.controller, pour_controller,
-            prefix='%d_' % index, pour_reference=segment.reference, resume_from=segment.start)
+        children = []
+        for trial in range(1, repeat + 1):
+            prefix = '%d_' % index if repeat == 1 else '%d_T%d_' % (index, trial)
+            if trial > 1:
+                children.append(OperatorGoBehavior(name='%sWait_For_Go' % prefix))
+            children.extend(pour_handover_children(
+                robot_config, pour_request, plan.controller, pour_controller,
+                prefix=prefix, pour_reference=segment.reference, resume_from=segment.start))
+        return children
 
     def grasp_children(index):
         return grasp_measure_children(robot_config, pour_request, prefix='%d_' % index)
+
+    def placed_children(index):
+        return place_children(pour_request, prefix='%d_' % index)
 
     replay_seq = py_trees.composites.Sequence(name='3_Replay', memory=True)
     replay_seq.add_children(replay_children(
         plan, robot_config, segments,
         pour_children=pour_children if pour_request is not None else None,
-        grasp_children=grasp_children if pour_request is not None else None))
+        grasp_children=grasp_children if pour_request is not None else None,
+        place_children=placed_children if pour_request is not None else None))
 
     mission = py_trees.composites.Sequence(name='SDL_Trajectory_Replay_Sequence', memory=True)
     mission.add_children([
@@ -122,12 +185,12 @@ def create_sdl_trajectory_replay_tree(robot_config) -> py_trees.behaviour.Behavi
         home_block(robot_config, plan, name='4_Finish', suffix='_Final', park=True),
     ])
 
-    root = guarded_mission(mission, robot_config, plan.control_mode,
-                           name='SDL_Trajectory_Replay_Root')
+    root = guarded_mission(mission, robot_config, plan.control_mode, name=root_name)
     root.replay_summary = replay_summary(
         plan, segments,
         pour=pour_request.as_dict() if pour_request is not None else None,
-        pour_controller=pour_controller)
+        pour_controller=pour_controller,
+        pour_repeat=repeat)
     return root
 
 
@@ -138,6 +201,8 @@ __all__ = [
     'DEFAULTS',
     'TASK',
     'TASK_NAME',
+    'build_trajectory_replay',
     'create_sdl_trajectory_replay_tree',
+    'pour_repeat',
     'trajectory_replay_params',
 ]

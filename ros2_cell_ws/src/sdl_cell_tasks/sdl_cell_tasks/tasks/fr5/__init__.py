@@ -14,6 +14,8 @@
 
 """The cell's FR5 trees; each module's TASK is the mapping setup.py registers."""
 
+from .beaker_transfer import create_sdl_beaker_transfer_tree
+from .grasp_trial import create_sdl_grasp_trial_tree
 from .occlusion_recovery import create_sdl_occlusion_recovery_tree
 from .occlusion_replay import create_sdl_occlusion_replay_tree
 from .perceived_replay import create_sdl_perceived_replay_tree
@@ -21,6 +23,8 @@ from .trajectory_replay import create_sdl_trajectory_replay_tree
 from .vessel_detect import create_sdl_vessel_detect_tree
 
 __all__ = [
+    'create_sdl_beaker_transfer_tree',
+    'create_sdl_grasp_trial_tree',
     'create_sdl_occlusion_recovery_tree',
     'create_sdl_occlusion_replay_tree',
     'create_sdl_perceived_replay_tree',

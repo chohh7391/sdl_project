@@ -320,3 +320,82 @@ def test_every_goal_names_the_fr5_joints(mode):
     returns = [leaf for leaf in _leaves(tree) if isinstance(leaf, JointSpaceActionBehavior)]
     assert returns
     assert goal_problems(tree, config) == []
+
+
+# ------------------------------------------- a bench's own object table (vessel_table)
+
+def _config_file(*parts):
+    return os.path.join(PACKAGE_ROOT, 'config', *parts)
+
+
+def test_a_vessel_table_names_the_vessels_and_their_topics():
+    # The two-beaker cell: the recovery runs on the pose node already started on
+    # pour_beakers.yaml, so it has to look for THAT table's names on THAT table's
+    # topics -- beaker1 on held_beaker, which the pouring controller reads.
+    tree = _tree(vessel_table='config/perception/pour_beakers.yaml',
+                 sweep_config='config/sweep/fr5_bench_beakers.yaml')
+    assert tree.recovery_summary['vessels'] == ['beaker1', 'beaker2']
+    assert tree.recovery_summary['uncovered'] == []
+    recover = _sweep_leaves(tree)[0]
+    assert sorted(target.topic for target in recover.targets) == [
+        '/perception/object_pose/beaker2', '/perception/object_pose/held_beaker']
+    assert sorted(target.record_as for target in recover.targets) == [
+        'beaker1_pose', 'beaker2_pose']
+
+
+def test_the_two_beaker_sweep_is_the_bench_sweep_under_other_names():
+    with open(_sweep_table(), encoding='utf-8') as handle:
+        bench = yaml.safe_load(handle)
+    with open(_config_file('sweep', 'fr5_bench_beakers.yaml'), encoding='utf-8') as handle:
+        beakers = yaml.safe_load(handle)
+    assert [s['object'] for s in beakers['sweeps']] == ['beaker1', 'beaker2']
+    assert beakers['defaults'] == bench['defaults']
+    assert [s['waypoints'] for s in beakers['sweeps']] == [s['waypoints'] for s in bench['sweeps']]
+
+
+def test_a_vessel_table_that_is_not_there_is_refused():
+    with pytest.raises(ValueError, match='vessel_table'):
+        _tree(vessel_table='/nonexistent/table.yaml')
+
+
+def test_a_vessel_table_whose_objects_the_sweep_does_not_cover_is_refused():
+    # The bench's sweep table names beaker and flask; pour_beakers.yaml has neither.
+    with pytest.raises(ValueError, match='nothing to recover'):
+        _tree(vessel_table='config/perception/pour_beakers.yaml')
+
+
+def test_without_a_vessel_table_the_bench_vessels_are_tracked():
+    assert _tree().recovery_summary['vessels'] == [vessel.name for vessel in VESSELS]
+    assert _tree(vessel_table=None).recovery_summary['vessels'] == [v.name for v in VESSELS]
+
+
+# ------------------------------------------------------------ the first home
+
+def _tree_via(home_via, **task_params):
+    config = _config(**task_params)
+    config['home_via'] = home_via
+    return build_task_tree(TASK, config)
+
+
+def test_the_first_home_is_planned_by_moveit_by_default():
+    # It starts from wherever the last task left the arm (author, 2026-09-30).
+    leaves = [leaf.name for leaf in _leaves(_tree())]
+    first_home = leaves.index('Go_Home_MoveIt')
+    # The bridge's readiness gate is waited out after the switch to its controller...
+    assert leaves[first_home - 1] == 'Wait_For_MoveIt_Gate'
+    # ...and the arm is handed back to the hold controller before the sweep.
+    assert leaves[first_home + 1].startswith('Park_On_')
+    assert _tree().recovery_summary['home_via'] == 'moveit'
+
+
+def test_home_via_direct_keeps_the_straight_interpolation():
+    tree = _tree_via('direct')
+    leaves = [leaf.name for leaf in _leaves(tree)]
+    assert 'Go_Home_MoveIt' not in leaves
+    assert 'Go_Home' in leaves
+    assert tree.recovery_summary['home_via'] == 'direct'
+
+
+def test_an_unknown_home_via_is_refused():
+    with pytest.raises(ValueError, match='home_via'):
+        _tree_via('teleport')

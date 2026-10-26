@@ -80,6 +80,7 @@ from sdl_cell_tasks.tasks.fr5.occlusion_recovery import (
     recovery_plan,
     recovery_summary,
     resolve_sweep_mode,
+    tracked,
 )
 from sdl_cell_tasks.tasks.fr5.replay import (
     handover_sequence,
@@ -134,7 +135,8 @@ def create_sdl_occlusion_replay_tree(robot_config) -> py_trees.behaviour.Behavio
 
     root = guarded_mission(
         mission, robot_config, plan.control_mode, name='SDL_Occlusion_Replay_Root')
-    root.recovery_summary = recovery_summary(sweeps, vessels, visibility_topic, mode)
+    root.recovery_summary = recovery_summary(sweeps, vessels, visibility_topic, mode,
+                                             bench=tracked(params, TASK_NAME))
     root.replay_summary = replay_summary(plan)
     return root
 

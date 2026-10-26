@@ -1,0 +1,17 @@
+# task_params of sdl_beaker_transfer (sdl_cell_tasks/tasks/fr5/beaker_transfer.py, DEFAULTS).
+#   ros2 launch cho_task_manager run_task_manager.launch.py robot_type:=fr5 task:=sdl_beaker_transfer \
+#     task_params:=<this file>
+# The plan says the trajectory, the cell it is gated on and the pour target (<plan>_cell.yaml pour:):
+# replay_trajectory:=, replay_meta:=, replay_layout:= beside it are refused, and so are
+# replay_pour_receiver, replay_pour_grasp_marker and replay_pour_put_back here. What and how much is
+# poured is this file's, with no default. scripts/real_cell/plan_remote.sh writes one per run.
+transfer_plan: ~/real_cell_runs/<run>/deliver/traj_realcell_seed0   # the plan's trajectory, no extension
+replay_pour_grams: 10.0                # [g] required
+replay_pour_material: granular         # liquid or granular; required
+pour_controller: pouring_controller    # must be in the registry's fr5 additional_arm (sdl_cell_bringup)
+replay_pour_container: auto            # the EMPTY receiver's weight [g], or auto: read off the scale first
+replay_pour_flow_index: 0.0            # 0..1 within the material class
+replay_pour_timeout: 0.0               # [s] the pour law may take; 0 keeps the controller's
+replay_pour_marker_topic: /perception/object_pose/held_beaker   # where the release/restore are sent
+replay_pour_required: false            # true: a pour that misses its target stops the replay
+replay_pour_repeat: 1                  # pours made there, each after the first on /real_cell/trial_go

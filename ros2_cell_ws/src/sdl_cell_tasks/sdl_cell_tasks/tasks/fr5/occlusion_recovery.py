@@ -82,7 +82,20 @@ one arm, and the next bench's is different. The task's parameters
 (``config/sweep/`` here; a relative path is read against this package's share
 directory), the vessels it covers are the vessels this tree locates, and
 ``cho_object_pose`` goes on knowing nothing about a robot. ``sweep_mode`` and
-``visibility_topic`` are the other two.
+``visibility_topic`` are two more.
+
+``vessel_table`` is the last: the object table whose objects the recovery looks
+for, by the names and topics it gives (``config/perception/pour_beakers.yaml``
+for the two-beaker cell, with ``config/sweep/fr5_bench_beakers.yaml``). That
+lets it run against a pose node already started on that table rather than on
+``vessel_detect.yaml``. Unset, it looks for the bench's own vessels
+(``tasks/fr5/common.py`` VESSELS), which are ``vessel_detect.yaml``'s.
+
+The first home goes the way the node's ``home_via`` says, as the replays' do:
+planned by MoveIt unless ``home_via:=direct`` (the FR5 default is ``moveit``),
+because it is the one move that starts from wherever the last task left the
+arm; the arm is then parked back on the hold controller the sweep drives. The
+returns from the sweep and the last home stay on the hold controller.
 
 Run it against a bringup and the camera stack::
 
@@ -114,6 +127,7 @@ import py_trees
 from cho_task_manager.behaviors.action import JointSpaceActionBehavior
 from cho_task_manager.behaviors.topic import PoseTargetBehavior
 from cho_task_manager.subtrees import guarded_mission, home_subtree
+from cho_task_manager.tasks.trajectory_replay import HOME_VIA_MOVEIT, replay_controller
 from cho_task_manager.utils.controller_names import arm_joint_names
 from sdl_cell_tasks.behaviors.action import (
     DEFAULT_VISIBILITY_TOPIC,
@@ -121,7 +135,8 @@ from sdl_cell_tasks.behaviors.action import (
     SinglePassSweepBehavior,
     SweepTarget,
 )
-from sdl_cell_tasks.tasks.fr5.common import CONTROL_MODE, home_joint_state, VESSELS
+from sdl_cell_tasks.tasks.fr5.common import CONTROL_MODE, home_joint_state, tracked_vessels
+from sdl_cell_tasks.tasks.fr5.replay import home_move, resolve_home_via
 from sdl_cell_tasks.utils.occlusion import load_sweeps
 from sdl_cell_tasks.utils.params import share_path, task_params
 
@@ -154,11 +169,13 @@ DEFAULT_SWEEP_MODE = SWEEP_MODE_SINGLE_PASS
 
 #: The recovery's parameters, which every task that locates the vessels this way
 #: takes in its task_params: the sweep table (required -- no default bench),
-#: how to sweep, and where cho_object_pose says what each camera sees.
+#: how to sweep, where cho_object_pose says what each camera sees, and the
+#: object table whose objects it looks for (None: the bench's own VESSELS).
 RECOVERY_DEFAULTS = {
     'sweep_config': None,
     'sweep_mode': DEFAULT_SWEEP_MODE,
     'visibility_topic': DEFAULT_VISIBILITY_TOPIC,
+    'vessel_table': None,
 }
 
 #: What this task's task_params may set, and its value when it does not.
@@ -178,6 +195,23 @@ def sweep_config_path(params, task=TASK_NAME):
             'put the wrist camera over each vessel. They belong to a bench, not to '
             'this file -- see config/sweep/fr5_bench.yaml in sdl_cell_tasks.' % task)
     return share_path(value, 'sweep_config', task)
+
+
+def vessel_table_path(params, task=TASK_NAME):
+    """The object table ``vessel_table`` names, checked to exist, or None when unset.
+
+    A relative path is read against this package's share directory, where the
+    tables in ``config/perception/`` are installed.
+    """
+    value = params.get('vessel_table')
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    return share_path(value, 'vessel_table', task)
+
+
+def tracked(params, task=TASK_NAME):
+    """The vessels this bench tracks: ``vessel_table``'s objects, else VESSELS."""
+    return tracked_vessels(vessel_table_path(params, task))
 
 
 def resolve_sweep_mode(params):
@@ -201,13 +235,15 @@ def recovery_plan(params, joint_names, task=TASK_NAME):
     # that fills a goal in by position.
     sweeps = load_sweeps(sweep_config_path(params, task), joint_names=joint_names)
 
-    vessels = [vessel for vessel in VESSELS if vessel.name in sweeps]
+    bench = tracked(params, task)
+    vessels = [vessel for vessel in bench if vessel.name in sweeps]
     if not vessels:
         raise ValueError(
             'the sweep table covers %s, and the vessels this bench tracks are %s, so '
             'there is nothing to recover. The names have to match the object table '
-            '(config/perception/vessel_detect.yaml), which is what decides the topic.'
-            % (sorted(sweeps), sorted(vessel.name for vessel in VESSELS)))
+            '(vessel_table, else config/perception/vessel_detect.yaml), which is what '
+            'decides the topic.'
+            % (sorted(sweeps), sorted(vessel.name for vessel in bench)))
 
     visibility_topic = str(params.get('visibility_topic') or DEFAULT_VISIBILITY_TOPIC).strip()
     return sweeps, vessels, visibility_topic
@@ -296,8 +332,13 @@ def locate_children(robot_config, mode, sweeps, vessels, visibility_topic, first
                                  index=first_index)]
 
 
-def recovery_summary(sweeps, vessels, visibility_topic, mode=DEFAULT_SWEEP_MODE):
-    """What the recovery half of a tree covers, for the node to report."""
+def recovery_summary(sweeps, vessels, visibility_topic, mode=DEFAULT_SWEEP_MODE,
+                     bench=None):
+    """What the recovery half of a tree covers, for the node to report.
+
+    *bench* is every vessel the bench tracks (:func:`tracked`); None is VESSELS.
+    """
+    bench = tracked_vessels(None) if bench is None else bench
     return {
         'sweep_mode': mode,
         'vessels': [vessel.name for vessel in vessels],
@@ -305,7 +346,7 @@ def recovery_summary(sweeps, vessels, visibility_topic, mode=DEFAULT_SWEEP_MODE)
                                 for name, sweep in sweeps.items()},
         'planning_targets': sorted(name for name, sweep in sweeps.items()
                                    if sweep.planning_target),
-        'uncovered': sorted(set(vessel.name for vessel in VESSELS) - set(sweeps)),
+        'uncovered': sorted(set(vessel.name for vessel in bench) - set(sweeps)),
         'waypoints': {name: [point.name for point in sweep.waypoints]
                       for name, sweep in sweeps.items()},
         'recovery_cameras': {name: sweep.recovery_camera
@@ -323,15 +364,25 @@ def create_sdl_occlusion_recovery_tree(robot_config) -> py_trees.behaviour.Behav
 
     sweeps, vessels, visibility_topic = recovery_plan(params, joint_names)
     mode = resolve_sweep_mode(params)
+    home_via = resolve_home_via(robot_config)
 
     mission = py_trees.composites.Sequence(
         name='SDL_Occlusion_Recovery_Sequence', memory=True)
-    mission.add_child(home_subtree(
-        robot_config, home_joint_state(robot_config), controller,
-        duration=HOME_DURATION_SEC, name='1_Initialize',
-        # The gripper is not part of looking at anything, and opening it is one
-        # more piece of hardware that has to be present for a perception run.
-        open_gripper=False))
+    if home_via == HOME_VIA_MOVEIT:
+        # The one move that starts from wherever the last task left the arm, so
+        # it is planned, then the arm is parked back on the hold controller the
+        # sweep drives. The gripper is not opened, as below.
+        mission.add_child(home_move(
+            robot_config, home_joint_state(robot_config), home_via, controller,
+            replay_controller(robot_config), name='1_Initialize', suffix='', park=True))
+    else:
+        mission.add_child(home_subtree(
+            robot_config, home_joint_state(robot_config), controller,
+            duration=HOME_DURATION_SEC, name='1_Initialize',
+            # The gripper is not part of looking at anything, and opening it is
+            # one more piece of hardware that has to be present for a
+            # perception run.
+            open_gripper=False))
 
     locate = locate_children(robot_config, mode, sweeps, vessels, visibility_topic)
     mission.add_children(locate)
@@ -347,7 +398,9 @@ def create_sdl_occlusion_recovery_tree(robot_config) -> py_trees.behaviour.Behav
     root = guarded_mission(
         mission, robot_config, CONTROL_MODE,
         name='SDL_Occlusion_Recovery_Root')
-    root.recovery_summary = recovery_summary(sweeps, vessels, visibility_topic, mode)
+    root.recovery_summary = recovery_summary(sweeps, vessels, visibility_topic, mode,
+                                             bench=tracked(params))
+    root.recovery_summary['home_via'] = home_via
     return root
 
 
@@ -372,4 +425,6 @@ __all__ = [
     'resolve_sweep_mode',
     'single_pass_sequence',
     'sweep_config_path',
+    'tracked',
+    'vessel_table_path',
 ]

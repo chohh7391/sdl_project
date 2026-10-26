@@ -20,6 +20,9 @@ or vessel topic than the first one did.
 
 from collections import namedtuple
 
+import yaml
+
+from cho_object_pose.objects import parse_objects
 # The robot's task home, the registry's poses.task_home -- for the FR5 home 1,
 # never the diagnostic-only home 0 (fr5.yaml's schema refuses that).
 from cho_task_manager.subtrees import home_joint_state  # noqa: F401
@@ -52,3 +55,25 @@ VESSELS = (
     VesselSpec('beaker', '/perception/object_pose/beaker', 'beaker_pose'),
     VesselSpec('flask', '/perception/object_pose/flask', 'flask_pose'),
 )
+
+
+def vessels_from_table(path):
+    """The objects of an object table (``config/perception/*.yaml``) as vessels.
+
+    Name and topic come from the table -- the same parse cho_object_pose runs,
+    so the two cannot read one file differently -- and the blackboard key is
+    ``<name>_pose``, as VESSELS has it.
+    """
+    with open(path, encoding='utf-8') as handle:
+        specs = parse_objects(yaml.safe_load(handle))
+    return tuple(VesselSpec(spec.name, spec.topic, '%s_pose' % spec.name) for spec in specs)
+
+
+def tracked_vessels(table_path):
+    """The vessels a tree tracks: the objects of the table at *table_path*, else VESSELS.
+
+    *table_path* is a checked path (``utils/params.share_path``) or None.
+    """
+    if table_path is None:
+        return VESSELS
+    return vessels_from_table(table_path)

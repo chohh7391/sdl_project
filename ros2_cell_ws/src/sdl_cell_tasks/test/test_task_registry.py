@@ -29,14 +29,18 @@ from cho_task_manager.testing import goal_problems, registry_tree
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / 'sdl_cell_tasks'
-TASKS = ['sdl_occlusion_recovery', 'sdl_occlusion_replay', 'sdl_perceived_replay',
-         'sdl_trajectory_replay', 'sdl_vessel_detect']
+TASKS = ['sdl_beaker_transfer', 'sdl_grasp_trial', 'sdl_occlusion_recovery',
+         'sdl_occlusion_replay', 'sdl_perceived_replay', 'sdl_trajectory_replay',
+         'sdl_vessel_detect']
 
 #: What each example task_params file does when built from the registry alone,
 #: as the node builds it with no other parameter: None builds, a string is the
 #: refusal (both replays need the cell's own layout, replay_layout:=, for the
-#: cell's recording, which assumes the bench's layout).
+#: cell's recording, which assumes the bench's layout; the two plan tasks need
+#: a plan the run delivered, which the examples only name).
 FROM_THE_REGISTRY_ALONE = {
+    'sdl_beaker_transfer': 'names no complete plan',
+    'sdl_grasp_trial': 'names no complete plan',
     'sdl_occlusion_recovery': None,
     'sdl_occlusion_replay': "needs 'replay_layout'",
     'sdl_perceived_replay': None,
@@ -54,7 +58,7 @@ def _example(task):
         return yaml.safe_load(stream) or {}
 
 
-def test_the_package_registers_its_five_tasks():
+def test_the_package_registers_its_seven_tasks():
     assert package_tasks('sdl_cell_tasks') == TASKS
 
 

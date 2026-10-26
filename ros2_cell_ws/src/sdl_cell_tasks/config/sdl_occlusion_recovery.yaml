@@ -3,7 +3,11 @@
 #     object_pose_config:=$(ros2 pkg prefix --share sdl_cell_tasks)/config/perception/mujoco_sdl_cell.yaml \
 #     object_pose_cameras_config:=<the cell's camera table> task_params:=<this file>
 # This one is the MuJoCo cell's; the real bench's sweep table is config/sweep/fr5_bench.yaml, with the
-# object table config/perception/vessel_detect.yaml.
+# object table config/perception/vessel_detect.yaml, and the two-beaker cell's is
+# config/sweep/fr5_bench_beakers.yaml with vessel_table: config/perception/pour_beakers.yaml.
+# The first home is planned by MoveIt (the node's home_via, FR5 default moveit): without move_group
+# (bringup_mujoco_cell.launch.py moveit:=false) pass home_via:=direct.
 sweep_config: config/sweep/fr5_mujoco_cell.yaml    # relative: under share/sdl_cell_tasks; required
 sweep_mode: single_pass                            # single_pass, or per_object
 visibility_topic: /perception/object_visibility    # where cho_object_pose says what each camera sees
+vessel_table: null                                 # the object table to look for; null: vessel_detect.yaml's

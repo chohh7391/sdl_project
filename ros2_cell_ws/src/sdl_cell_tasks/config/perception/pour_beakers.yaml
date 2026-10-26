@@ -1,0 +1,125 @@
+# Object table for the FR5 two-beaker pour: beaker1 is picked off its riser and
+# poured into beaker2, which stands at the centre of the balance pan. Planned in
+# sdl_project's "transfer_real_beakers" cell (scripts/real_cell/plan_remote.sh
+# --perceive --beakers), which measures both beakers from this table before
+# planning (scripts/real_cell/measure_vessels.py); the replay's pour then reads
+# beaker1's marker from the same pose node.
+#
+#   TABLE=$(ros2 pkg prefix --share sdl_cell_tasks)/config/perception/pour_beakers.yaml
+#   ros2 launch cho_object_pose detectors.launch.py objects_config:=$TABLE \
+#     cameras_config:=$(ros2 pkg prefix --share cho_object_pose)/config/cameras.yaml
+#   ros2 launch cho_object_pose object_pose.launch.py robot_type:=fr5 \
+#     objects_config:=$TABLE cameras_config:=... min_cameras:=1
+#
+# The recovery that re-measures a beaker the standing cameras lost takes this
+# table as its vessel_table (sdl_occlusion_recovery's task_params, with
+# config/sweep/fr5_bench_beakers.yaml), so it looks for these names on these
+# topics.
+#
+# Tags 0 and 1 are also vessel_detect.yaml's beaker and flask, and tag 0 is
+# pour_vessel.yaml's beaker: load ONE of the three tables into a pose node,
+# never two. beaker1 = tag 0, beaker2 = tag 1, both on the same mount (author,
+# 2026-09-29).
+#
+# ------------------------------------------------------------------ the mount
+#
+# Both beakers stand on the same mount, sdl_project's hardware/tag_mount/
+# square88_circle_connector_r20_c110.stl: a 2 mm sheet with a round pad (R 20 mm)
+# the beaker stands on, joined by a bridge to an 88 mm square plate carrying the
+# tag. Plate centre to pad centre is 110 mm, read off the STL (the pad's far edge
+# at x = 130 mm, R 20). So the published pose is the BEAKER'S BOTTOM CENTRE:
+#
+#   xy  110 mm from the tag along the tag's own -y as printed -- mount the tag
+#       with its printed BOTTOM edge towards the bridge, as the older mounts were
+#       (pour_vessel.yaml, vessel_detect.yaml)
+#   z   0: the tag lies on the plate's top face, which is the pad's top face, on
+#       which the beaker's bottom stands
+#
+# That is what the pouring controller expects of its marker (sdl_cell_bringup's
+# config/real/pouring_controller.yaml: tag_radius 0, tag_height 0), so beaker1's
+# pose is published on the topic the controller reads,
+# /perception/object_pose/held_beaker.
+#
+# Check it before planning: each pose must land on its beaker. One that lands
+# 220 mm away, on the far side of its tag, means that tag is on its plate a half
+# turn from what is assumed here -- turn the tag, or flip the sign of that
+# object's offset y. plan_remote.sh refuses a beaker2 more than 15 mm from the
+# pan centre, which catches it there; nothing catches it for beaker1.
+#
+# `tag_size` is the black square's edge: the 88 mm plate is the 70 mm square
+# plus one 9 mm white cell each side. Measure the prints with callipers.
+#
+# `hold_unseen`: a beaker found once -- by side_1 + side_2, or by the occlusion
+# recovery's wrist camera -- keeps its pose after the view is lost (the sugar in
+# beaker1 hides its tag; side_1 and side_2 can disagree past the fusion gate).
+# The rule is the author's (2026-09-29): a position found once is kept while the
+# robot has not moved the object. A camera that measures it again from a view at
+# least as trusted replaces the held pose -- the wrist's close-up is not replaced
+# by a standing camera's. The replay marks beaker1 taken right after its jaws
+# close on it (`<topic>/release`: no pose, an afterimage, and its tag not
+# believed as where it stands) and put back once it has set it down where it
+# took it from (`<topic>/restore`). See cho_object_pose/hold.py.
+#
+# `hold_unseen`, `<topic>/release|restore|resume`, `<topic>/in_hand` and the
+# `display:` section below are the laptop's cho_object_pose (its 6e364e1, never
+# on GitHub), not cho_robot_project v0.1.0's: the v0.1.0 pose node reads the
+# objects as it always has and ignores those keys, so on this workspace's core
+# a beaker no camera sees has no pose, the release and restore the replay
+# sends find no service (the replay carries on), and the pour controller levels
+# beaker1 by its grasp's axis rather than by its tag.
+#
+# The mount comes WITH beaker1 when it is lifted (side_1 saw tag 0 at 40 px on
+# the riser and 80 px at the pour, 2026-09-29): its pad is stuck under the
+# beaker. So while the robot holds it, the tag lies in the plane of the
+# beaker's bottom and its normal is the beaker's axis. The pose node publishes
+# that tilt on `<topic>/in_hand` (held_beaker/in_hand), and the pouring
+# controller stands the beaker upright by it before it pours
+# (pouring_controller.yaml geometry.level).
+# How rviz shows this cell (author, 2026-09-29): no writing but the two beakers'
+# and the two standing cameras' names, and each beaker's tag drawn where it was
+# measured. A beaker found once stays drawn where it was found however long it
+# goes unseen (ghost_after_sec 0); the afterimage is for a beaker the robot has
+# TAKEN -- drawn faint where it was, until the replay puts it back (hold.py).
+display:
+  camera_labels: [side_1, side_2]
+  ghost_after_sec: 0
+  draw_tags: true
+objects:
+  - name: beaker1
+    tag_id: 0
+    tag_size: 0.070
+    topic: /perception/object_pose/held_beaker
+    hold_unseen: true
+    grasp_offset:
+      position: [0.0, -0.110, 0.0]
+      orientation: [0.0, 0.0, 0.0, 1.0]
+    top_down_yaw: true
+    yaw_axis: [1.0, 0.0, 0.0]
+    # Drawn in rviz at the beaker, not at the published point: the pose is the
+    # beaker's bottom centre, the mesh is centred on its bounding box, so the
+    # body sits half its 70 mm height above it.
+    shape:
+      type: mesh
+      resource: package://sdl_cell_tasks/meshes/beaker.stl
+      size: [0.050, 0.050, 0.070]
+      origin: [0.0, 0.0, 0.035]
+      color: [0.2, 0.7, 1.0, 0.65]
+  - name: beaker2
+    tag_id: 1
+    tag_size: 0.070
+    topic: /perception/object_pose/beaker2
+    hold_unseen: true
+    grasp_offset:
+      position: [0.0, -0.110, 0.0]
+      orientation: [0.0, 0.0, 0.0, 1.0]
+    top_down_yaw: true
+    yaw_axis: [1.0, 0.0, 0.0]
+    # Drawn in rviz at the beaker, not at the published point: the pose is the
+    # beaker's bottom centre, the mesh is centred on its bounding box, so the
+    # body sits half its 70 mm height above it.
+    shape:
+      type: mesh
+      resource: package://sdl_cell_tasks/meshes/beaker.stl
+      size: [0.050, 0.050, 0.070]
+      origin: [0.0, 0.0, 0.035]
+      color: [1.0, 0.6, 0.2, 0.65]

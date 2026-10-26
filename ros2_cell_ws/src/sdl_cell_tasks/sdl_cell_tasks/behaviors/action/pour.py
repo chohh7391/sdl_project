@@ -13,6 +13,8 @@
 # limitations under the License.
 
 """Pour a measured amount into a vessel whose weight the tree already knows."""
+import math
+
 import py_trees
 
 from cho_task_manager.behaviors.action.base_action_behavior import BaseActionBehavior
@@ -76,6 +78,7 @@ class PourActionBehavior(BaseActionBehavior):
         grasp_marker_key: str = None,
         pour_direction: int = 0,
         pour_reference_joints: list = None,
+        receiver_rim_center: list = None,
         blackboard_namespace: str = TASK_NAMESPACE,
         timeout_sec: float = DEFAULT_TIMEOUT_SEC,
     ):
@@ -141,6 +144,17 @@ class PourActionBehavior(BaseActionBehavior):
         # How to tip, shown rather than said: see Pour.action.
         self.pour_reference_joints = (
             [float(q) for q in pour_reference_joints] if pour_reference_joints else [])
+        # Where the receiver's rim is, base frame [m]: three numbers or none.
+        # A controller that lays its pour out around the receiver refuses a
+        # goal without it; see Pour.action.
+        if receiver_rim_center is not None:
+            receiver_rim_center = [float(v) for v in receiver_rim_center]
+            if len(receiver_rim_center) != 3 or not all(
+                    math.isfinite(v) for v in receiver_rim_center):
+                raise ValueError(
+                    f'[{name}] receiver_rim_center must be three finite numbers, the '
+                    f"receiver's rim centre in the arm's base frame; got {receiver_rim_center!r}")
+        self.receiver_rim_center = receiver_rim_center
         self.grasp_joints_key = grasp_joints_key
         self.grasp_marker_key = grasp_marker_key
         self.blackboard_namespace = blackboard_namespace
@@ -182,6 +196,8 @@ class PourActionBehavior(BaseActionBehavior):
         goal.timeout = float(self.pour_timeout)
         goal.pour_direction = int(self.pour_direction)
         goal.pour_reference_joints = list(self.pour_reference_joints)
+        if self.receiver_rim_center is not None:
+            goal.receiver_rim_center = list(self.receiver_rim_center)
         if self.grasp_joints_key is not None:
             joints = read_if_set(self.blackboard, self.grasp_joints_key)
             marker = read_if_set(self.blackboard, self.grasp_marker_key)

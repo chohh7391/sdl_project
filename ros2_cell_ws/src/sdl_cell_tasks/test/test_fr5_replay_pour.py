@@ -24,6 +24,7 @@ No ROS graph: trees are built, not ticked, and the latch runs on a fake clock.
 """
 
 import json
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import py_trees
@@ -41,13 +42,21 @@ from cho_task_manager.utils.trajectory_recording import (
     RecordingRejected,
 )
 from sdl_cell_tasks.behaviors.action import PourActionBehavior
-from sdl_cell_tasks.behaviors.topic import GraspMarkerSampleBehavior, ScaleLatchBehavior
+from sdl_cell_tasks.behaviors.service import HeldPoseServiceBehavior, ReleaseHeldPoseBehavior
+from sdl_cell_tasks.behaviors.topic import (
+    GraspMarkerSampleBehavior,
+    OperatorGoBehavior,
+    ScaleLatchBehavior,
+)
 from sdl_cell_tasks.behaviors.topic.grasp_marker import GRASP_JOINTS_KEY, GRASP_MARKER_KEY
 from sdl_cell_tasks.subtrees.pour import (
     CONTAINER_AUTO,
     CONTAINER_KEY,
+    DEFAULT_GRANULAR_POUR_TIMEOUT_SEC,
     DEFAULT_MARKER_TOPIC,
+    DEFAULT_POUR_TIMEOUT_SEC,
     parse_pour_request,
+    POUR_OVERHEAD_SEC,
 )
 from sdl_cell_tasks.tasks.fr5.replay import cell_recording
 from sdl_cell_tasks.utils.pour_splice import PourSegment, splice_pour
@@ -55,6 +64,8 @@ from sdl_cell_tasks.utils.pour_splice import PourSegment, splice_pour
 TASK = 'sdl_trajectory_replay'
 HEADER = 't_s,j1,j2,j3,j4,j5,j6,operation\n'
 LAYOUT = {'beaker': {'xy': [0.584, -0.298]}, 'flask': {'xy': [0.52, 0.32]}}
+#: A receiver's rim as perception would give it: beaker2 on the pan.
+RIM = [0.513, 0.328, 0.158]
 
 
 def _rows(pour_end_j2=0.1, pour_ops=None):
@@ -120,6 +131,23 @@ def _replay_names(tree):
 
 
 # --- the splice ---------------------------------------------------------------
+
+def test_a_pour_handed_to_the_controller_does_not_set_the_replays_clock(tmp_path):
+    # 2026-09-30, on the real cell: two of the recorded pour's samples 1.6 ms
+    # apart, with a j6 step between them, read as 680 deg/s and stretched every
+    # move 29.7x -- though the controller, not the replay, does the pour.
+    rows = _rows()
+    row, op = rows[13]
+    rows[13] = ([rows[12][0][0] + 0.0016] + row[1:], op)
+    (tmp_path / 'poured').mkdir()
+    (tmp_path / 'replayed').mkdir()
+    poured = _tree(tmp_path / 'poured', rows, replay_pour_grams=10.0).replay_summary
+    replayed = _tree(tmp_path / 'replayed', rows).replay_summary
+
+    assert poured['ceiling_scale'] == pytest.approx(1.0)
+    # Replayed as recorded, the same samples do have to be slowed down.
+    assert replayed['ceiling_scale'] > 10.0
+
 
 def test_the_pour_is_cut_out_of_the_move_it_sat_in(tmp_path):
     csv_path, meta_path, _ = _write(tmp_path, _rows())
@@ -271,7 +299,76 @@ def test_the_hand_over_sits_between_the_two_halves_of_the_move(tmp_path):
     assert tree.replay_summary['pour'] == {
         'target_grams': 20.0, 'container': CONTAINER_AUTO, 'material': 'liquid',
         'flow_index': 0.0, 'timeout': 0.0, 'marker_topic': DEFAULT_MARKER_TOPIC,
-        'required': False}
+        'required': False, 'receiver_rim': None, 'grasp_marker': None,
+        'put_back': 'elsewhere'}
+    assert tree.replay_summary['pour_repeat'] == 1
+
+
+def test_the_pour_goes_where_the_receiver_was_perceived(tmp_path):
+    # A list in a task_params file, or "x,y,z" / "x y z" as a string.
+    for given in (RIM, '0.513,0.328,0.158', '0.513 0.328 0.158'):
+        tree = _tree(tmp_path, replay_pour_grams=20.0, replay_pour_receiver=given)
+        pour = [n for n in tree.iterate() if isinstance(n, PourActionBehavior)][0]
+        assert pour.receiver_rim_center == pytest.approx(RIM)
+
+
+def test_without_a_receiver_the_goal_carries_none(tmp_path):
+    # Not required here: the MuJoCo cell's controller pours about its joint
+    # (pour_geometry: joint), which does not use it. The real cell's (measured)
+    # refuses such a goal itself, and sdl_beaker_transfer always sends one.
+    tree = _tree(tmp_path, replay_pour_grams=20.0)
+    pour = [n for n in tree.iterate() if isinstance(n, PourActionBehavior)][0]
+    assert pour.receiver_rim_center is None
+
+
+def test_a_granular_pour_is_waited_for_as_long_as_the_controller_gives_it(tmp_path):
+    sugar = _tree(tmp_path, replay_pour_grams=30.0, replay_pour_material='granular')
+    pour = [n for n in sugar.iterate() if isinstance(n, PourActionBehavior)][0]
+    assert pour.timeout_sec == DEFAULT_GRANULAR_POUR_TIMEOUT_SEC + POUR_OVERHEAD_SEC
+    water = _tree(tmp_path, replay_pour_grams=30.0)
+    pour = [n for n in water.iterate() if isinstance(n, PourActionBehavior)][0]
+    assert pour.timeout_sec == DEFAULT_POUR_TIMEOUT_SEC + POUR_OVERHEAD_SEC
+
+
+def test_repeated_pours_wait_for_the_operator_between_them(tmp_path):
+    tree = _tree(tmp_path, replay_pour_grams=10.0, replay_pour_repeat=3)
+    names = _replay_names(tree)
+    pours = [n for n in tree.iterate() if isinstance(n, PourActionBehavior)]
+    gates = [n for n in tree.iterate() if isinstance(n, OperatorGoBehavior)]
+    assert len(pours) == 3
+    assert len(gates) == 2
+    # Each pour after the first is preceded by its wait, and every pour reads
+    # the receiver it starts on.
+    order = [n for n in names if 'Wait_For_Go' in n or n.endswith('Pour_Result_Logged')
+             or 'Read_Empty_Receiver' in n]
+    assert order == ['3_T1_Read_Empty_Receiver', '3_T1_Pour_Result_Logged',
+                     '3_T2_Wait_For_Go', '3_T2_Read_Empty_Receiver', '3_T2_Pour_Result_Logged',
+                     '3_T3_Wait_For_Go', '3_T3_Read_Empty_Receiver', '3_T3_Pour_Result_Logged']
+    assert len(set(names)) == len(names)
+    assert tree.replay_summary['pour_repeat'] == 3
+
+
+def test_a_single_pour_is_named_as_before(tmp_path):
+    names = _replay_names(_tree(tmp_path, replay_pour_grams=10.0))
+    assert '3_Pour_Result_Logged' in names
+    assert not [n for n in names if 'Wait_For_Go' in n or '_T1_' in n]
+
+
+@pytest.mark.parametrize('repeat', [0, -2, 2.5, 'three', True])
+def test_a_repeat_that_is_not_a_whole_number_of_pours_is_refused(tmp_path, repeat):
+    with pytest.raises(ValueError, match='replay_pour_repeat'):
+        _tree(tmp_path, replay_pour_grams=10.0, replay_pour_repeat=repeat)
+
+
+def test_repeated_pours_need_the_receiver_read_each_time(tmp_path):
+    with pytest.raises(ValueError, match='replay_pour_container: auto'):
+        _tree(tmp_path, replay_pour_grams=10.0, replay_pour_repeat=2,
+              replay_pour_container=139.2)
+
+
+def test_a_repeat_without_a_pour_is_refused(tmp_path):
+    with pytest.raises(ValueError, match='no pour was asked for'):
+        _tree(tmp_path, replay_pour_repeat=2)
 
 
 def test_the_replay_resumes_only_from_where_the_pour_was_handed_over(tmp_path):
@@ -297,7 +394,10 @@ def test_the_grasp_is_measured_once_the_jaws_have_settled_on_the_vessel(tmp_path
     # arm moves on -- and nowhere else.
     at = names.index('1_Measure_Grasp_Or_At_Pour')
     assert names[at - 2:at] == ['1_Gripper_Close_Move_to_Surface', '1_Gripper_Settle']
-    assert names[at + 1] == '2_Replay_Move_to_Surface'
+    # Measured off the vessel's pose, THEN the pose node stops holding it: from
+    # here the robot is moving it.
+    assert names[at + 1] == '1_Release_Held_Pose_Or_None'
+    assert names[at + 2] == '2_Replay_Move_to_Surface'
     assert sum('Measure_Grasp' in name for name in names) == 1
     tree = _tree(tmp_path, replay_pour_grams=20.0)
     sampler = [n for n in tree.iterate() if isinstance(n, GraspMarkerSampleBehavior)][0]
@@ -365,6 +465,12 @@ def test_a_recording_that_cannot_hand_its_pour_over_refuses_the_whole_replay(tmp
     ({'replay_pour_grams': 5.0, 'replay_pour_container': 'flask'}, "EMPTY receiver"),
     ({'replay_pour_grams': 5.0, 'replay_pour_material': 'honey'}, 'material'),
     ({'replay_pour_grams': 5.0, 'replay_pour_flow_index': 3.0}, 'flow_index'),
+    ({'replay_pour_grams': 5.0, 'replay_pour_receiver': '0.5,0.3'}, 'three numbers'),
+    ({'replay_pour_grams': 5.0, 'replay_pour_receiver': '0.5,0.3,nan'}, 'three numbers'),
+    ({'replay_pour_grams': 5.0, 'replay_pour_receiver': 'scale'}, 'three numbers'),
+    ({'replay_pour_grams': 5.0, 'replay_pour_receiver': [0.5, 0.3, True]}, 'three numbers'),
+    ({'replay_pour_grams': 5.0, 'replay_pour_grasp_marker': '0.4,-0.3'}, 'grasp_marker'),
+    ({'replay_pour_grams': 5.0, 'replay_pour_put_back': 'shelf'}, 'put_back'),
 ])
 def test_a_malformed_pour_request_is_refused_by_name(config, fragment):
     with pytest.raises(ValueError) as excinfo:
@@ -534,6 +640,7 @@ def test_the_pour_goal_carries_the_grasp_the_sampler_left():
     goal = pour.send_action_goal.call_args[0][0]
     assert goal.pour_direction == 0
     assert list(goal.pour_reference_joints) == []
+    assert list(goal.receiver_rim_center) == []
     assert list(goal.grasp_joints) == [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
     assert (goal.grasp_marker.x, goal.grasp_marker.y, goal.grasp_marker.z) == (0.58, -0.30, 0.12)
     py_trees.blackboard.Blackboard.clear()
@@ -577,3 +684,98 @@ def test_an_arm_left_elsewhere_stops_the_resume_and_names_the_joint():
     check.clock.seconds += 4.0
     assert check.update() == py_trees.common.Status.FAILURE
     assert 'j6 is 1.0000 rad' in check.node.get_logger().error.call_args[0][0]
+
+
+# --- the receiver, the perceived grasp, and the pose node's holds ---------------
+
+def test_the_pour_goal_carries_the_perceived_receiver():
+    py_trees.blackboard.Blackboard.clear()
+    pour = PourActionBehavior('pour', 'pouring_controller', target_grams=20.0,
+                              container_grams=139.15, receiver_rim_center=RIM)
+    pour.node = MagicMock()
+    pour.send_action_goal = MagicMock()
+    pour.initialise()
+    assert list(pour.send_action_goal.call_args[0][0].receiver_rim_center) == RIM
+    py_trees.blackboard.Blackboard.clear()
+
+
+@pytest.mark.parametrize('rim', [[0.5, 0.3], [0.5, 0.3, float('inf')]])
+def test_a_receiver_that_is_not_a_point_is_refused_at_tree_build_time(rim):
+    with pytest.raises(ValueError) as excinfo:
+        PourActionBehavior('pour', 'pouring_controller', target_grams=20.0,
+                           container_grams=139.15, receiver_rim_center=rim)
+    assert 'receiver_rim_center' in str(excinfo.value)
+
+
+def test_the_held_pose_is_released_once_the_jaws_have_the_vessel(tmp_path):
+    tree = _tree(tmp_path, replay_pour_grams=20.0)
+    release = [n for n in tree.iterate() if isinstance(n, ReleaseHeldPoseBehavior)][0]
+    assert release.service_name == DEFAULT_MARKER_TOPIC + '/release'
+    # A pose node holding nothing, without holds (cho_robot_project v0.1.0's),
+    # is not a reason to stop.
+    assert isinstance(release.parent, py_trees.decorators.FailureIsSuccess)
+
+
+def test_with_the_measuring_left_to_the_controller_nothing_is_released(tmp_path):
+    tree = _tree(tmp_path, replay_pour_grams=20.0, replay_pour_marker_topic='none')
+    assert not [n for n in tree.iterate() if isinstance(n, HeldPoseServiceBehavior)]
+
+
+def test_a_perceived_marker_is_the_grasps_marker(tmp_path):
+    # The position the plan grasps at, measured before planning: a standing
+    # camera re-measuring the vessel from a poor view does not move the pour.
+    tree = _tree(tmp_path, replay_pour_grams=20.0,
+                 replay_pour_grasp_marker=[0.4215, -0.2934, 0.0596])
+    sampler = [n for n in tree.iterate() if isinstance(n, GraspMarkerSampleBehavior)][0]
+    assert sampler.marker == [0.4215, -0.2934, 0.0596]
+    pour = [n for n in tree.iterate() if isinstance(n, PourActionBehavior)][0]
+    assert (pour.grasp_joints_key, pour.grasp_marker_key) == (GRASP_JOINTS_KEY, GRASP_MARKER_KEY)
+
+
+def test_a_given_marker_latches_only_the_joints():
+    py_trees.blackboard.Blackboard.clear()
+    sampler = GraspMarkerSampleBehavior('grasp', marker_topic='', required_frame='base_link',
+                                        joint_names=['j1', 'j2'], marker=[0.42, -0.29, 0.06])
+    sampler.node = MagicMock()
+    sampler.clock = _Clock()
+    sampler.node.get_clock.return_value = sampler.clock
+    sampler.initialise()
+    assert sampler.update() == py_trees.common.Status.RUNNING
+    sampler._on_joints(SimpleNamespace(name=['j2', 'j1'], position=[0.2, 0.1]))
+    assert sampler.update() == py_trees.common.Status.SUCCESS
+    assert _read(GRASP_JOINTS_KEY) == [0.1, 0.2]
+    assert _read(GRASP_MARKER_KEY) == [0.42, -0.29, 0.06]
+    py_trees.blackboard.Blackboard.clear()
+
+
+def test_a_given_marker_with_no_joints_times_out_on_the_node_clock():
+    py_trees.blackboard.Blackboard.clear()
+    sampler = GraspMarkerSampleBehavior('grasp', marker_topic='', required_frame='base_link',
+                                        joint_names=['j1', 'j2'], marker=[0.42, -0.29, 0.06],
+                                        timeout_sec=5.0)
+    sampler.node = MagicMock()
+    sampler.clock = _Clock()
+    sampler.node.get_clock.return_value = sampler.clock
+    sampler.initialise()
+    sampler.clock.seconds += 6.0
+    assert sampler.update() == py_trees.common.Status.FAILURE
+    py_trees.blackboard.Blackboard.clear()
+
+
+def _held_pose_calls(tree):
+    return [(n.name, n.verb, n.service_name) for n in tree.iterate()
+            if isinstance(n, HeldPoseServiceBehavior)]
+
+
+def test_the_vessel_set_down_elsewhere_is_measured_afresh(tmp_path):
+    names = _replay_names(_tree(tmp_path, replay_pour_grams=20.0))
+    at = names.index('5_Resume_Held_Pose_Or_None')
+    assert names[at - 2].startswith('5_Gripper_Open_') and names[at - 1] == '5_Gripper_Settle'
+    assert names[at + 1] == '6_Replay_Place'
+
+
+def test_the_vessel_put_back_where_it_was_taken_holds_its_old_pose(tmp_path):
+    tree = _tree(tmp_path, replay_pour_grams=20.0, replay_pour_put_back='start')
+    calls = _held_pose_calls(tree)
+    assert [verb for _, verb, _ in calls] == ['release', 'restore']
+    assert calls[1][2] == DEFAULT_MARKER_TOPIC + '/restore'

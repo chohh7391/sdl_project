@@ -1,0 +1,26 @@
+# The cell layout traj_return_seed4.csv assumes, taken verbatim from its meta
+# (traj_return_seed4.meta.json, seed 4, tool fr5_ag95, recorded 2026-09-23T13:28:49Z).
+#
+# This only PASSES the gate; the replay senses nothing, so the vessels
+# must physically be here -- the beaker standing ON the 50 mm riser.
+# yaw_deg is omitted for the round vessels.
+layout:
+  beaker:
+    xy: [0.584, -0.298]
+  flask:
+    xy: [0.52, 0.32]
+  magnet:
+    xy: [-0.307, 0.4449]
+    yaw_deg: 174.3
+  box:
+    xy: [-0.1392, -0.5279]
+    yaw_deg: 154.4
+  stirrer:
+    xy: [-0.1822, 0.6109]
+    yaw_deg: 73.8
+  riser:
+    xy: [0.584, -0.298]
+    yaw_deg: 0.0
+  scale:
+    xy: [0.5328, 0.3279]
+    yaw_deg: 31.6

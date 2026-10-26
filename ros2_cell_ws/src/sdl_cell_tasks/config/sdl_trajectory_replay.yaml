@@ -12,3 +12,9 @@ replay_pour_flow_index: 0.0            # 0..1 within the material class: 0 water
 replay_pour_timeout: 0.0               # [s] the pour law may take; 0 keeps the controller's
 replay_pour_marker_topic: /perception/object_pose/held_beaker   # none: measured by the controller at the pour
 replay_pour_required: false            # true: a pour that misses its target stops the replay
+replay_pour_receiver: null             # [x, y, z] the receiver's rim centre in base_link [m], as perceived;
+                                       #   required by a controller under pour_geometry: measured (the real
+                                       #   cell's), unused under joint (MuJoCo's)
+replay_pour_grasp_marker: null         # [x, y, z] the held vessel as perceived before planning; null: marker_topic
+replay_pour_put_back: elsewhere        # start: set down where it was taken (the pose node restores its pose)
+replay_pour_repeat: 1                  # pours made there, each after the first on /real_cell/trial_go

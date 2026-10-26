@@ -33,6 +33,10 @@ setup(
         (os.path.join(share, 'config', 'perception'), glob('config/perception/*.yaml')),
         # The cell layouts a replay of a recording that assumes one is checked against.
         (os.path.join(share, 'config', 'replay'), glob('config/replay/*.yaml')),
+        # Recordings made on the real cell, with their meta and the layout they assume.
+        (os.path.join(share, 'config', 'replay', 'real'),
+         glob('config/replay/real/*.csv') + glob('config/replay/real/*.json')
+         + glob('config/replay/real/*.yaml')),
         # Where the wrist camera goes to look at an occluded vessel, and the
         # specs those tables are solved from (scripts/solve_sweep_raster.py).
         (os.path.join(share, 'config', 'sweep'), glob('config/sweep/*.yaml')),
@@ -53,6 +57,8 @@ setup(
         # <task name> = <module>:<{robot_type: tree builder}>. Task names are
         # global across every installed package, hence the sdl_ prefix.
         'cho_task_manager.tasks': [
+            'sdl_beaker_transfer = sdl_cell_tasks.tasks.fr5.beaker_transfer:TASK',
+            'sdl_grasp_trial = sdl_cell_tasks.tasks.fr5.grasp_trial:TASK',
             'sdl_trajectory_replay = sdl_cell_tasks.tasks.fr5.trajectory_replay:TASK',
             'sdl_occlusion_recovery = sdl_cell_tasks.tasks.fr5.occlusion_recovery:TASK',
             'sdl_occlusion_replay = sdl_cell_tasks.tasks.fr5.occlusion_replay:TASK',

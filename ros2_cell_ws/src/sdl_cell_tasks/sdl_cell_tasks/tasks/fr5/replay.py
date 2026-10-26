@@ -30,8 +30,11 @@ exactly those, so they build the same tree from the same parts here:
 * :func:`home_block`, :func:`replay_children`, :func:`recording_paths` and
   :func:`check_layout` are copies of the core's private ``_home_block``,
   ``_replay_children``, ``_recording_paths`` and ``_check_layout`` (v0.1.0),
-  each saying so; ``replay_children`` takes the pour and grasp hooks the cell
-  splices in.
+  each saying so; ``replay_children`` takes the pour, grasp and place hooks the
+  cell splices in, and the MoveIt home waits out the bridge's readiness gate
+  after its controller switch (:data:`MOVEIT_GATE_WAIT_SEC`);
+* :func:`retimed` sets the replay's clock from the moves it replays, after a
+  pour has been spliced out of them.
 
 The parameters are the core node's own (``replay_trajectory``, ``replay_meta``,
 ``replay_layout``, ``home_via``, ``replay_speed_scale``, ``control_mode``), read
@@ -42,8 +45,9 @@ no ``replay_trajectory`` a cell replay plays the cell's recording,
 assumes no layout.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import os
+from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
 
 from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
@@ -105,6 +109,14 @@ CELL_RECORDING = 'traj_level_seed2'
 #: The FR5's replay defaults, measured on the real arm (home_via moveit, speed
 #: 0.25, gripper settle 4 s): the core's, unchanged.
 CELL_DEFAULTS = FR5_REPLAY_DEFAULTS
+
+#: Seconds between handing the arm to the trajectory controller and asking
+#: MoveIt to move it. The core's MoveIt bridge takes a goal only while its own
+#: check, run every 0.5 s, has seen the planning scene ready within the last
+#: 1.5 s (cho_moveit_common moveit_action_bridge.py); a goal sent straight after
+#: the switch got there first and was rejected on the real cell ("static floor
+#: planning scene is not ready", 2026-09-30).
+MOVEIT_GATE_WAIT_SEC = 1.5
 
 
 def cell_recording() -> Tuple[str, str]:
@@ -247,13 +259,7 @@ def replay_plan(robot_config, task, defaults: ReplayDefaults = CELL_DEFAULTS,
     layout_checked, layout_path = check_layout(
         recording, robot_config, task, required=layout_required)
 
-    home_via = (robot_config.get('home_via') or defaults.home_via).strip().lower()
-    if home_via not in HOME_VIA_CHOICES:
-        raise ValueError(
-            'home_via must be one of %s; got %r' % (list(HOME_VIA_CHOICES), home_via))
-    if home_via == HOME_VIA_MOVEIT:
-        # A missing MoveIt endpoint is a build-time error naming the robot.
-        moveit_joint_action_name(robot_config)
+    home_via = resolve_home_via(robot_config, defaults)
 
     speed_scale = float(robot_config.get('replay_speed_scale', defaults.speed_scale))
     if not 0.0 < speed_scale <= 1.0:
@@ -298,19 +304,44 @@ def replay_plan(robot_config, task, defaults: ReplayDefaults = CELL_DEFAULTS,
     )
 
 
+def resolve_home_via(robot_config, defaults: ReplayDefaults = CELL_DEFAULTS) -> str:
+    """``home_via`` as the core node passed it, else the FR5 default, checked.
+
+    With ``moveit``, a robot whose registry has no MoveIt endpoint is a
+    build-time error naming it.
+    """
+    home_via = (robot_config.get('home_via') or defaults.home_via).strip().lower()
+    if home_via not in HOME_VIA_CHOICES:
+        raise ValueError(
+            'home_via must be one of %s; got %r' % (list(HOME_VIA_CHOICES), home_via))
+    if home_via == HOME_VIA_MOVEIT:
+        moveit_joint_action_name(robot_config)
+    return home_via
+
+
 def home_block(robot_config, plan, name, suffix, park=False):
     """Take the arm to the recording's start pose, either straight there or planned.
 
     Copied from cho_task_manager/tasks/trajectory_replay.py (v0.1.0),
-    ``_home_block``, which is private there. The gripper is never opened here,
-    in either variant: the recording may begin with the arm already holding a
-    vessel, and opening would drop it.
+    ``_home_block``, which is private there, as :func:`home_move`. The gripper
+    is never opened here, in either variant: the recording may begin with the
+    arm already holding a vessel, and opening would drop it.
     """
-    if plan.home_via == HOME_VIA_DIRECT:
+    return home_move(robot_config, plan.home, plan.home_via, plan.hold, plan.controller,
+                     name, suffix, park=park)
+
+
+def home_move(robot_config, home, home_via, hold, controller, name, suffix, park=False):
+    """:func:`home_block` for any pose: *home* by *hold* (direct) or MoveIt through *controller*.
+
+    The occlusion recovery's first home and the grasp trial's homes go this way
+    too, so every home a cell tree plans waits out the bridge's gate the same.
+    """
+    if home_via == HOME_VIA_DIRECT:
         return home_subtree(
             robot_config,
-            target_joints=plan.home,
-            controller=plan.hold,
+            target_joints=home,
+            controller=hold,
             duration=HOME_DURATION_SEC,
             name=name,
             suffix=suffix,
@@ -323,13 +354,16 @@ def home_block(robot_config, plan, name, suffix, park=False):
     sequence = py_trees.composites.Sequence(name=name, memory=True)
     sequence.add_children([
         SwitchControllerServiceBehavior(
-            name='Switch_To_%s%s' % (plan.controller, suffix),
-            activate=[plan.controller],
+            name='Switch_To_%s%s' % (controller, suffix),
+            activate=[controller],
             robot_config=robot_config,
         ),
+        # On the node clock, like every wait in the cell's trees.
+        WaitBehavior(name='Wait_For_MoveIt_Gate%s' % suffix,
+                     duration_sec=MOVEIT_GATE_WAIT_SEC),
         JointSpaceActionBehavior(
             name='Go_Home_MoveIt%s' % suffix,
-            target_joints=plan.home,
+            target_joints=home,
             duration=HOME_DURATION_SEC,
             action_name=moveit_joint_action_name(robot_config),
             # The bridge plans for the registry's joints, by these names.
@@ -345,11 +379,46 @@ def home_block(robot_config, plan, name, suffix, park=False):
         # block does: ending a session on the controller an external executor
         # was driving is how an arm is left unattended under a live goal.
         sequence.add_child(SwitchControllerServiceBehavior(
-            name='Park_On_%s%s' % (plan.hold, suffix),
-            activate=[plan.hold],
+            name='Park_On_%s%s' % (hold, suffix),
+            activate=[hold],
             robot_config=robot_config,
         ))
     return sequence
+
+
+def replayed_time_scale(plan, segments):
+    """``(scale, joint, rate, ceiling)`` over the moves in *segments*, as the core measures it.
+
+    The core's ``required_time_scale`` measures the whole recording, and so
+    does :func:`replay_plan`. A pour handed to the pouring controller is cut
+    out of the moves, and on the real cell (2026-09-30) its recorded samples --
+    two 1.6 ms apart with a 1 deg j6 step, 680 deg/s on paper -- stretched every
+    move 29.7x. What is not replayed does not set the clock here: each move is
+    measured on its own, with the core's function, and the slowest wins.
+    """
+    worst = (1.0, None, 0.0, 0.0)
+    for segment in segments:
+        if segment.kind != 'move':
+            continue
+        span = SimpleNamespace(times=segment.times, positions=segment.positions,
+                               joint_names=plan.recording.joint_names)
+        measured = required_time_scale(span, plan.limits, scaling=plan.scaling)
+        if measured[1] is not None and measured[0] > worst[0]:
+            worst = measured
+    return worst
+
+
+def retimed(plan, segments):
+    """*plan* with its clock set by the moves *segments* replays (:func:`replayed_time_scale`)."""
+    ceiling_scale, joint, rate, ceiling = replayed_time_scale(plan, segments)
+    return replace(
+        plan,
+        time_scale=max(1.0 / plan.speed_scale, ceiling_scale),
+        ceiling_scale=ceiling_scale,
+        ceiling_joint=joint,
+        ceiling_rate=rate,
+        ceiling=ceiling,
+    )
 
 
 def handover_sequence(robot_config, plan, name):
@@ -372,16 +441,19 @@ def handover_sequence(robot_config, plan, name):
     return sequence
 
 
-def replay_children(plan, robot_config, segments=None, pour_children=None, grasp_children=None):
+def replay_children(plan, robot_config, segments=None, pour_children=None, grasp_children=None,
+                    place_children=None):
     """One behaviour per segment, in recorded order.
 
     Copied from cho_task_manager/tasks/trajectory_replay.py (v0.1.0),
-    ``_replay_children``, which is private there, with the cell's two hooks.
+    ``_replay_children``, which is private there, with the cell's three hooks.
     *segments* defaults to the plan's; a pour replay passes them through
     ``splice_pour()`` first. *pour_children* builds what replaces a pour segment,
     as ``pour_children(index, segment) -> [behaviour, ...]``. *grasp_children*
     builds what follows the settle of the LAST grasp before it -- the one that
-    closed on the vessel being poured -- as ``grasp_children(index)``.
+    closed on the vessel being poured -- as ``grasp_children(index)``, and
+    *place_children* what follows the settle of the FIRST release after it --
+    the one that sets that vessel down -- as ``place_children(index)``.
     """
     segments = plan.segments if segments is None else segments
     gripper = robot_config.get('gripper')
@@ -389,6 +461,9 @@ def replay_children(plan, robot_config, segments=None, pour_children=None, grasp
     grasps = [i for i, segment in enumerate(segments)
               if segment.kind == 'gripper' and segment.grasp and pours and i < pours[0]]
     grasp_of_pour = grasps[-1] if grasps else None
+    releases = [i for i, segment in enumerate(segments)
+                if segment.kind == 'gripper' and not segment.grasp and pours and i > pours[0]]
+    place_of_pour = releases[0] if releases else None
     # One source for every segment of this replay: one subscription, one parse.
     position_limits = DescriptionPositionLimits(plan.joint_names)
     if gripper is None and any(segment.kind == 'gripper' for segment in segments):
@@ -421,6 +496,9 @@ def replay_children(plan, robot_config, segments=None, pour_children=None, grasp
                 # the bench near a camera: the best moment the replay has to
                 # measure where it sits in them.
                 children.extend(grasp_children(index))
+            if index == place_of_pour and place_children is not None:
+                # The vessel is down and the jaws are clear of it.
+                children.extend(place_children(index))
             continue
         children.append(FollowJointTrajectoryBehavior(
             name='%d_Replay_%s' % (index, segment.operation or 'move'),
@@ -463,14 +541,19 @@ def replay_summary(plan, segments=None, **extra):
 __all__ = [
     'CELL_DEFAULTS',
     'CELL_RECORDING',
+    'MOVEIT_GATE_WAIT_SEC',
     'ReplayPlan',
     'cell_recording',
     'check_layout',
     'handover_sequence',
     'home_block',
+    'home_move',
     'position_tolerance',
     'recording_paths',
     'replay_children',
     'replay_plan',
     'replay_summary',
+    'replayed_time_scale',
+    'resolve_home_via',
+    'retimed',
 ]

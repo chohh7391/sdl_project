@@ -12,15 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""The cell's topic leaves: the grasp measurement, the layout check and monitor, the scale latch."""
+"""The cell's topic leaves: the grasp and its check, the layout check and monitor, the scale, the go."""
 
 from .grasp_marker import GraspMarkerSampleBehavior
+from .gripper_hold import GripperHoldCheckBehavior
 from .object_layout import ObjectLayoutCheckBehavior, ObjectLayoutMonitorBehavior
+from .operator_go import OperatorGoBehavior
 from .scale_latch import ScaleLatchBehavior
 
 __all__ = [
     'GraspMarkerSampleBehavior',
+    'GripperHoldCheckBehavior',
     'ObjectLayoutCheckBehavior',
     'ObjectLayoutMonitorBehavior',
+    'OperatorGoBehavior',
     'ScaleLatchBehavior',
 ]

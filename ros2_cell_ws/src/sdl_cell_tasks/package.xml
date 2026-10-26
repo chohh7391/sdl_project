@@ -3,7 +3,7 @@
 <package format="3">
   <name>sdl_cell_tasks</name>
   <version>0.1.0</version>
-  <description>The FR5 chemistry-bench task trees, registered with cho_task_manager: the pour-splicing replay, vessel detection, occlusion sweeps and the perception-gated replays; the glassware meshes, sweep tables and the pour and scale tools.</description>
+  <description>The FR5 chemistry-bench task trees, registered with cho_task_manager: the pour-splicing replay, the two-beaker transfer and grasp trial, vessel detection, occlusion sweeps and the perception-gated replays; the glassware meshes, sweep tables and the pour and scale tools.</description>
   <maintainer email="chohh7391@gmail.com">Hyunho Cho</maintainer>
   <license>Apache-2.0</license>
 
@@ -26,6 +26,8 @@
   <exec_depend>sdl_cell_bringup</exec_depend>
   <exec_depend>sdl_cell_interfaces</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
 
   <test_depend>ament_flake8</test_depend>
   <test_depend>python3-pytest</test_depend>

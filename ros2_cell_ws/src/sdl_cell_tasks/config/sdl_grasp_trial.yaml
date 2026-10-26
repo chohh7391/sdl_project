@@ -1,0 +1,7 @@
+# task_params of sdl_grasp_trial (sdl_cell_tasks/tasks/fr5/grasp_trial.py, DEFAULTS).
+#   ros2 launch cho_task_manager run_task_manager.launch.py robot_type:=fr5 task:=sdl_grasp_trial \
+#     task_params:=<this file>
+# Only the plan's first grasp is tried: reach, close, check, open, back off along the reach.
+# replay_trajectory:=, replay_meta:=, replay_layout:= beside the plan are refused.
+transfer_plan: ~/real_cell_runs/<run>/deliver/traj_realcell_seed0   # the plan's trajectory, no extension
+grasp_held_from: 0.005                 # [m] finger travel from which the jaws count as holding something
