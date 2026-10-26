@@ -1,0 +1,236 @@
+# The real FR5 pour cell's cameras, for the core's launch file:
+#
+#   ros2 launch cho_bringup_fr5 camera_extrinsics.launch.py \
+#     extrinsics_config:=$(ros2 pkg prefix --share sdl_cell_bringup)/config/real/camera_extrinsics.yaml
+#
+# cho_bringup_fr5's config/real/camera_extrinsics.yaml (cho_robot_project
+# v0.1.0) with the re-solves made on the laptop's own core checkout since, which
+# never reached GitHub: its c8fda05 (2026-09-30, side_1 and side_2 moved),
+# 0b312cb (side_2 re-aimed), 73240a0 (the arm hit side_1's mount) and e5aee35
+# (after the 10-03 mount collision and side_1's move). The core's own file
+# keeps the older values.
+#
+# Where each camera sits relative to the FR5, as measured at the bench.
+#
+# THIS IS THE ONE NUMBER NOTHING ELSE CHECKS. Every object pose the perception
+# stack publishes is downstream of it, and a wrong extrinsic produces a
+# confident, wrong pose -- there is no gate, no residual and no log line that
+# shows it. Re-measure after anything moves, and record what the check said.
+#
+# It lives HERE, in the cell's bringup, on purpose:
+#
+#   cho_realsense / cho_oak  are camera drivers. They know nothing about a
+#                            robot and publish no transform into one, which is
+#                            what lets the same launch serve a bag recording.
+#   cho_object_pose          consumes the transform and never names one. It
+#                            looks up base_link <- <prefix>tag_<id> and does
+#                            not care how that chain was built.
+#
+# So the only place that knows both a robot and a camera is the bringup for the
+# cell they share. Moving the tripod is an edit here and nowhere else.
+#
+# ------------------------------------------------------------------- frames
+#
+# `child_frame` is each driver's OWN ROOT, never an optical frame. Both drivers
+# publish their internal chain from their own description (`publish_tf: true`
+# on the D435; depthai always), so supplying anything below the root would give
+# one frame two parents -- not an error, just transforms that resolve through
+# whichever arrived last.
+#
+#   D435   camera_link, named by `camera_name:=` -> `wrist_link` and
+#          `side_2_link` here
+#   OAK    `side_1_mount`, which cho_oak derives from its `name:=` -- see the
+#          note there about the driver's own default being a sentinel
+#
+# --------------------------------------------------------------- how to redo
+#
+# `ros2 run cho_camera_calibration solve_hand_eye.py ...` -- see that package's
+# README for the arguments. All three entries below come from one run.
+#
+# THE BOARD'S OWN POSE IS AN OUTPUT, NOT AN INPUT. The earlier procedure put
+# one tag at a surveyed point and solved the camera against it, which made
+# that tag's residual meaningless (it is fitted) and left the survey itself
+# unchecked. Measured: the same board, taped twice at the same nominal spot,
+# moved the solved camera 52 mm; and when the robot finally measured where
+# the board actually was, it was 48 mm from where it had been placed. Solving
+# AX = ZB over a moving arm gives the hand-eye AND the board's pose together,
+# so no tape measure enters either number.
+transforms:
+  # ------------------------------------------------------------------ wrist
+  # Eye-in-hand: the D435 rides the wrist, so its transform hangs off
+  # `wrist3_link` and the robot's FK carries it. The bringup must therefore be
+  # running for any wrist detection to resolve into the base frame.
+  #
+  # SOLVED from eight arm poses viewing the tag board (2026-09-23), the run
+  # that re-placed both standing cameras after they were moved.
+  # ALL THREE CAMERAS BELOW COME FROM THAT ONE RUN, which is the point of doing
+  # it that way: they are placed against ONE board pose, so a disagreement
+  # between them is a real disagreement rather than two different boards.
+  #
+  # What says this one is right:
+  #
+  #   reprojection over board corners      0.147-0.346 px across the eight poses
+  #   the board's pose, pose to pose       0.53 mm mean, 0.70 mm worst
+  #   the board's height                   came out at -0.0113 against a bench
+  #                                        at -0.013 -- 1.7 mm, and NOTHING in
+  #                                        the solve knows the bench height
+  #   the board's plane                    0.35 deg off level
+  #   relative rotation between poses      77.4 deg median, 26 of 28 pairs
+  #                                        past 30 deg (config/real/handeye_poses.yaml)
+  #
+  # Nobody touched this camera between 2026-09-22 and this run, and it came out
+  # 0.2 mm and 0.97 deg from that evening's solve. It is re-entered anyway: the
+  # standing cameras below were placed against the board pose THIS hand-eye
+  # produced, and keeping the older wrist value would leave the wrist and them
+  # about 9 mm apart at 0.5 m.
+  #
+  # Every one of those is better than the morning's run on this same bench, and
+  # the reason is not the procedure. This camera's firmware was 5.9.2, which
+  # ignored every exposure setting and left it about 31% saturated; on 5.17.3.10
+  # it takes the configured 3000 us and sits at 2.7%. Saturation costs corner
+  # precision first, and corner precision is the whole solve.
+  #
+  # It came off the bracket for that update and went back on, which moved it
+  # about 4 mm -- the difference from the morning's [0.00023, 0.04779, 0.22847].
+  # A remount is a re-solve, every time.
+  # RE-SOLVED 2026-09-30 13:54 (~/real_cell_runs/calib_20260930-135402/solve.txt),
+  # the second run that day: side_1 was moved clear of the arm, which had
+  # knocked it. 0.1 mm and 0.04 deg from that morning's solve, reprojection
+  # 0.129-0.277 px, board 0.59 mm across the eight poses at z -0.0114 against a
+  # bench at -0.013, 0.29 deg off level. Re-entered for the reason above: the
+  # standing cameras stand on its board.
+  # RE-SOLVED 2026-09-30 15:52 (~/real_cell_runs/calib_20260930-154200/solve.txt),
+  # the third run that day, after both standing cameras were moved again: 0.2 mm
+  # and 0.12 deg from the 13:54 solve, reprojection 0.129-0.273 px, board
+  # 0.42 mm mean / 0.59 mm worst across the eight poses at z -0.0113, 0.28 deg
+  # off level.
+  # RE-SOLVED 2026-10-02 11:20 (~/real_cell_runs/calib_20261002-112018/solve.txt)
+  # because side_2 had moved: 0.8 mm and 0.13 deg from the 09-30 15:52
+  # solve, reprojection 0.102-0.160 px, board 0.35 mm mean / 0.54 mm worst at
+  # z -0.0113 (unmoved: 0.1 mm and 0.04 deg of yaw from 09-30), 0.16 deg off level.
+  # RE-SOLVED 2026-10-03 23:27 (~/real_cell_runs/calib_20261003-232657/solve.txt) after the
+  # arm ran into a camera mount at 22:44 with this camera on it: 1.8 mm and
+  # 0.99 deg from the 10-02 entry (re-solves of an untouched mount have moved
+  # 0.1-0.8 mm). Reprojection 0.112-0.222 px, board 0.45 mm mean / 0.64 mm worst
+  # at z -0.0113, 0.17 deg off level, 0.07 mm from 10-02's board: it had not moved.
+  - name: wrist
+    parent_frame: wrist3_link
+    child_frame: wrist_link
+    xyz: [0.00065, 0.04587, 0.23289]
+    # x, y, z, w -- the order geometry_msgs uses, NOT the w-first order some
+    # CAD tools print.
+    quaternion: [0.541260, -0.534962, 0.459404, 0.458040]
+
+  # ----------------------------------------------------------------- side_1
+  # Eye-to-hand: the OAK stands beside the bench and does not move, so this is
+  # a bench-layout number. IT IS WRONG THE MOMENT THE TRIPOD IS NUDGED -- and
+  # it was. The previous entry had it 481 mm from where it actually stands,
+  # with no log line, no residual and no symptom beyond object poses that were
+  # confidently wrong. Running the board against it put the board 422 mm from
+  # its surveyed spot, tilted the bench plane 19.3 degrees off level and spread
+  # six coplanar tags over 60 mm of height. A board notices; one tag cannot.
+  #
+  # SOLVED 2026-09-28, with side_2, off the board pose the wrist's eight views
+  # produced (board 0.43 mm across them, z -0.0113 against a bench at -0.013;
+  # the wrist hand-eye came out 1.2 mm and 0.57 deg from its entry above, so
+  # that entry stands):
+  #
+  #   reprojection over board corners      0.307-0.321 px
+  #   camera position across eight views   0.11 mm of spread
+  #
+  # It saw all six board tags at all eight poses, 46-56 px on the short edge.
+  # A solve on 2026-09-22 had 5.17 mm of spread because at one pose the ARM
+  # STOOD BETWEEN THIS CAMERA AND THE BOARD and it saw three tags instead of
+  # six; if a future position brings that back, re-run with poses chosen to
+  # keep the arm out of this camera's line.
+  #
+  # The camera was moved before this run, 383.8 mm and 46.6 deg from the
+  # previous entry. Re-run after anything touches it and watch those two
+  # numbers -- they are what tells you it has been touched.
+  # RE-SOLVED 2026-09-30 13:54 after the tripod was moved clear of the arm
+  # (233 mm and 38 deg from that morning's entry, where the arm passed within
+  # about 50 mm of it and knocked it): eight views, spread 0.39 mm,
+  # reprojection 0.553-0.627 px. Its optical centre came out 1.5 mm from a
+  # single board view taken before the arm moved (board pose held from the
+  # morning solve), and the arm's paths were checked against that first.
+  # RE-SOLVED 2026-09-30 15:52: 13.4 mm and 3.48 deg from the 13:54 entry -- its
+  # cable was swapped with side_2's, which nudged it. Eight views, spread
+  # 0.49 mm, reprojection 0.632-0.714 px.
+  # RE-SOLVED 2026-10-02 11:20, with side_2: 2.3 mm and 1.11 deg from the 15:52
+  # entry. Eight views, spread 0.59 mm, reprojection 0.618-0.728 px; the board
+  # through the new entry 0.4 mm mean / 0.5 mm worst from the solve.
+  # RE-SOLVED 2026-10-03 23:09 from one board view: the author moved it to the
+  # -y side, nearer the pour, so it sees the held vessel's tag 0 (side_2 lost
+  # it). base -> optical as the 10-02 11:20 board pose times the PnP of all six
+  # tags (151 frames, corner jitter 0.17 px, reprojection 0.373 px). side_2 read
+  # 4.3 mm / 0.16 deg from its entry in the same view -- the board or side_2;
+  # the wrist (FK) is what tells them apart.
+  # RE-SOLVED 2026-10-03 23:33 against the 23:27 wrist solve's board pose, its
+  # 0.17 deg tilt included (the 23:09 entry took the board level, as every
+  # single-view re-solve before it had): one view, all six tags, 99 frames,
+  # reprojection 0.362 px; 1.2 mm and 0.49 deg from 23:09.
+  - name: side_1
+    parent_frame: base_link
+    child_frame: side_1_mount
+    xyz: [0.55555, -0.33279, 0.37209]
+    quaternion: [-0.303192, 0.249943, 0.703187, 0.592562]
+
+  # ----------------------------------------------------------------- side_2
+  # The second standing camera. SOLVED 2026-09-28 in the same run as side_1,
+  # after both were repositioned: 244.8 mm and 23.0 deg from the previous
+  # entry.
+  #
+  #   reprojection over board corners      0.154-0.165 px
+  #   camera position across eight views   0.23 mm of spread
+  #
+  # It saw all six board tags at all eight poses, 33-40 px on the short edge
+  # against cho_object_pose's 25 px floor -- oblique, which costs pixels in
+  # one direction, but no longer on the floor as it was (23-32 px) before.
+  #
+  # ITS ANGLE TO side_1 IS THE POINT OF IT. Crossing two lines of sight is
+  # only worth anything when there is an angle between them: cho_object_pose's
+  # `fusion_mode: intersect` stops crossing below `min_ray_angle_deg` (10) and
+  # falls back to a weighted mean, saying so in the object's status. Where
+  # they stand now, both on the far side of the bench, their lines of sight
+  # cross at 54.6 deg at the board (0.68 / 0.71 m), 56.3 at the receiver's rim
+  # and 64.3 at the pour start (0.30 / 0.70 m). The previous layout had 91.4 at
+  # the board; the error the crossing leaves grows as the angle closes, so this
+  # layout trades some of that for seeing the pour.
+  # RE-SOLVED 2026-09-30 13:54: 1.8 mm and 2.61 deg from that morning's entry --
+  # nudged while side_1 was being moved, which is why a standing camera is
+  # re-solved whenever anything near it is touched. Eight views, spread
+  # 0.15 mm, reprojection 0.173-0.178 px.
+  # RE-SOLVED 2026-09-30 15:52 after it was raised over the bench, out of the
+  # arm's way (a new plan's carry passed close enough to it that the run was
+  # E-stopped): 660 mm and 41 deg from the 13:54 entry, now 1.13 m up and
+  # looking down. The crossing angles above are the 2026-09-28 layout's; this
+  # one crosses side_1 at 68.2 deg at the board (0.67 / 1.23 m). The arm hid
+  # part of the board from it at three of the eight poses (4, 2 and 2 tags),
+  # which spread the camera over 10.3 mm; solved from the five views that saw
+  # all six tags (data_side2_full.json): spread 0.65 mm, reprojection
+  # 0.118-0.120 px.
+  # RE-SOLVED 2026-10-02 11:20: 60.5 mm and 3.17 deg from the 15:52 entry. It
+  # had moved before that morning's first perception (its colour view of the
+  # bench ~43 px from 09-30's, and beaker1, seen by this camera alone, read
+  # 85 mm from where it stood), and the author re-aimed it again before the
+  # solve. The arm hid the board at two of the eight poses (2 and 3 tags);
+  # solved from the five that saw all six: spread 0.82 mm, reprojection
+  # 0.119-0.121 px; the board through the new entry 0.9 mm mean / 1.1 mm worst
+  # (4 tags, the arm at home hiding two).
+  # RE-SOLVED 2026-10-02 14:10 from one board view, after the arm ran into
+  # side_1's mount at 13:43: the board through the 11:20 entry had gone from
+  # 0.9 to 6.1-6.4 mm (every 3- and 4-tag subset agreeing, 0.11 px), while
+  # side_1 still read 0.5 mm, so the board had not moved and this camera had.
+  # base -> optical as the 11:20 solve's board pose times the PnP of tags
+  # 12-15 (0.114 px, 197+ frames each): 4.7 mm and 0.46 deg from 11:20.
+  # RE-SOLVED 2026-10-03 23:33 with side_1, against the 23:27 board pose with its
+  # tilt: one view of tags 11 and 13-15 (the arm at home hides 10 and 12), 215
+  # frames, 0.126 px; 2.3 mm and 0.06 deg from 14:10. (Taking the board level,
+  # as 14:10 did, reads 4.3-4.6 mm -- most of that was the level board.) The
+  # eight wrist poses' own side_2 views spread 14.8 mm, two of them seeing 2-3
+  # tags behind the arm, so they were not used.
+  - name: side_2
+    parent_frame: base_link
+    child_frame: side_2_link
+    xyz: [0.53506, -0.47141, 1.13034]
+    quaternion: [-0.371673, 0.458277, 0.605858, 0.533646]

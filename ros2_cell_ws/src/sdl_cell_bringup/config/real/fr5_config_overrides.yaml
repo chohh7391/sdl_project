@@ -1,0 +1,13 @@
+# What the real pour cell sets differently in cho_bringup_fr5's
+# config/real/fr5.config.yaml (robot IP, gripper registration), merged over it by
+# launch/bringup_real_cell.launch.py and handed to the core bringup as its
+# config_file. Every key here must already be in the core's file: a misspelt one
+# is refused rather than added.
+
+fr5:
+  gripper_config:
+    # The close already aims fully shut (percent_at_closed) and stops on the
+    # vessel at ~51%, so how hard it holds is this force alone: 30 -> 60 at the
+    # author's word (2026-10-05, sugar: "hold it harder"). Was the laptop core
+    # checkout's 83eb973, never on GitHub; the core's file keeps 30.
+    force_percent: 60
