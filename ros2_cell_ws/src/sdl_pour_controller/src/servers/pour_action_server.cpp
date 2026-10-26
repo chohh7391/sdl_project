@@ -116,6 +116,29 @@ rclcpp_action::GoalResponse FR5PourActionServer::handle_goal(
             return rclcpp_action::GoalResponse::REJECT;
         }
     }
+    // The receiver is where the caller perceived it, never a configured
+    // stand-in: a goal that needs one and does not say is refused, and one that
+    // says must say it whole.
+    const auto & rim = goal->receiver_rim_center;
+    const bool rim_given = !rim.empty();
+    if (rim_given && (rim.size() != 3 ||
+                      !std::all_of(rim.begin(), rim.end(),
+                                   [](double v) { return std::isfinite(v); }))) {
+        RCLCPP_ERROR(node_->get_logger(),
+            "[%s] Goal rejected: receiver_rim_center must be empty or three finite numbers "
+            "(the receiver's rim centre, base frame, metres); got %zu",
+            action_name_.c_str(), rim.size());
+        return rclcpp_action::GoalResponse::REJECT;
+    }
+    if (requires_receiver_ && !rim_given) {
+        RCLCPP_ERROR(node_->get_logger(),
+            "[%s] Goal rejected: this controller lays the pour out around the receiver "
+            "(pour_geometry: measured), and the goal does not say where it is. Give "
+            "receiver_rim_center -- the rim centre of the vessel poured into, as perception "
+            "measured it, in the arm's base frame",
+            action_name_.c_str());
+        return rclcpp_action::GoalResponse::REJECT;
+    }
     if (control_running_ || (goal_handle_ && goal_handle_->is_active())) {
         RCLCPP_WARN(node_->get_logger(), "[%s] Goal rejected: another pour is active",
             action_name_.c_str());
@@ -144,13 +167,21 @@ void FR5PourActionServer::handle_accepted(const std::shared_ptr<PourGoalHandle> 
     // Left at zero on purpose when the goal does not set it: the material
     // profile's own tilt rate is the default, and the controller resolves that.
     bounds_.max_tilt_rate = goal->max_tilt_rate;
-    bounds_.max_tilt = or_default(goal->max_tilt, defaults_.max_tilt);
+    // A granular bed pours from where a liquid has nearly finished (sugar from
+    // ~0.72 rad, 2026-09-29), so its bound is its own when one is configured.
+    const bool granular = goal->material == PourAction::Goal::MATERIAL_GRANULAR;
+    bounds_.max_tilt = or_default(goal->max_tilt,
+        granular && granular_max_tilt_ > 0.0 ? granular_max_tilt_ : defaults_.max_tilt);
     bounds_.tolerance = or_default(goal->tolerance, defaults_.tolerance);
-    bounds_.timeout = or_default(goal->timeout, defaults_.timeout);
+    // And it takes longer: a bed that stops at the park has to be crept back
+    // over its angle of repose before a trim pulse pours anything.
+    bounds_.timeout = or_default(goal->timeout,
+        granular && granular_timeout_ > 0.0 ? granular_timeout_ : defaults_.timeout);
     bounds_.grasp_joints = goal->grasp_joints;
     bounds_.pour_direction = goal->pour_direction;
     bounds_.pour_reference_joints = goal->pour_reference_joints;
     bounds_.grasp_marker = {goal->grasp_marker.x, goal->grasp_marker.y, goal->grasp_marker.z};
+    bounds_.receiver_rim_center = goal->receiver_rim_center;
 
     RCLCPP_INFO(node_->get_logger(),
         "[%s] Pouring %.1f g of %s (flow_index %.2f) into a %.2f g vessel "
@@ -159,6 +190,11 @@ void FR5PourActionServer::handle_accepted(const std::shared_ptr<PourGoalHandle> 
         bounds_.material == PourAction::Goal::MATERIAL_GRANULAR ? "granular media" : "liquid",
         bounds_.flow_index, bounds_.container_grams, bounds_.tolerance, bounds_.max_tilt,
         bounds_.timeout);
+    if (bounds_.receiver_rim_center.size() == 3) {
+        RCLCPP_INFO(node_->get_logger(), "[%s] Receiver rim centre (%.4f, %.4f, %.4f) m",
+            action_name_.c_str(), bounds_.receiver_rim_center[0],
+            bounds_.receiver_rim_center[1], bounds_.receiver_rim_center[2]);
+    }
 
     initialized_ = false;
     control_running_ = true;

@@ -152,6 +152,51 @@ Eigen::Vector3d lip_of(const LipPath & path, double tilt)
 
 }  // namespace
 
+TEST(LipPath, TiltsTheBeakerNotTheGripperWhenTheGraspIsRotated)
+{
+    // The same upright beaker, held once squarely and once by jaws pitched 8
+    // degrees about their closing axis -- a grasp offset with a rotation in
+    // it. The pose is the beaker's bottom centre (tag_radius 0, tag_height 0),
+    // which is how the real cell's object table publishes it.
+    Scene square;
+    square.tag_offset = Eigen::Vector3d::Zero();
+    Scene pitched = square;
+    const Eigen::Isometry3d ee_square = square.ee();
+    const Eigen::Vector3d jaws = square.vessel_origin + Eigen::Vector3d(0, 0, square.grasp_height);
+    const Eigen::Matrix3d pitch =
+        Eigen::AngleAxisd(8.0 * M_PI / 180.0, Eigen::Vector3d::UnitX()).toRotationMatrix();
+    Eigen::Isometry3d ee_pitched = ee_square;
+    ee_pitched.linear() = pitch * ee_square.linear();
+    ee_pitched.translation() = jaws + pitch * (ee_square.translation() - jaws);
+
+    LipPath a;
+    LipPath b;
+    std::string why;
+    ASSERT_TRUE(a.plan(ee_square, square.pour_axis, square.tag(), square.max_tilt, square.vessel,
+                       square.receiver, square.config, why)) << why;
+    ASSERT_TRUE(b.plan(ee_pitched, pitch * pitched.pour_axis, pitched.tag(), pitched.max_tilt,
+                       pitched.vessel, pitched.receiver, pitched.config, why)) << why;
+
+    const Eigen::Vector3d up = Eigen::Vector3d::UnitZ();
+    for (double tilt = 0.0; tilt <= 1.0; tilt += 0.1) {
+        const Eigen::Isometry3d va = a.vessel_pose(tilt, a.inset_limit(tilt));
+        const Eigen::Isometry3d vb = b.vessel_pose(tilt, b.inset_limit(tilt));
+        // The beaker moves the same way whichever way the jaws hold it...
+        EXPECT_TRUE(vb.isApprox(va, 1e-9)) << "tilt " << tilt;
+        // ...tipped by exactly `tilt` from upright, about the horizontal.
+        const Eigen::Vector3d axis = vb.linear().col(2);
+        EXPECT_NEAR(std::atan2(axis.cross(up).norm(), axis.dot(up)), tilt, 1e-9);
+        EXPECT_NEAR(axis.dot(b.tilt_axis()), 0.0, 1e-9);
+        // The gripper is carried by it through the grasp as measured, rotation
+        // and all: the offset between the two stays what it was.
+        const Eigen::Isometry3d grasp = vb.inverse() * b.ee_pose(tilt, b.inset_limit(tilt));
+        EXPECT_TRUE(grasp.isApprox(b.vessel_pose(0.0, b.inset_limit(0.0)).inverse() *
+                                   b.ee_pose(0.0, b.inset_limit(0.0)), 1e-9)) << "tilt " << tilt;
+    }
+    // And at the start the gripper is left pitched, not squared up to the beaker.
+    EXPECT_TRUE(b.ee_pose(0.0, b.inset_limit(0.0)).linear().isApprox(ee_pitched.linear(), 1e-9));
+}
+
 TEST(LipPath, RecoversTheGraspItWasGiven)
 {
     Scene scene;

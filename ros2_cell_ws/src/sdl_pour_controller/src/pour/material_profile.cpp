@@ -47,6 +47,22 @@ PourLimits MaterialProfile::at(double flow_index) const
     out.tilt_rate = lerp(free.tilt_rate, resistant.tilt_rate, s);
     out.seek_tilt_rate = lerp(free.seek_tilt_rate, resistant.seek_tilt_rate, s);
     out.dose_quantum = lerp(free.dose_quantum, resistant.dose_quantum, s);
+    out.park_drop = lerp(free.park_drop, resistant.park_drop, s);
+    out.forecast_min_pairs = lerp(free.forecast_min_pairs, resistant.forecast_min_pairs, s);
+    out.slow_seek_below_grams = lerp(free.slow_seek_below_grams, resistant.slow_seek_below_grams, s);
+    out.early_flight_factor = lerp(free.early_flight_factor, resistant.early_flight_factor, s);
+    out.keep_flowing_margin = lerp(free.keep_flowing_margin, resistant.keep_flowing_margin, s);
+    out.stop_forecast_scale = lerp(free.stop_forecast_scale, resistant.stop_forecast_scale, s);
+    out.max_trim_pulses = s < 0.5 ? free.max_trim_pulses : resistant.max_trim_pulses;
+    out.final_approach_grams = lerp(free.final_approach_grams, resistant.final_approach_grams, s);
+    out.final_approach_rise = lerp(free.final_approach_rise, resistant.final_approach_rise, s);
+    out.max_step_down = s < 0.5 ? free.max_step_down : resistant.max_step_down;
+    out.final_approach_shake_amplitude =
+        lerp(free.final_approach_shake_amplitude, resistant.final_approach_shake_amplitude, s);
+    out.final_approach_shake_period =
+        lerp(free.final_approach_shake_period, resistant.final_approach_shake_period, s);
+    out.final_approach_tilt_rate =
+        lerp(free.final_approach_tilt_rate, resistant.final_approach_tilt_rate, s);
     out.repose_angle = lerp(free.repose_angle, resistant.repose_angle, s);
     out.shake_amplitude = lerp(free.shake_amplitude, resistant.shake_amplitude, s);
     out.shake_period = lerp(free.shake_period, resistant.shake_period, s);
@@ -86,12 +102,67 @@ bool MaterialProfile::validate(const std::string & label, std::string & why) con
     // it stays a few degrees: the lip swings with it.
     constexpr double kMaxShake = 0.1;
     constexpr double kMaxRepose = 1.2;
+    constexpr double kMaxParkDrop = 0.6;
+    // A fit needs pairs to mean anything, but at the scale's 5 Hz more than this
+    // is seconds of a pour forecast from the scale alone.
+    constexpr double kMaxForecastMinPairs = 25.0;
+    constexpr double kMaxSlowSeekBelow = 500.0;
     for (const auto & [endpoint, limits] : {std::pair<const char *, const PourLimits *>{"free", &free},
                                             std::pair<const char *, const PourLimits *>{"resistant", &resistant}}) {
         const std::string where = label + '.' + endpoint + '.';
         std::ostringstream os;
-        if (!std::isfinite(limits->repose_angle) || limits->repose_angle < 0.0 ||
-            limits->repose_angle > kMaxRepose) {
+        if (!std::isfinite(limits->park_drop) || limits->park_drop < 0.0 ||
+            limits->park_drop > kMaxParkDrop) {
+            os << where << "park_drop must be in [0, " << kMaxParkDrop << "] rad (got "
+               << limits->park_drop << ')';
+        } else if (!std::isfinite(limits->forecast_min_pairs) || limits->forecast_min_pairs < 0.0 ||
+                   limits->forecast_min_pairs > kMaxForecastMinPairs) {
+            os << where << "forecast_min_pairs must be in [0, " << kMaxForecastMinPairs << "] (got "
+               << limits->forecast_min_pairs << ')';
+        } else if (!std::isfinite(limits->slow_seek_below_grams) || limits->slow_seek_below_grams < 0.0 ||
+                   limits->slow_seek_below_grams > kMaxSlowSeekBelow) {
+            os << where << "slow_seek_below_grams must be in [0, " << kMaxSlowSeekBelow << "] g (got "
+               << limits->slow_seek_below_grams << ')';
+        } else if (!std::isfinite(limits->early_flight_factor) || limits->early_flight_factor <= 0.0 ||
+                   limits->early_flight_factor > 1.0) {
+            os << where << "early_flight_factor must be in (0, 1] (got " << limits->early_flight_factor << ')';
+        } else if (!std::isfinite(limits->keep_flowing_margin) || limits->keep_flowing_margin < 0.0 ||
+                   limits->keep_flowing_margin > 0.2) {
+            os << where << "keep_flowing_margin must be in [0, 0.2] rad (got " << limits->keep_flowing_margin << ')';
+        } else if (!std::isfinite(limits->stop_forecast_scale) || limits->stop_forecast_scale <= 0.0 ||
+                   limits->stop_forecast_scale > 1.5) {
+            os << where << "stop_forecast_scale must be in (0, 1.5] (got " << limits->stop_forecast_scale << ')';
+        } else if (!std::isfinite(limits->max_trim_pulses) || limits->max_trim_pulses > 50.0 ||
+                   (limits->max_trim_pulses < 0.0 && limits->max_trim_pulses != -1.0) ||
+                   limits->max_trim_pulses != std::floor(limits->max_trim_pulses)) {
+            os << where << "max_trim_pulses must be -1 (the planner's) or a whole number 0-50 (got "
+               << limits->max_trim_pulses << ')';
+        } else if (!std::isfinite(limits->final_approach_grams) || limits->final_approach_grams < 0.0 ||
+                   limits->final_approach_grams > 100.0) {
+            os << where << "final_approach_grams must be in [0, 100] g (got " << limits->final_approach_grams << ')';
+        } else if (!std::isfinite(limits->final_approach_rise) || limits->final_approach_rise < 0.0 ||
+                   limits->final_approach_rise > 0.05) {
+            os << where << "final_approach_rise must be in [0, 0.05] rad/g (got " << limits->final_approach_rise << ')';
+        } else if (!std::isfinite(limits->max_step_down) || limits->max_step_down > 1.0 ||
+                   (limits->max_step_down < 0.0 && limits->max_step_down != -1.0)) {
+            os << where << "max_step_down must be -1 (the law's lead) or in [0, 1] rad (got "
+               << limits->max_step_down << ')';
+        } else if (!std::isfinite(limits->final_approach_shake_amplitude) ||
+                   limits->final_approach_shake_amplitude < 0.0 ||
+                   limits->final_approach_shake_amplitude > 0.1) {
+            os << where << "final_approach_shake_amplitude must be in [0, 0.1] rad (got "
+               << limits->final_approach_shake_amplitude << ')';
+        } else if (limits->final_approach_shake_amplitude > 0.0 &&
+                   !(std::isfinite(limits->final_approach_shake_period) &&
+                     limits->final_approach_shake_period > 0.0)) {
+            os << where << "final_approach_shake_period must be positive with a final-approach tap (got "
+               << limits->final_approach_shake_period << ')';
+        } else if (!std::isfinite(limits->final_approach_tilt_rate) ||
+                   limits->final_approach_tilt_rate < 0.0 || limits->final_approach_tilt_rate > 0.5) {
+            os << where << "final_approach_tilt_rate must be in [0, 0.5] rad/s (got "
+               << limits->final_approach_tilt_rate << ')';
+        } else if (!std::isfinite(limits->repose_angle) || limits->repose_angle < 0.0 ||
+                   limits->repose_angle > kMaxRepose) {
             os << where << "repose_angle must be in [0, " << kMaxRepose << "] rad (got "
                << limits->repose_angle << ')';
         } else if (!std::isfinite(limits->shake_amplitude) || limits->shake_amplitude < 0.0 ||

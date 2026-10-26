@@ -16,12 +16,16 @@
 
 #include <limits>
 #include <string>
+#include <vector>
 
 #include <realtime_tools/realtime_buffer.hpp>
+#include <realtime_tools/realtime_publisher.hpp>
+#include <std_msgs/msg/float64_multi_array.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include "cho_controller_fr5/base_controller.hpp"
+#include "sdl_pour_controller/pour/level.hpp"
 #include "sdl_pour_controller/pour/lip_path.hpp"
 #include "sdl_pour_controller/pour/material_profile.hpp"
 #include "sdl_pour_controller/pour/pour_planner.hpp"
@@ -95,9 +99,13 @@ namespace sdl_pour_controller {
  *             it, by damped least-squares IK on the command, never on the
  *             measured joints.
  *
- * In `measured` a goal runs Measure -> Align -> the law -> Untilt -> Unalign ->
- * Return, and the arm finishes in exactly the joint configuration it started
- * in. Measure waits for a marker pose that arrived at least vessel_settle_sec
+ * In `measured` a goal runs Measure -> Level -> Align -> the law -> Untilt ->
+ * Unalign -> Unlevel -> Return, and the arm finishes in exactly the joint
+ * configuration it started in. Level (`geometry.level`, pour/level.hpp) turns the whole EE about
+ * the point the jaws hold the vessel at until the vessel stands upright -- by
+ * its tag's normal when the pose node publishes one for the vessel in the
+ * jaws, else by the axis the grasp gave it -- because the lip path assumes it
+ * does. It is skipped when the vessel leans less than level.deadband. Measure waits for a marker pose that arrived at least vessel_settle_sec
  * after the arm last moved, because the pose node aggregates over a window and
  * a window that straddles a motion describes nowhere the vessel ever was --
  * unless the goal carries a grasp measured earlier (grasp_joints and
@@ -139,17 +147,28 @@ private:
     //: vessel home) -> Idle. The planner never commands the final return: it has
     //: finished deciding by then, and the return is a safety obligation rather
     //: than part of the law.
-    //: `measured` adds Measure (wait for the marker, plan the lip path) and
-    //: Align (move the lip to where the tilt starts) before the law, and
-    //: Unalign and Return (joint space, to the exact start configuration)
-    //: after the untilt. Any failure after Measure goes through them too.
-    enum class Phase { Idle, Measure, Align, Pouring, Untilt, Unalign, Return };
+    //: `measured` adds Measure (wait for the marker, plan the lip path), Level
+    //: (stand the vessel upright, when it is not) and Align (move the lip to
+    //: where the tilt starts) before the law, and Unalign, Unlevel (Level
+    //: backwards, as slowly) and Return (joint space, to the exact start
+    //: configuration) after the untilt. Any failure after Measure goes through
+    //: them too; one the arm cannot follow goes straight to Return.
+    enum class Phase { Idle, Measure, Level, Align, Pouring, Untilt, Unalign, Unlevel, Return };
 
     //: Latest marker pose, stamped on arrival on this node's clock -- the same
     //: clock the motion that invalidates it is timed on.
     struct VesselSample {
         double stamp{0.0};
         Eigen::Vector3d position{Eigen::Vector3d::Zero()};
+        bool frame_ok{false};
+        bool finite{false};
+    };
+
+    //: Latest attitude of the vessel in the jaws, as its tag's normal says,
+    //: stamped on arrival like VesselSample.
+    struct AttitudeSample {
+        double stamp{0.0};
+        Eigen::Vector3d axis{Eigen::Vector3d::UnitZ()};
         bool frame_ok{false};
         bool finite{false};
     };
@@ -176,7 +195,37 @@ private:
     //: Move the tilt to `proposed` and the lip toward the path's limit there,
     //: holding the tilt instead while the lip still has to back out.
     void advance_tilt(double proposed, double dt);
+    //: How fast the tilt may go in `direction` (its sign) from where it is so
+    //: that neither the IK nor the lip falls behind: the joints' per-cycle
+    //: bound over the joint motion a radian of tilt takes here, and the lip's
+    //: speed over how fast the path's inset limit closes in. Infinite when
+    //: neither binds. Kept for the trace.
+    double tilt_rate_cap(double direction, double dt);
+    //: The path's inset limit at `tilt` to the nearest kLipTableStep, computed
+    //: the first time a pour asks for that cell and kept: for the look-ahead,
+    //: never for the step the tilt takes, which is checked exactly.
+    [[nodiscard]] double lip_limit_cached(double tilt) const;
+    mutable std::vector<double> lip_table_;
+    double lip_table_lo_{0.0};
+    //: The far end of the stretch of tilt the lip looks over from `from` in
+    //: `direction`: kLipLookahead, or less where the motion ends sooner.
+    [[nodiscard]] double lip_window_end(double from, double direction) const;
+    //: Where the lip heads: the lowest over that stretch of the path's inset
+    //: limit plus kLipEnvelopeSlope per radian still to go, so it is out
+    //: before the limit closes in and gets there at an even pace.
+    [[nodiscard]] double lip_ahead(double from, double direction) const;
+    //: The most any joint moves per radian of tilt along the lip path at
+    //: (tilt, inset), by the last IK step's own solve; 0 before there is one.
+    [[nodiscard]] double joints_per_tilt(double tilt, double inset) const;
     [[nodiscard]] bool vessel_sample_usable(const VesselSample & sample, double now) const;
+    [[nodiscard]] bool attitude_usable(const AttitudeSample & sample, double now) const;
+    //: The horizontal across the jaws at `H`, EE frame, signed so a positive
+    //: tilt brings the fingertip side down; its heading is the fingertips'.
+    bool fingertips_axis(const pinocchio::SE3 & H, Eigen::Vector3d & axis_ee, double & heading,
+                         std::string & why) const;
+    //: Measure's last step, and Level's: the lip path from the command the arm
+    //: holds now, with the vessel where held_ puts it. False with `why`.
+    bool plan_pour_geometry(std::string & why);
     void publish_feedback_if_due(double dt);
     //: A failure after Measure: the arm is somewhere else by now, so it goes
     //: back the way it came before the goal reports.
@@ -215,10 +264,22 @@ private:
     //: about the pour joint's own axis whatever the goal says; and which way,
     //: 0 meaning pour_direction.
     std::string granular_tilt_about_{"goal"};
+    //: How a liquid tips: "goal" (the goal's reference configuration, else the
+    //: pour joint) or "fingertips" (toward the fingertips, about the horizontal
+    //: across the jaws, whatever the goal's reference shows).
+    std::string liquid_tilt_about_{"goal"};
     double granular_pour_direction_{0.0};
     //: The lip's height above the receiver's rim for a granular pour [m]; 0
     //: is geometry.lip_height, the liquid's.
     double granular_lip_height_{0.0};
+    //: How far inside the receiver's near rim a granular pour's lip may come
+    //: [m]; 0 is geometry.lip_inset, the liquid's.
+    double granular_lip_inset_{0.0};
+    //: The tilt bound of a granular goal that sets none [rad]; 0 is max_tilt,
+    //: the liquid's.
+    double granular_max_tilt_{0.0};
+    //: The timeout of a granular goal that sets none [s]; 0 is the liquid's.
+    double granular_timeout_{0.0};
     //: The pour axis in the EE frame, from the goal's reference configuration,
     //: when it gave one (its sign tips the lip down); otherwise unused.
     Eigen::Vector3d reference_axis_ee_{Eigen::Vector3d::UnitZ()};
@@ -234,6 +295,15 @@ private:
     //: pour makes -- the law's, and the way back to the carried attitude --
     //: goes through tilt_ramp_ with it.
     double tilt_accel_{0.4};
+    //: Bound on how fast the tilt's acceleration may change [rad/s^3]; 0 keeps
+    //: the trapezoid. tilt_ramp_ only.
+    double tilt_jerk_{0.0};
+    //: The IK residual, as a multiple of its tolerance, past which the tilt is
+    //: held where it is. Between 1 and this the path is only braked -- the
+    //: speed scale is already 0 there -- so a residual that crosses the
+    //: tolerance for a cycle slows the tilt instead of stopping it dead. 1 is
+    //: the old hold at the tolerance itself.
+    double ik_hold_ratio_{1.0};
     double feedback_period_{0.1};
     //: Largest believable jump between two scale samples, as a multiple of what
     //: the fastest configured flow could deliver in one sample period.
@@ -262,6 +332,20 @@ private:
     //: pour starts [rad]. The lip path assumes it hangs upright; a carry that
     //: tipped it would put the lip somewhere the path does not know about.
     double max_carry_lean_{0.10};
+    //: Standing the vessel upright before the pour (geometry.level).
+    bool level_enabled_{false};
+    //: The vessel-in-the-jaws attitude topic; empty: level by the kinematics.
+    std::string attitude_topic_;
+    //: Refuse the pour when no usable attitude arrives, instead of levelling
+    //: by the kinematics.
+    bool level_require_tag_{false};
+    double level_rate_{0.05};
+    pour::LevelConfig level_config_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr attitude_sub_;
+    realtime_tools::RealtimeBuffer<AttitudeSample> attitude_buffer_;
+    //: The receiver's rim height in the base frame [m], replacing the goal's
+    //: z; 0 takes the goal's. x and y are always the goal's.
+    double receiver_rim_z_{0.0};
     pour::HeldVessel vessel_;
     pour::Receiver receiver_;
     pour::LipPathConfig lip_config_;
@@ -350,10 +434,43 @@ private:
     //: path's limit by at most max_lip_speed, and the tilt waits for it
     //: whenever the limit requires the lip to back out.
     double inset_cmd_{0.0};
+    //: The held vessel, rigid in the EE frame, once Measure has placed it.
+    pour::HeldInJaws held_;
+    bool held_measured_{false};
+    //: Whether the goal tips toward the fingertips: the axis is found again
+    //: from the levelled pose.
+    bool fingertips_{false};
+    pour::LevelMove level_move_;
+    double level_s_{0.0};
+    pour::Ramp level_ramp_;
+    //: What Level did, for the pour geometry log line.
+    std::string level_note_;
     bool ik_lagging_{false};
     //: The last IK step's residual as a fraction of its tolerance, the larger
     //: of position and rotation. 1 is where ik_lagging_ trips.
     double ik_lag_ratio_{0.0};
+    //: Why advance_tilt last took less than it was handed: 0 it took it all,
+    //: 1 held for the IK, 2 held for the lip, 3 a share of it for the lip,
+    //: 4 braking for the IK (it took all of a braked step).
+    int hold_reason_{0};
+    //: The last IK step's task Jacobian and damped normal matrix, and the
+    //: frame its error was taken in: what tilt_rate_cap() asks the path's
+    //: derivative of.
+    Eigen::MatrixXd ik_J_task_;
+    Eigen::LDLT<Eigen::Matrix<double, 6, 6>> ik_JJt_ldlt_;
+    Eigen::Matrix3d ik_R_{Eigen::Matrix3d::Identity()};
+    bool ik_solve_cached_{false};
+    //: The last caps tilt_rate_cap() found [rad/s]; infinite when none bound.
+    double tilt_cap_ik_{std::numeric_limits<double>::infinity()};
+    double tilt_cap_lip_{std::numeric_limits<double>::infinity()};
+    //: Per-cycle trace of the tilt during Pouring and Untilt on ~/tilt_debug:
+    //: [time, phase, tilt, proposed, ramp v, ramp a, ik_lag_ratio, hold_reason,
+    //:  inset_cmd, speed scale, IK rate cap, lip rate cap] -- a cap that does
+    //: not bind is -1. For finding where a pour knocks.
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr tilt_debug_pub_;
+    std::unique_ptr<realtime_tools::RealtimePublisher<std_msgs::msg::Float64MultiArray>>
+        tilt_debug_rt_;
+    void publish_tilt_debug(double now, double proposed);
     //: How much of its speed the path may use given how far the IK is behind:
     //: all of it up to half the tolerance, none of it at the tolerance.
     [[nodiscard]] double ik_speed_scale() const;

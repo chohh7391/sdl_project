@@ -39,7 +39,8 @@ struct HeldVessel {
     double tag_height{0.0};
 };
 
-//: The vessel being poured into. Fixed, not perceived: it stands on the scale.
+//: The vessel being poured into. Its radius is configured; its rim centre is
+//: where the pour goal says perception put it.
 struct Receiver {
     //: Centre of the rim circle, base frame [m].
     Eigen::Vector3d rim_center{Eigen::Vector3d::Zero()};

@@ -1,6 +1,9 @@
 # pouring_controller in the real FR5 cell (launch/bringup_real_cell.launch.py hands
 # this file to its spawner). Moved from cho_bringup_fr5/config/real/controllers.yaml
-# (cho_robot_project 720dba3), values unchanged.
+# (cho_robot_project 720dba3), with the real cell's changes since then, which
+# were made in the laptop's own cho_robot_project checkout and never reached
+# GitHub (its 599fbc9..5c7921d, 2026-09-29..10-05): the measured pour geometry
+# with Level, the 15 mm flange, the per-material lips, tilts and stops.
 
 pouring_controller:
   ros__parameters:
@@ -92,7 +95,26 @@ pouring_controller:
     # in one cycle: a retract reaches its 0.15 rad/s in 0.38 s and brakes into
     # its park instead of stopping dead on it. It used to go from a 0.26 deg/s
     # creep to an 8.6 deg/s retract between two cycles.
+    # 0.4 again from 2026-10-04 17:01 (0.2 for a day, for the jolts): a slower
+    # brake keeps the vessel above its onset longer on every stop, and the stop
+    # forecast counts that -- syrup stops came at 5 g of 10. tilt_jerk below is
+    # what takes the corners off now.
     tilt_accel: 0.4
+    # How fast that acceleration may change [rad/s^3]; 0 is no bound (the plain
+    # trapezoid, with a corner at every start, stop and reversal). At 2 the
+    # acceleration builds over 0.1 s. The stop forecast still brakes at
+    # tilt_accel alone, so it under-counts a retract's run by v a / (2 j) --
+    # 0.0035 rad at 0.07 rad/s.
+    tilt_jerk: 2.0
+    # Past the IK tolerance the path used to hold the tilt dead and restart it
+    # from rest -- the knock every ~0.6 s on the way back upright (2026-10-03).
+    # Now the tilt is capped at what the IK and the lip can follow, braked at
+    # its own acceleration past the tolerance (the speed scale is 0), braked
+    # 4x as hard from this many tolerances behind, and stopped dead only at 2x
+    # (4 mm / 0.04 rad, inside lip_gap's 5 mm) -- also Level and Align, which
+    # stopped dead at 1x. 1.3 is 2.6 mm / 0.026 rad. ik_fail_sec still ends a
+    # pour the arm cannot follow.
+    ik_hold_ratio: 1.3
     feedback_period: 0.1
 
     # ---- where the lip goes ------------------------------------------------
@@ -155,16 +177,58 @@ pouring_controller:
       # centre line the axis is). 0.27, not the AG-95's grasp_link (0.29): the
       # riser recordings close on the beaker 0.270 m out, and the real grasp
       # measured 0.279.
-      grasp_depth: 0.27
+      #
+      # 0.285 since 2026-09-29: the gripper now sits on a 15 mm adapter flange
+      # (fr5.urdf.xacro gripper_flange), so the jaws hold 15 mm further out.
+      # That xacro argument is the laptop's core checkout's (c1b3f16), not
+      # cho_robot_project v0.1.0's, whose model still has the AG-95 on the
+      # wrist: these values are the jaws' real reach either way.
+      grasp_depth: 0.285
       max_depth_error: 0.04
       approach_axis_in_ee: [0.0, 0.0, 1.0]
       # A beaker measured upright at its grasp may lean this much by the time
       # the pour starts [rad]; a carry that tipped it further is refused.
+      # (Only while level.enabled is false. With it, level.max_correction
+      # bounds the lean instead, and the beaker is stood up again.)
       max_carry_lean: 0.10
-      # The receiver is fixed at the scale's centre, rim at 180 mm (measured on
-      # the cell, 2026-09-23). Not perceived.
-      receiver_rim_center: [0.520, 0.320, 0.180]
+      # Stand beaker1 upright before pouring (author, 2026-09-29: "tag를 보고
+      # 지면과 수평하게 맞추고 나서 시작"). Its tag lies flat on the mount stuck
+      # under it, so the tag's normal is its axis; the pose node sends that
+      # tilt on held_beaker/in_hand while the robot holds it. The whole EE turns
+      # about the point the jaws hold the beaker at, at `rate`, until it stands
+      # upright, and the lip path is laid out from there. The tag is believed
+      # within max_tag_disagreement of the axis the grasp left it with (the
+      # plan's carry keeps that one upright: 0.00 deg on 2026-09-29), further
+      # than that it is taken for a flipped tag pose. Without a usable tag
+      # attitude within vessel_pose_timeout it levels by the grasp's axis
+      # (require_tag: false). A lean under deadband is not moved for; one past
+      # max_correction is refused.
+      #
+      # The pose node of cho_robot_project v0.1.0 publishes no in_hand (that is
+      # the laptop's cho_object_pose 6e364e1, not in the core), so on this
+      # workspace's core the topic stays silent and Level always uses the
+      # grasp's axis.
+      level:
+        enabled: true
+        attitude_topic: /perception/object_pose/held_beaker/in_hand
+        require_tag: false
+        rate: 0.05
+        max_correction: 0.26
+        max_tag_disagreement: 0.17
+        deadband: 0.01
+      # Where the receiver stands is NOT configured: every pour goal carries its
+      # rim centre (Pour.action receiver_rim_center), as perception measured it,
+      # and a goal without one is refused. Setting receiver_rim_center here
+      # fails the configure. Only the receiver's outer rim radius is the cell's:
+      # 25 mm, the 50 mm beaker on the pan (2026-09-29).
       receiver_radius: 0.025
+      # ...except its rim's HEIGHT, which is fixed here and replaces the goal's
+      # z (0 would take the goal's). The goal's came from beaker2's tag, which
+      # put its bottom at z 0.080 when it stands at 0.100 (2026-09-29): 0.150
+      # for the rim, and every height the pour holds is above the rim, so the
+      # whole pour came down 30 mm. 0.180 is the rim height the pours were
+      # tuned at (FLASK_RIM_Z_M, measured 2026-09-23).
+      receiver_rim_z: 0.180
       # The lip is held at the height it was brought in at, clamped to these,
       # and comes in over the mouth only as far as the tilt swings the glass
       # and the jaws below it back out past the rim, `lip_gap` clear.
@@ -189,8 +253,20 @@ pouring_controller:
       # inset limit -- the lip enters the mouth only as far as the tilt has
       # carried the wall and jaws out of the rim -- keeps it off. A few
       # millimetres of error toward the receiver is a contact, not a spill.
-      lip_height: 0.045
-      lip_inset: 0.012
+      #
+      # 55 mm since 2026-09-30, 10 mm higher at the operator's call: at 45 the
+      # pour looked to come down a little too far over the receiver. That run
+      # (50 g, lip aligned at 45.0 mm over a rim at 0.180) stopped at 49.17 g
+      # and a trim pulse took it to 52.24 g.
+      lip_height: 0.055
+      # 20 mm since 2026-10-01 (was 12), at the operator's call: in the
+      # 2026-09-30 pours (10/30/50 g) the lip poured 12.7-13.2 mm short of the
+      # receiver's centre, on the near side, and 0.6-1.3 mm off its line --
+      # the full 12 mm in, from the rosbags' joints and the grasp the
+      # controller measured. The gap to the jaws and the wall still holds it
+      # out wherever they would meet the rim. A granular pour has its own,
+      # granular.lip_inset.
+      lip_inset: 0.020
       lip_gap: 0.005
       landing_margin: 0.005
       # Held too low, the jaw below the lip keeps it outside the rim until late
@@ -223,8 +299,10 @@ pouring_controller:
       # past the glass, +-20 mm about the grasp, and the URDF's jaw sweep
       # (190-301 mm) along the approach. The jaw on the lip side hangs just
       # below the lip; these boxes are all that keeps it off the rim.
-      hand_boxes: [0.025, -0.020, 0.1904, 0.045, 0.020, 0.3008,
-                   -0.045, -0.020, 0.1904, -0.025, 0.020, 0.3008]
+      # All 15 mm further out than the bare AG-95 (190.4-300.8 mm) since the
+      # adapter flange went on (2026-09-29).
+      hand_boxes: [0.025, -0.020, 0.2054, 0.045, 0.020, 0.3158,
+                   -0.045, -0.020, 0.2054, -0.025, 0.020, 0.3158]
       # Damped least squares on the COMMAND, like task_space_ik_controller. The
       # tolerance must stay well inside lip_gap: it is how far off the path the
       # arm may be and still count as on it.
@@ -275,7 +353,14 @@ pouring_controller:
     # s of every pour to search from upright; in the sim this cut ~10 s from
     # every pour. Lower it before pouring from anything fuller.
     seek_fast_until: 0.35
-    # Hold the angle while the flow is within 30% of the wanted one.
+    # The least fraction of seek_tilt_rate a goal under its material's
+    # slow_seek_below_grams seeks at (in proportion to the goal above it).
+    slow_seek_min_fraction: 0.5
+    # Hold the angle while the flow is within 30% of the wanted one. 0.5 was
+    # tried 2026-10-04 00:16-17:01 against syrup's wobble, and put back: holding
+    # a 50% surplus left the vessel further over its onset at every stop, the
+    # forecast of what runs on the way down grew from 0.2-0.5 g to 1.1-3.4 g,
+    # and the first stop came at 5 g of 10.
     flow_deadband: 0.3
     # Every stop is decided from a FORECAST of what the scale has not seen:
     # what has left the lip since the reading's delay, and what leaves on the
@@ -321,6 +406,14 @@ pouring_controller:
       # Off: waiting for the pour's own pairs before trusting the forecast
       # made the sim worse (2.61 g worst at 10 g, from 0.46).
       min_pairs: 0
+      # A fit whose onset lands further than this from where the flow was first
+      # seen is not taken; the last one stands. On a steady climb
+      # at a steady flow (2026-10-04 23:44, 50 g of water) the fit slid to
+      # 1.9 g/s/rad with the onset at -64 deg, forecast 10.6 g on the way down
+      # to the park when 2.25 g came, and stopped 5.5 g short. Re-run on all
+      # 22 of that night's pours, the last fit changes in three: that one's
+      # forecast 9.1 -> 1.7 g, a 30 g one's 3.4 -> 0.8 g, one unchanged.
+      max_onset_shift: 0.25
     no_flow_epsilon: 0.15
     # How long the vessel waits at its tilt bound with nothing coming before
     # the pour gives up. 6 s since 2026-09-28, from 3: a granular bed at the
@@ -423,6 +516,13 @@ pouring_controller:
     # stream thinned. Every other endpoint is a commissioning seed. Tune them by
     # pouring and reading `measured_afterflow` off the action result.
     liquid:
+      # How a liquid tips. "fingertips": toward the fingertips, about the
+      # horizontal across the jaws -- the wrist pitching, the way the first
+      # real-cell recordings poured water -- whatever reference the goal
+      # carries. The two-beaker cell's plans pour by rolling j6 (-85 deg,
+      # 2026-09-29), which put the water over the jaw's side. "goal" follows
+      # the goal's reference configuration.
+      tilt_about: fingertips
       free:              # flow_index 0: water, alcohol
         # Slowed after the first lip-pivot water pour (2026-09-23, measured
         # geometry, a ~75 mL fill): seeking at 0.15 rad/s the tilt ran ~6 deg
@@ -450,21 +550,123 @@ pouring_controller:
         settle_hold_sec: 1.2
         tilt_rate: 0.15
         seek_tilt_rate: 0.03
-        dose_quantum: 0.3
-      resistant:         # flow_index 1: honey, syrup
+        # Goals under 20 g seek at down to half that (0.015 at 10 g): the seek
+        # turns on for the 1 s the stream takes to land, and every 10 g water
+        # goal (2026-10-04) arrived ~5 g/s past its onset, stopped at 3-5 g on
+        # 3-6 g forecast in the air and trimmed over by 0.8-2.7 g. In the sim a
+        # 1 s delay took a 10 g goal to 23.0 g at the full rate, 10.9 g at half.
+        slow_seek_below_grams: 20.0
+        # Water's first ~1 s comes in a rush, and a model fitted on it forecast
+        # 5 g in the air and 3.5 g on the way down at a 10 g goal's 2.6 g --
+        # 1.6 g came -- so it stopped at 4.2 g and trimmed over (2026-10-04,
+        # with the slow seek). As syrup: the stop waits for 5 pairs of its own
+        # before trusting the model, deciding from flow x delay until then.
+        # (The sim had found waiting worse for water; the rig says otherwise.)
+        forecast_min_pairs: 5.0
+        # And while it waits, the flow on the scale is the rush off a wet lip,
+        # not the stream: stops called on it at 2-3 g of 10 g forecast 5-7 g in
+        # the air and 2.3-2.8 g came, tail and all (eight stops, 2026-10-04).
+        # 0.4 of it is believed, so the pour carries on and is metered by the
+        # tilt instead of stopped and trimmed. A rush that is really a stream
+        # would overpour on it (the sim's sticky lip: 15.6 g -> 19.6 g of 10).
+        early_flight_factor: 0.4
+        # The bulk steps the tilt down no lower than this over the onset: the
+        # stream is throttled, not broken -- the author: a broken stream is
+        # worse than one held thin, since it restarts all at once. 0.01 rad
+        # still broke it: a 0.2 deg step back on a 4 g/s rush stopped the
+        # stream for 5 s (the seek's onset sits under where it pours as it
+        # empties), so 0.03 (2026-10-04). The same line is also a floor the
+        # climb is taken up to when the stream thins: the onset for what has
+        # left the lip, which climbs as the vessel empties (35.1 -> 39 deg over
+        # 5 g on the rig, where the lead-bound climb let the stream stop 4 s).
+        keep_flowing_margin: 0.03
+        # Ten 10 g stops (2026-10-04) let 0.21-1.52x of what was forecast to
+        # come after them come, median 0.7, so the stop believes 0.65 of it.
+        # Re-run on those ten with the same ratios, 9 of 10 first stops land
+        # within 1 g against 6 -- an estimate, and the one that came at 1.52x
+        # goes to +0.97 g.
+        stop_forecast_scale: 0.65
+        # Not trimmed: every 10 g trim restarted the stream all at once off the
+        # wet lip and overpoured, by 1.5-2.2 g. Short, it ends short; a stepped
+        # run's next step is to the running total and takes the shortfall up.
+        max_trim_pulses: 0.0
+        # The last 3 g are poured at the tilt reached, not climbed after: the
+        # stream thinned 2-3 g out as the beaker emptied, the climb to keep it
+        # (0.9-2.3 deg in the last 2 s, all ten 10 g pours of 2026-10-04) landed
+        # a second later as a 2.4 g/s surge at the stop, 0.9-1.9 g came after
+        # it, and two went over by 1.0 and 1.2 g. A stream stopped outright for
+        # a second is still climbed after.
+        final_approach_grams: 3.0
+        # Held flat there, the beaker's stream died in two of five (2026-10-04
+        # 22:25, -0.92 and -1.79 g, untrimmed): the onset rises as it empties.
+        # Fifteen steps' onsets went 35.2-35.5 deg at 0 g out to 55.5-56.2 at
+        # 38-40 g, 0.515 deg/g (sd 0.71 deg), ~0.65 full to ~0.38 nearly empty.
+        # The last 3 g follow it up at this times the flow on the scale.
+        final_approach_rise: 0.009
+        # Never stepped back for too much flow. In twelve 30 and 50 g pours
+        # (2026-10-04 22:51-23:05) the stream broke four times, each after the
+        # bulk stepped back 1.6-2.8 deg to slow down 6-10 g out; it came back
+        # 3-6 deg higher, all at once, 2-3 s later, and a stop called on that
+        # rush left a 50 g pour 2.26 g short. The eighteen pours that never
+        # stepped back never broke for longer than 0.8 s.
+        max_step_down: 0.0
+        # 1.0 from 2026-10-04 (0.3 before), the author's bound for water too: with
+        # the stream a second from the scale a 10 g goal's first stop lands within
+        # a gram, and a trim pulse from there lets 1.3-2.3 g go at once off the
+        # wet lip -- 9.66 g became 13.66. +-0.5 is judged from the pan instead.
+        dose_quantum: 1.0
+        # Water stops where it started.
+        park_drop: 0.0
+      resistant:         # flow_index 1: oligosaccharide syrup (올리고당), honey
+        # The syrup on the rig (2026-10-03, 10 g poured at flow_index 0, as
+        # water): it started at 45.5 deg and poured 1.3-1.7 g/s at 47 deg.
         max_flow_rate: 2.0
         trim_flow_rate: 0.5
         trim_pulse_sec: 0.4
         transport_delay: 1.2
-        afterflow_grams: 4.0
+        # What comes after a stop. Parked 2 deg back, at its onset, where it
+        # kept running, 2.89 g came (forecast 0.73) and a 10 g pour ended at
+        # 12.16 g. Parked park_drop further back it stops: at flow_index 1 the
+        # same day 1.02, 1.06 and 1.32 g came after the first stop of the 10,
+        # 30 and 50 g pours (9.50, 29.58, 49.11 g on the pan; 70, 84, 89 s).
+        # 1.5 g is the prior the first stop is decided with -- a little high,
+        # so all three ended short -- and the stop re-measures it for the trims.
+        # 0.3 from 2026-10-04 00:04: three first stops of the pour series came
+        # 1.47, 0.71 and 0.88 g after against 0.83, 0.98 and 1.05 g forecast in
+        # the air and on the way down, so the tail on top was ~0.1 g, not 1.5;
+        # every stop was 1.4-1.8 g early. Kept above 0 since over is final.
+        afterflow_grams: 0.3
         settle_hold_sec: 3.0
         # Kept below the free endpoint's slowed rates: the profile check refuses
         # a resistant material that tilts faster than a free one.
+        # 0.07 was tried 2026-10-04 00:16-17:01 against the way back upright
+        # holding dead every ~0.6 s; it did not cure that (tilt_jerk and
+        # ik_hold_ratio did) and a slower way down made every stop's forecast
+        # larger, so the first stop came early. Back at 0.1.
         tilt_rate: 0.1
         seek_tilt_rate: 0.02
-        # Every stop of a material this thick leaves a string behind, and that
-        # string IS the smallest amount it can be metered in.
-        dose_quantum: 3.0
+        # How far under the angle it started at the syrup has to be tipped back
+        # to stop: parked 0.1 deg under its onset it still ran 1.2 g/s, 1.8 deg
+        # under 0.4-0.9 g/s, and tipped back through 34 deg (11.5 under) it let
+        # another 0.38 g go. A trim pulse climbs this part at tilt_rate and
+        # creeps only the last park margin.
+        park_drop: 0.3
+        # Pairs of its own the flow model needs before a stop is decided from its
+        # forecast (0 for water, the free endpoint's default). Syrup lets go of
+        # what the lip held as one lump -- 0.82-0.86 g in one 0.2 s sample, then
+        # ~0.75 g/s with 0.5 g clumps (2026-10-03, -04) -- and a model fitted on
+        # that lump forecast 9 g to come: the pour stopped at 0.86 g and trimmed
+        # for 100 s. 5 is ~1 s at the scale's 5 Hz; until then the stop comes
+        # from the scale's flow x delay. In the sim with that lump: 9.71 g, no
+        # trim, 26 s, against 11.28 g, a trim, 40 s trusting the first pair.
+        forecast_min_pairs: 5.0
+        # The smallest amount it can be metered in, which also floors the
+        # goal's tolerance. 3.0 g was a seed for honey's string; the syrup at
+        # 1.5 g/s pours ~0.6 g in one 0.4 s pulse. 0.5 g was tried 2026-10-03
+        # 22:10-23:57 and put back: syrup's first stop lands 0.7-1.5 g short (its
+        # tail prior is 1.5 g, measured 0.7-1.5), so a 0.5 g bound re-tilted it
+        # 2-6 times; the author judges +-0.5 g from the pan instead.
+        dose_quantum: 1.0
     granular:
       # How a granular pour tips. Water is tipped toward the fingertips, the
       # reference recordings' way: under this grasp that is the wrist pitching,
@@ -478,14 +680,84 @@ pouring_controller:
       # on that jaw. The align brings the receiver round in front of it. 0
       # would use pour_direction, the liquid's.
       pour_direction: -1.0
-      # Rolled toward a jaw, the jaw hangs under the lip -- its lower edge 48
-      # mm below it and 20 mm out -- and at the liquid's 45 mm (lifted to 58)
-      # it met the rim by 0.26 rad. Planned from the rig's grasp (2026-09-28):
-      # 60 mm pours 0.20-1.75 rad, 80 mm 0-1.75, either direction. What falls
-      # is sugar, so the extra height costs nothing. The first pour this way
-      # (sugar crystals, a full beaker, 20 g): onset at 66 deg, one stop at
-      # 18.47 g, settled at 20.54 g in 59.6 s.
-      lip_height: 0.08
+      # Was pinned at 45 mm, where it was verified below, when the liquid's
+      # geometry.lip_height went to 55 mm (2026-09-30); 0 would take the
+      # liquid's. Rolled toward a jaw, the
+      # jaw hangs under the lip -- its lower edge ~48 mm below it and 20 mm
+      # out. That only mattered because the lip path was asked to land the
+      # stream from landing_by_tilt (0.5 rad), which lifted the lip to 58 mm,
+      # where the jaw met the rim by 0.26 rad. The controller now asks a
+      # granular pour to land only from where it can first pour -- the seek's
+      # fast range plus the repose angle, 0.85 rad -- and at 45 mm the lip
+      # path pours 0.72-1.75 rad for any grasp from 34 to 50 mm above the
+      # bottom (planned offline from the rig's grasp, 2026-09-29). On the arm
+      # at 45 mm (2026-09-29, sugar, 20 g) it planned 0.72-1.75 rad as
+      # computed, onset at ~63 deg; the bulk stopped at 17.60 g and a trim
+      # pulse let a ~3 g lump go, 21.39 g in all. At 80 mm the day before:
+      # one stop at 18.47 g, settled at 20.54 g in 59.6 s.
+      #
+      # Back to 80 mm (author, 2026-10-01: the pour had become too cautious to
+      # come near 30 g; take it from the commit that poured well). At 45 mm the
+      # bulk stopped early every time: the stop forecast, a liquid's model,
+      # put 1.5-12.9 g still to come where 0.3-0.8 g landed (09-29 20 g ->
+      # 17.87 then 21.39 after a trim; 10-01 10 g -> 8.86 then 11.33; 10-01
+      # 30 g -> 17.41, then 72 s creeping back to the flow, 21.12 g at the
+      # timeout). At 80 mm the same forecast was close: 1.53 g forecast, 2.07
+      # landed, one stop. The lip comes in to the same inset (12 mm) either
+      # way; only its height changes, and at 80 mm the jaw clears the rim, so
+      # it starts over the mouth instead of 25 mm outside it.
+      #
+      # 70 mm since 2026-10-02, 10 mm lower at the operator's call (the 50 g
+      # sugar pour at 80 mm looked to pour from too high). The lip path, run
+      # offline with this cell's jaws for grasps 47-51 mm above the bottom,
+      # lands the stream from 0.16 rad to 1.75 rad at 70 mm (80: 0-1.75,
+      # 45: 0.72-1.75, both as the arm planned them): the lip starts 5 mm
+      # outside the near rim and is the full 12 mm in by 0.3 rad, well before
+      # sugar's ~1.1 rad onset. The stop forecast's margin is
+      # granular.stop_margin_factor's now, not the height's.
+      #
+      # 65 mm since 2026-10-05, lower at the operator's call (sugar 10 g from
+      # 70 mm looked to pour from too high; asked ~10 mm). 60 was refused on the
+      # rig: with that day's grasp (the jaws 40.3 mm above the bottom, ~30 mm
+      # under the lip) the lip was over the mouth only at 0.20 rad and the jaw
+      # came onto the rim just after. The offline lip path with a synthetic
+      # grasp had passed 60 -- it does not stand in for the real one.
+      lip_height: 0.065
+      # The granular pour's own, so that tuning the water's lip and tilt no
+      # longer moves the sugar's (author, 2026-10-01: "분리를 해놔"). Both are
+      # what the 2026-09-29 sugar pours ran with: the lip at most 12 mm inside
+      # the rim (the water's went to 20), and a goal that sets no tilt bound
+      # gets 1.75 rad -- the lip path plans sugar 0.72-1.75 rad, and the
+      # two-beaker cell's goals, which set none, were getting the water's 1.2.
+      # 0 would take geometry.lip_inset / max_tilt.
+      #
+      # 20 mm since 2026-10-05, the water's, at the operator's call: at 12 the
+      # lip sat 13 mm short of the receiver's centre (radius 25) and the spout
+      # looked to the operator to drift away from the centre as it tipped. The
+      # path's own limit still keeps it out wherever a jaw would meet the rim.
+      lip_inset: 0.020
+      max_tilt: 1.75
+      # And the timeout of a goal that sets none: the 2026-09-29 sugar goals
+      # gave 300 s, and a bed parked after a stop takes a minute or more to be
+      # crept back over its angle of repose (72 s on 10-01, at 30 g).
+      timeout: 300.0
+      # How much of the stop forecast a granular pour believes (author,
+      # 2026-10-01: "찔끔찔끔 ... 너무 보수적"). The forecast is a liquid's model
+      # and a bed tipped back stops at once, so it put far more still to come
+      # than landed, the bulk stopped early, and the rest went in trim pulses
+      # of 0.2-3 g, each after a creep at 0.26 deg/s. 30 g at 80 mm: first stop
+      # at 18.91 g (forecast 11.10 g more, 0.57 g came), then seven pulses to
+      # 30.10 g in 204 s. Fitted to the four pours at today's cell (forecast
+      # beside what came after the stop):
+      #   09-29 20 g, 45 mm   2.40 g   0.27 g
+      #   10-01 10 g, 45 mm   2.02 g   0.56 g
+      #   10-01 30 g, 45 mm  13.43 g   0.81 g
+      #   10-01 30 g, 80 mm  11.10 g   0.57 g
+      # 0.05 x forecast + the 0.5 g tail stops each of them 0.02-0.46 g short:
+      # inside the tolerance. The one pour it does not fit is the flask cell's
+      # (09-29, 20 g at 80 mm: 1.53 g forecast, 2.07 g came), which it would
+      # overpour by ~1.5 g. 0 would take stop_margin_factor, the liquid's.
+      stop_margin_factor: 0.05
       free:              # flow_index 0: dry salt, sugar
         max_flow_rate: 8.0
         trim_flow_rate: 1.5
@@ -495,10 +767,44 @@ pouring_controller:
         # stream and the three-sample flow fit, not the fall, and the seek and
         # retract rates water settled on. Every other number here is a seed.
         transport_delay: 1.0
+        # Back to 0.5 g (2026-10-05): 1.0 was set for a beaker filled with more
+        # sugar than before, whose slides let 0.75-4.84 g come after a stop;
+        # with the earlier, smaller fill 0.27-0.81 g came, and 1.0 would stop
+        # those short.
         afterflow_grams: 0.5
         settle_hold_sec: 1.5
         tilt_rate: 0.15
         seek_tilt_rate: 0.03
+        # Parked 0.12 rad under the onset (0 before): parked 2.3-2.8 deg back the
+        # bed kept sliding, 0.20-1.31 g after the park (2026-10-05); 8-13 deg back,
+        # 0.00-0.09 g.
+        park_drop: 0.12
+        # The last 3 g are poured at the tilt reached, tapped, not climbed into
+        # (final_approach_rise 0): a little at a time, as the operator asked
+        # (2026-10-05), where the climb to the goal set off slides of 2-3 g
+        # that landed in one 0.4 s and kept coming after the stop (+1.56 to
+        # +3.02 g). A trickle that stops outright for a second is crept after;
+        # too much is stepped back.
+        #
+        # 6 g since 2026-10-05 15:57: with the slow creep below, the last 3 g
+        # trickled (8.2 -> 9.5 g over 15 s, -0.11 g), but two 10 g steps slid
+        # before them, 5.5 and 3.4 g short: the stream had stopped and the bulk,
+        # with that much still to go, climbed 3.6-3.7 deg at 1.6-1.7 deg/s, and
+        # 8 and 6 g let go (+2.51, +2.53).
+        final_approach_grams: 6.0
+        # Held and tapped with the bulk's taps (0.012 rad every 0.08 s) the bed did
+        # not trickle (2026-10-05 15:08): nothing for 6-7 s, the creep after a
+        # stopped stream went on 2.6-5 deg, and 1.6-5 g let go at once (+3.44,
+        # +0.73). Larger, slower taps in the last 3 g (0.03 rad every 0.25 s,
+        # 15:27) did no better: +1.35 +2.27 -0.28 +1.02 +0.84 g, still nothing
+        # for 5-7 s and then 2.1-3.7 g at once, and to the operator's eye the
+        # large taps made it worse. Back to the bulk's taps (0 here).
+        final_approach_shake_amplitude: 0.0
+        final_approach_shake_period: 0.0
+        # Crept slowly instead, at the operator's call: the creep after a stopped
+        # stream ran at 0.38-0.62 deg/s (the lead-bounded climb) and a degree more
+        # was climbed in the second before the scale showed a slide. 0.2 deg/s.
+        final_approach_tilt_rate: 0.0035
         dose_quantum: 0.5
         # Dry sugar crystals (2026-09-28, ~50 mL in the 100 mL beaker) did not
         # come out at 68.8 deg, nor at 77.6 deg where j4 reached its limit. A

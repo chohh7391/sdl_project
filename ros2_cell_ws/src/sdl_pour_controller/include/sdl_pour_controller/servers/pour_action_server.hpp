@@ -52,6 +52,9 @@ struct PourBounds {
     //: A configuration showing how the pour tips the vessel; empty: the pour
     //: joint's axis.
     std::vector<double> pour_reference_joints;
+    //: The receiver's rim centre in the base frame, from the goal: three
+    //: numbers, or empty where the controller does not need one.
+    std::vector<double> receiver_rim_center;
 };
 
 /**
@@ -84,6 +87,12 @@ public:
 
     // Defaults the controller hands over, used to fill a goal's zero bounds.
     void set_defaults(const PourBounds & defaults) { defaults_ = defaults; }
+    // The tilt bound a granular goal gets when it sets none; 0: the defaults'.
+    void set_granular_max_tilt(double max_tilt) { granular_max_tilt_ = max_tilt; }
+    // The timeout a granular goal gets when it sets none; 0: the defaults'.
+    void set_granular_timeout(double timeout) { granular_timeout_ = timeout; }
+    // Whether a goal must say where the receiver is (pour_geometry: measured).
+    void set_requires_receiver(bool required) { requires_receiver_ = required; }
     const PourBounds & bounds() const { return bounds_; }
 
     bool is_canceling() const;
@@ -96,6 +105,9 @@ public:
                            int trim_pulses = 0, double measured_afterflow = 0.0);
 
 private:
+    bool requires_receiver_{false};
+    double granular_max_tilt_{0.0};
+    double granular_timeout_{0.0};
     PourBounds defaults_;
     PourBounds bounds_;
 };

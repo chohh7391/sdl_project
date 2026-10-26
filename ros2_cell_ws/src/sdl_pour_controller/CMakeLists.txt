@@ -51,6 +51,7 @@ add_library(${PROJECT_NAME} SHARED
     src/pour/container_gate.cpp
     src/pour/flow_model.cpp
     src/pour/guards.cpp
+    src/pour/level.cpp
     src/pour/lip_path.cpp
     src/pour/material_profile.cpp
     src/pour/pour_planner.cpp
@@ -119,6 +120,13 @@ if(BUILD_TESTING)
         src/pour/lip_path.cpp
     )
     target_include_directories(test_lip_path PRIVATE include ${EIGEN3_INCLUDE_DIRS})
+
+    # Standing the held vessel upright before the pour. Eigen only.
+    ament_add_gtest(test_level
+        test/test_level.cpp
+        src/pour/level.cpp
+    )
+    target_include_directories(test_level PRIVATE include ${EIGEN3_INCLUDE_DIRS})
 
     # Not a test: prints both laws' results on pour_sim.hpp's vessels, which is
     # where the comparison quoted in pouring_controller.yaml comes from. Built

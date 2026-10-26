@@ -32,6 +32,11 @@ constexpr int kLeadPairs = 3;
 // has seen is a disturbance, not a pour [g]. Several times the indicator's
 // quiet-reading noise, which is zero on the HS-AA.
 constexpr double kFallBackGrams = 0.3;
+// A flow under this fraction of the trim rate is a stream stopped outright,
+// not one thinning [-]. On the rig (2026-10-04) water thinning as the beaker
+// emptied read 0.25-0.4 g/s at its lowest, against a trim rate of 2; broken,
+// it read 0.
+constexpr double kStoppedFlowFraction = 0.1;
 } // namespace
 
 bool PourPlanner::configure(const PlannerConfig & config, const MaterialProfile & liquid,
@@ -66,8 +71,19 @@ bool PourPlanner::configure(const PlannerConfig & config, const MaterialProfile 
         {"flow_model.flow_noise", config.flow_model.flow_noise},
         {"retract_slack_sec", config.retract_slack_sec},
     };
+    if (!std::isfinite(config.slow_seek_min_fraction) || config.slow_seek_min_fraction <= 0.0 ||
+        config.slow_seek_min_fraction > 1.0) {
+        why = "slow_seek_min_fraction must be in (0, 1]";
+        return false;
+    }
     if (!std::isfinite(config.seek_fast_until) || config.seek_fast_until < 0.0) {
         why = "seek_fast_until must be finite and not negative (0 seeks the whole way slowly)";
+        return false;
+    }
+    if (!std::isfinite(config.granular_stop_margin_factor) ||
+        config.granular_stop_margin_factor < 0.0) {
+        why = "granular_stop_margin_factor must be finite and not negative (0 uses "
+              "stop_margin_factor)";
         return false;
     }
     if (config.max_park_attempts < 1) {
@@ -102,6 +118,10 @@ bool PourPlanner::configure(const PlannerConfig & config, const MaterialProfile 
     if (config.trim_undershoot > 1.0) {
         why = "trim_undershoot must be at most 1.0: a pulse aimed past the remaining gap cannot "
               "be taken back, and there is nothing after it to correct with";
+        return false;
+    }
+    if (!std::isfinite(config.flow_model.max_onset_shift) || config.flow_model.max_onset_shift < 0.0) {
+        why = "flow_model.max_onset_shift must be finite and not negative (0 is off)";
         return false;
     }
     if (config.flow_model.min_pairs < 0) {
@@ -169,6 +189,8 @@ void PourPlanner::begin(const PourRequest & request, double now)
     model_ = FlowModel{};
     last_fit_stamp_ = -std::numeric_limits<double>::infinity();
     bulk_peak_ = 0.0;
+    quiet_since_ = -1.0;
+    bulk_tilt_peak_ = 0.0;
     park_entered_ = 0.0;
     tilt_history_.clear();
     cancel_requested_ = false;
@@ -332,7 +354,9 @@ PourPlanner::Forecast PourPlanner::forecast(const PourObservation & obs) const
 void PourPlanner::set_onset(double onset)
 {
     onset_tilt_ = onset;
-    hold_tilt_ = std::max(onset_tilt_ - park_margin_, -request_.max_back_tilt);
+    // A thick liquid keeps running under the angle it started at, so it is
+    // parked the material's park_drop further back (zero for water and sugar).
+    hold_tilt_ = std::max(onset_tilt_ - park_margin_ - limits_.park_drop, -request_.max_back_tilt);
 }
 
 PourCommand PourPlanner::enter_retract(double target, const PourObservation & obs)
@@ -391,9 +415,12 @@ PourCommand PourPlanner::emit(double tilt_rate) const
     return cmd;
 }
 
-PourCommand PourPlanner::shaken(PourCommand cmd) const
+PourCommand PourPlanner::shaken(PourCommand cmd, bool final_approach) const
 {
-    if (limits_.shake_amplitude > 0.0) {
+    if (final_approach && limits_.final_approach_shake_amplitude > 0.0) {
+        cmd.shake_amplitude = limits_.final_approach_shake_amplitude;
+        cmd.shake_period = limits_.final_approach_shake_period;
+    } else if (limits_.shake_amplitude > 0.0) {
         cmd.shake_amplitude = limits_.shake_amplitude;
         cmd.shake_period = limits_.shake_period;
     }
@@ -505,7 +532,7 @@ PourCommand PourPlanner::step_seek(const PourObservation & obs)
         // that much -- and an onset estimated too high parks the vessel at an
         // attitude that is still pouring, which breaks the one invariant the
         // settle depends on.
-        onset_tilt_ = obs.tilt - limits_.seek_tilt_rate * limits_.transport_delay;
+        onset_tilt_ = obs.tilt - seek_rate() * limits_.transport_delay;
         // set_onset below derives the park and pulse angles from it.
         // NOT clamped at zero. A vessel handed over already leaning pours at a
         // tilt at or below the attitude it arrived in, and the park angle has to
@@ -516,13 +543,15 @@ PourCommand PourPlanner::step_seek(const PourObservation & obs)
         // delay's own spread -- is of the same size, so the park is set below by
         // that much again rather than by a token amount.
         park_base_margin_ = std::max(config_.retract_margin,
-                                     limits_.seek_tilt_rate * limits_.transport_delay);
+                                     seek_rate() * limits_.transport_delay);
         park_margin_ = park_base_margin_;
         set_onset(onset_tilt_);
         model_.begin(config_.flow_model, onset_tilt_);
         fit_flow_model(obs);
         phase_ = PourPhase::Bulk;
         stalled_ = false;
+        quiet_since_ = -1.0;
+        bulk_tilt_peak_ = obs.tilt;
         return emit(tilt_rate_limit());
     }
 
@@ -550,7 +579,7 @@ PourCommand PourPlanner::step_seek(const PourObservation & obs)
     if (obs.tilt < config_.seek_fast_until + limits_.repose_angle) {
         return emit(tilt_rate_limit());
     }
-    return shaken(emit(limits_.seek_tilt_rate));
+    return shaken(emit(seek_rate()));
 }
 
 PourCommand PourPlanner::step_bulk(const PourObservation & obs)
@@ -562,13 +591,23 @@ PourCommand PourPlanner::step_bulk(const PourObservation & obs)
     // at 8.6 deg was taken for the onset of a vessel that pours at ~35; the
     // model seeded there forecast 47-95 g in the air at every stop, and the
     // pour ran out of trim pulses 23.6 g short after 324 s.
+    //
+    // An onset called on less than that fall is no onset either once the pan
+    // is back under what the scale can detect: mass that has landed cannot
+    // leave. On the rig (2026-10-05, syrup, 40 -> 50 g) the pan read +0.18 g
+    // for 0.8 s at 23 deg and fell back; the syrup came at 56. Taken for the
+    // onset, it stopped the bulk on the first syrup, parked 18 deg too low,
+    // and the goal timed out in trims 4.78 g short.
     bulk_peak_ = std::max(bulk_peak_, poured(obs));
+    const bool small_onset_gone =
+        bulk_peak_ < kFallBackGrams && poured(obs) < config_.trim_detect_grams;
     if (report_.stops == 0 &&
-        bulk_peak_ - poured(obs) >= std::max(kFallBackGrams, 0.5 * bulk_peak_)) {
+        (bulk_peak_ - poured(obs) >= std::max(kFallBackGrams, 0.5 * bulk_peak_) ||
+         small_onset_gone)) {
         model_ = FlowModel{};
         stalled_ = false;
         phase_ = PourPhase::Seek;
-        return emit(limits_.seek_tilt_rate);
+        return emit(seek_rate());
     }
     set_onset(onset_tilt_);
 
@@ -584,14 +623,17 @@ PourCommand PourPlanner::step_bulk(const PourObservation & obs)
     // stopped the bulk 0.2-0.4 s in, at a third of the target, and left the
     // rest to trim pulses -- each of which let 2.7-3.2 g off the lip at once.
     Forecast coming = forecast(obs);
-    if (model_.pairs() < config_.flow_model.min_pairs) {
+    const int min_pairs = std::max(config_.flow_model.min_pairs,
+                                   static_cast<int>(std::lround(limits_.forecast_min_pairs)));
+    if (model_.pairs() < min_pairs) {
         // Too little of this pour in the model yet to believe what it says is
         // coming. What the scale says is flowing, for a delay, is the honest
         // stand-in -- and it is what the landed mass then has to catch up to.
         coming = Forecast{};
-        coming.in_flight = flow * limits_.transport_delay;
+        coming.in_flight = flow * limits_.transport_delay * limits_.early_flight_factor;
     }
-    const double stop_margin = config_.stop_margin_factor * coming.total() + afterflow_est_;
+    const double believed = limits_.stop_forecast_scale * coming.total();
+    const double stop_margin = margin_factor() * believed + afterflow_est_;
     const double remaining = request_.target_grams - poured(obs);
 
     if (remaining <= stop_margin) {
@@ -609,7 +651,7 @@ PourCommand PourPlanner::step_bulk(const PourObservation & obs)
         grams_at_stop_ = obs.grams;
         // Without the safety factor: this is the honest prediction, and the
         // settle grades it against what actually landed.
-        predicted_post_stop_ = coming.total() + afterflow_est_;
+        predicted_post_stop_ = believed + afterflow_est_;
         record_stop(obs, coming);
         tail_measurable_ = true;
         return enter_retract(hold_tilt_, obs);
@@ -653,13 +695,66 @@ PourCommand PourPlanner::step_bulk(const PourObservation & obs)
     double rate = 0.0;
     // Short of the wanted flow, a granular bed is also tapped: at the bound
     // it is the only thing left that can move it.
+    // Where the stream keeps going: just over the onset for what has left the
+    // lip by now. The onset climbs as the vessel empties -- on the rig
+    // (2026-10-04) water that rushed out at 35.1 deg had stopped by 5 g and
+    // only ran again at 39 -- and the lead-bounded climb (0.5-1 deg/s) let it
+    // stop for 4 s and restart all at once off the wet lip. With a margin, a
+    // thinning stream is taken straight up to it instead.
+    constexpr double kNoFloor = 1e9;
+    double keep_floor = -kNoFloor;
+    if (limits_.keep_flowing_margin > 0.0) {
+        const double left = std::max(0.0, poured(obs)) + coming.in_flight;
+        const double onset_now = (model_.started() && model_.pairs() >= kLeadPairs)
+                                     ? std::max(onset_tilt_, model_.onset(left))
+                                     : onset_tilt_;
+        keep_floor = onset_now + limits_.keep_flowing_margin;
+    }
+    // The last grams: no climb after the flow. The tilt only follows the onset
+    // up as what leaves the lip raises it -- final_approach_rise x the flow --
+    // and only a stream the scale has shown stopped outright for a transport
+    // delay is climbed after. On the rig (2026-10-04, ten 10 g water pours) the
+    // climb to keep a thinning stream up came 2-3 g out, 0.9-2.3 deg in the
+    // last 2 s, and with the scale a second behind it landed as a 2.4 g/s surge
+    // just as the stop was called: 0.9-1.9 g came after the stop, two pours
+    // over by 1.0 and 1.2 g. Held flat instead, two of five streams died and
+    // ended short (-0.92, -1.79 g). Too much flow is still stepped down, no
+    // lower than keep_floor.
+    bulk_tilt_peak_ = std::max(bulk_tilt_peak_, obs.tilt);
+    const bool final_approach =
+        limits_.final_approach_grams > 0.0 && remaining <= limits_.final_approach_grams;
+    if (flow < kStoppedFlowFraction * limits_.trim_flow_rate) {
+        if (quiet_since_ < 0.0) {
+            quiet_since_ = obs.now;
+        }
+    } else {
+        quiet_since_ = -1.0;
+    }
+    const bool stream_stopped =
+        quiet_since_ >= 0.0 && (obs.now - quiet_since_) > limits_.transport_delay;
     const bool wants_more = flow < (1.0 - config_.flow_deadband) * target_rate;
-    if (wants_more) {
-        const double ceiling = std::min(seen + lead, tilt_bound(obs));
+    const bool too_much = flow > (1.0 + config_.flow_deadband) * target_rate;
+    if (final_approach && !too_much && !(wants_more && stream_stopped)) {
+        rate = std::min(limits_.final_approach_rise * flow, tilt_rate_limit());
+    } else if (wants_more) {
+        const double ceiling = std::min(std::max(seen + lead, keep_floor), tilt_bound(obs));
         rate = std::clamp(config_.kp_tilt * (ceiling - obs.tilt), 0.0, tilt_rate_limit());
-    } else if (flow > (1.0 + config_.flow_deadband) * target_rate) {
-        const double floor = seen - lead;
+    } else if (too_much) {
+        double floor = seen - lead;
+        if (keep_floor > -kNoFloor) {
+            // Throttled, not broken: no lower than just over where it pours now.
+            floor = std::max(floor, keep_floor);
+        }
+        if (limits_.max_step_down >= 0.0) {
+            floor = std::max(floor, bulk_tilt_peak_ - limits_.max_step_down);
+        }
         rate = std::clamp(config_.kp_tilt * (floor - obs.tilt), -tilt_rate_limit(), 0.0);
+    }
+    // And in the last grams whatever climb there is goes slowly: a bed that
+    // lets go all at once does so a second before the scale shows it, and
+    // what was tilted on in that second is more of the bed set moving.
+    if (final_approach && limits_.final_approach_tilt_rate > 0.0) {
+        rate = std::min(rate, limits_.final_approach_tilt_rate);
     }
 
     if (at_tilt_bound(obs, request_.max_tilt, config_.tilt_epsilon)) {
@@ -687,6 +782,12 @@ PourCommand PourPlanner::step_bulk(const PourObservation & obs)
         }
     } else {
         stalled_ = false;
+    }
+    // In the final approach a material with its own taps is tapped on
+    // whatever the flow, short of too much: the bed is to come down a little
+    // at a time rather than wait to be climbed into.
+    if (final_approach && limits_.final_approach_shake_amplitude > 0.0 && !too_much) {
+        return shaken(emit(rate), true);
     }
     return wants_more ? shaken(emit(rate)) : emit(rate);
 }
@@ -808,7 +909,15 @@ PourCommand PourPlanner::step_settle(const PourObservation & obs)
     }
 
     // Short. Can one more pulse close the gap without going past?
-    if (report_.trim_pulses >= config_.max_trim_pulses) {
+    const int max_trims = limits_.max_trim_pulses >= 0.0 ? static_cast<int>(limits_.max_trim_pulses)
+                                                         : config_.max_trim_pulses;
+    if (max_trims == 0) {
+        std::ostringstream os;
+        os << "stopped " << error << " g short of " << request_.target_grams
+           << " g, and this material is not trimmed: a stopped stream starts again all at once";
+        return finish(false, os.str());
+    }
+    if (report_.trim_pulses >= max_trims) {
         std::ostringstream os;
         os << "still " << error << " g short of " << request_.target_grams << " g after "
            << report_.trim_pulses << " trim pulses";
@@ -839,9 +948,26 @@ PourCommand PourPlanner::step_settle(const PourObservation & obs)
     return emit(0.0);
 }
 
+double PourPlanner::seek_rate() const
+{
+    const double below = limits_.slow_seek_below_grams;
+    if (!(below > 0.0) || !(request_.target_grams < below)) {
+        return limits_.seek_tilt_rate;
+    }
+    const double f = std::clamp(request_.target_grams / below, config_.slow_seek_min_fraction, 1.0);
+    return limits_.seek_tilt_rate * f;
+}
+
 double PourPlanner::creep_rate() const
 {
     return std::min(tilt_rate_limit(), config_.trim_creep_fraction * limits_.seek_tilt_rate);
+}
+
+double PourPlanner::margin_factor() const
+{
+    return request_.material == MaterialClass::Granular && config_.granular_stop_margin_factor > 0.0
+        ? config_.granular_stop_margin_factor
+        : config_.stop_margin_factor;
 }
 
 PourCommand PourPlanner::step_trim(const PourObservation & obs)
@@ -895,6 +1021,14 @@ PourCommand PourPlanner::step_trim(const PourObservation & obs)
             }
             return shaken(emit(0.0));
         }
+        // Below the park a thin material would have had, nothing pours: the
+        // extra park_drop only stops a thick one draining. That stretch is
+        // covered at the full tilt rate, and only the last park_margin_ up to
+        // the onset is crept -- at the creep rate, 0.25 rad of park_drop
+        // would cost the syrup ~38 s a pulse.
+        if (limits_.park_drop > 0.0 && obs.tilt < onset_tilt_ - park_margin_) {
+            return emit(tilt_rate_limit());
+        }
         return shaken(emit(creep_rate()));
     }
 
@@ -903,14 +1037,14 @@ PourCommand PourPlanner::step_trim(const PourObservation & obs)
     // a pulse is a handful of samples and the material has not landed in any
     // of them, so the scale cannot end it -- the flow model can.
     const Forecast coming = forecast(obs);
-    const bool enough = poured(obs) + config_.stop_margin_factor * coming.total() +
+    const bool enough = poured(obs) + margin_factor() * limits_.stop_forecast_scale * coming.total() +
                             afterflow_est_ >= request_.target_grams;
     if ((obs.now - pulse_started_) >= pulse_sec_ || enough) {
         ++report_.trim_pulses;
         grams_at_stop_ = obs.grams;
         // Still to arrive once the hold ends, and the tail. The settle grades
         // this.
-        predicted_post_stop_ = coming.total() + afterflow_est_;
+        predicted_post_stop_ = limits_.stop_forecast_scale * coming.total() + afterflow_est_;
         record_stop(obs, coming);
         tail_measurable_ = true;
         return enter_retract(hold_tilt_, obs);

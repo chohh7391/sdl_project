@@ -18,6 +18,7 @@
 #include <cmath>
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <vector>
 
@@ -44,6 +45,50 @@ constexpr double kTapMargin = 0.005;
 // block there is unlikely, and a false one leaves the lip path beside the
 // receiver.
 constexpr double kReturnBlockFactor = 4.0;
+// The share of the joints' per-cycle bound (max_delta_q) the tilt is planned
+// to use, and of the lip's speed. The rest is headroom: the cap is taken from
+// the path's derivative where the tilt is now, and the path bends.
+constexpr double kIkRateShare = 0.7;
+constexpr double kLipRateShare = 0.9;
+// How much harder than its own acceleration a path brakes once the IK is
+// ik_hold_ratio behind -- instead of stopping it in one cycle, which is a
+// knock -- and how far behind it is stopped dead all the same, the last resort
+// when the cap above has not kept it from falling behind.
+constexpr double kEmergencyBrake = 4.0;
+constexpr double kDeadHoldRatio = 2.0;
+// The step the path's derivatives are taken over [rad of tilt].
+constexpr double kPathEps = 1e-3;
+// How far ahead of the tilt, in the direction it moves, the lip looks for
+// where the path's inset limit closes in [rad], and in how many samples. The
+// limit is a minimum over sampled points of the hand and the vessel, each of
+// which only counts once it is below the rim, so it closes in steps: on the
+// way back upright on the rig (2026-10-04 23:3x) by 0.3-0.6 mm every 1.5-2.6
+// deg between 25 and 11 deg. Backed out only when the tilt got there, the lip
+// held the tilt for a cycle or two each time and the tilt restarted from
+// rest: five stop-and-go knocks in 3 s.
+// Heading straight for the lowest limit in that stretch still sent the lip
+// out at its full 30 mm/s for a cycle or two at every step -- its pace is 8 --
+// five small jolts in a return (2026-10-04 23:4x). It heads instead for the
+// lowest of the limit plus kLipEnvelopeSlope per radian still to go: each
+// step is taken up over the stretch before it, at most 1.4 mm/deg, which at
+// 0.15 rad/s is 12 mm/s. The stretch is long enough for kLipEnvelopeSlope to
+// take up 4 mm, several times the steps seen, and sampled finely enough that
+// the target slides rather than steps.
+constexpr double kLipLookahead = 0.05;
+constexpr double kLipEnvelopeSlope = 0.08;
+// In toward the limit the lip goes no faster than the tilt carries it --
+// kLipEnvelopeSlope per radian -- plus this creep [m/s], so it still gets
+// there while the tilt holds. Tipping up the limit opens in the same steps it
+// closes in on the way back, and the lip went in at its full 30 mm/s at each:
+// 23 and 30 mm/s spikes from a 1.5 mm/s pace in the slow seek, 22-26 deg
+// (2026-10-05 00:14). Out, away from the receiver, it keeps its full speed.
+constexpr double kLipCreep = 0.002;
+// The stretch is looked over cell by cell, and each cell's limit is computed
+// once a pour and kept: the limit is a loop over every sampled point of the
+// hand and the vessel (~2400 here), and a hundred of those a cycle would take
+// milliseconds of the 8 the control loop has. The exact limit still guards
+// every step the tilt actually takes.
+constexpr double kLipTableStep = 0.0005;
 
 // Seeds, not measurements, except where noted. The liquid/free endpoint is the
 // one with hardware behind it: water on an HS-AA, 2026-09-16, which ran 6-11 g/s
@@ -152,6 +197,19 @@ void PouringController::declare_limits(const std::string & prefix, const PourLim
     auto_declare<double>(prefix + ".tilt_rate", d.tilt_rate);
     auto_declare<double>(prefix + ".seek_tilt_rate", d.seek_tilt_rate);
     auto_declare<double>(prefix + ".dose_quantum", d.dose_quantum);
+    auto_declare<double>(prefix + ".park_drop", d.park_drop);
+    auto_declare<double>(prefix + ".forecast_min_pairs", d.forecast_min_pairs);
+    auto_declare<double>(prefix + ".slow_seek_below_grams", d.slow_seek_below_grams);
+    auto_declare<double>(prefix + ".early_flight_factor", d.early_flight_factor);
+    auto_declare<double>(prefix + ".keep_flowing_margin", d.keep_flowing_margin);
+    auto_declare<double>(prefix + ".stop_forecast_scale", d.stop_forecast_scale);
+    auto_declare<double>(prefix + ".max_trim_pulses", d.max_trim_pulses);
+    auto_declare<double>(prefix + ".final_approach_grams", d.final_approach_grams);
+    auto_declare<double>(prefix + ".final_approach_rise", d.final_approach_rise);
+    auto_declare<double>(prefix + ".max_step_down", d.max_step_down);
+    auto_declare<double>(prefix + ".final_approach_shake_amplitude", d.final_approach_shake_amplitude);
+    auto_declare<double>(prefix + ".final_approach_shake_period", d.final_approach_shake_period);
+    auto_declare<double>(prefix + ".final_approach_tilt_rate", d.final_approach_tilt_rate);
     auto_declare<double>(prefix + ".repose_angle", d.repose_angle);
     auto_declare<double>(prefix + ".shake_amplitude", d.shake_amplitude);
     auto_declare<double>(prefix + ".shake_period", d.shake_period);
@@ -170,6 +228,21 @@ PourLimits PouringController::read_limits(const std::string & prefix) const
     l.tilt_rate = node->get_parameter(prefix + ".tilt_rate").as_double();
     l.seek_tilt_rate = node->get_parameter(prefix + ".seek_tilt_rate").as_double();
     l.dose_quantum = node->get_parameter(prefix + ".dose_quantum").as_double();
+    l.park_drop = node->get_parameter(prefix + ".park_drop").as_double();
+    l.forecast_min_pairs = node->get_parameter(prefix + ".forecast_min_pairs").as_double();
+    l.slow_seek_below_grams = node->get_parameter(prefix + ".slow_seek_below_grams").as_double();
+    l.early_flight_factor = node->get_parameter(prefix + ".early_flight_factor").as_double();
+    l.keep_flowing_margin = node->get_parameter(prefix + ".keep_flowing_margin").as_double();
+    l.stop_forecast_scale = node->get_parameter(prefix + ".stop_forecast_scale").as_double();
+    l.max_trim_pulses = node->get_parameter(prefix + ".max_trim_pulses").as_double();
+    l.final_approach_grams = node->get_parameter(prefix + ".final_approach_grams").as_double();
+    l.final_approach_rise = node->get_parameter(prefix + ".final_approach_rise").as_double();
+    l.max_step_down = node->get_parameter(prefix + ".max_step_down").as_double();
+    l.final_approach_shake_amplitude =
+        node->get_parameter(prefix + ".final_approach_shake_amplitude").as_double();
+    l.final_approach_shake_period =
+        node->get_parameter(prefix + ".final_approach_shake_period").as_double();
+    l.final_approach_tilt_rate = node->get_parameter(prefix + ".final_approach_tilt_rate").as_double();
     l.repose_angle = node->get_parameter(prefix + ".repose_angle").as_double();
     l.shake_amplitude = node->get_parameter(prefix + ".shake_amplitude").as_double();
     l.shake_period = node->get_parameter(prefix + ".shake_period").as_double();
@@ -194,8 +267,12 @@ CallbackReturn PouringController::on_init()
         auto_declare<std::string>("pour_joint", "");
         auto_declare<double>("pour_direction", pour_direction_);
         auto_declare<std::string>("granular.tilt_about", granular_tilt_about_);
+        auto_declare<std::string>("liquid.tilt_about", liquid_tilt_about_);
         auto_declare<double>("granular.pour_direction", granular_pour_direction_);
         auto_declare<double>("granular.lip_height", granular_lip_height_);
+        auto_declare<double>("granular.lip_inset", granular_lip_inset_);
+        auto_declare<double>("granular.max_tilt", granular_max_tilt_);
+        auto_declare<double>("granular.timeout", granular_timeout_);
         auto_declare<double>("scale_timeout", scale_timeout_);
         auto_declare<double>("scale_sample_period", scale_sample_period_);
         auto_declare<double>("outlier_factor", outlier_factor_);
@@ -204,6 +281,8 @@ CallbackReturn PouringController::on_init()
         auto_declare<double>("weight_tolerance", weight_tolerance_);
         auto_declare<double>("max_delta_q", max_delta_q_);
         auto_declare<double>("tilt_accel", tilt_accel_);
+        auto_declare<double>("tilt_jerk", tilt_jerk_);
+        auto_declare<double>("ik_hold_ratio", ik_hold_ratio_);
         auto_declare<double>("feedback_period", feedback_period_);
 
         const pour::PlannerConfig d;
@@ -216,11 +295,13 @@ CallbackReturn PouringController::on_init()
         auto_declare<double>("max_tilt_lead_far", d.max_tilt_lead_far);
         auto_declare<double>("lead_fraction", d.lead_fraction);
         auto_declare<double>("seek_fast_until", d.seek_fast_until);
+        auto_declare<double>("slow_seek_min_fraction", d.slow_seek_min_fraction);
         auto_declare<double>("flow_deadband", d.flow_deadband);
         auto_declare<double>("no_flow_epsilon", d.no_flow_epsilon);
         auto_declare<double>("park_check_sec", d.park_check_sec);
         auto_declare<double>("park_drip_grams", d.park_drip_grams);
         auto_declare<double>("stop_margin_factor", d.stop_margin_factor);
+        auto_declare<double>("granular.stop_margin_factor", d.granular_stop_margin_factor);
         auto_declare<double>("flow_model.prior_gain", d.flow_model.prior_gain);
         auto_declare<double>("flow_model.prior_gain_sd", d.flow_model.prior_gain_sd);
         auto_declare<double>("flow_model.prior_onset_sd", d.flow_model.prior_onset_sd);
@@ -228,6 +309,7 @@ CallbackReturn PouringController::on_init()
         auto_declare<double>("flow_model.prior_rise_sd", d.flow_model.prior_rise_sd);
         auto_declare<double>("flow_model.flow_noise", d.flow_model.flow_noise);
         auto_declare<int>("flow_model.min_pairs", d.flow_model.min_pairs);
+        auto_declare<double>("flow_model.max_onset_shift", d.flow_model.max_onset_shift);
         auto_declare<double>("settle_timeout", d.settle_timeout);
         auto_declare<double>("stall_timeout", d.stall_timeout);
         auto_declare<double>("trim_undershoot", d.trim_undershoot);
@@ -268,6 +350,7 @@ CallbackReturn PouringController::on_init()
         auto_declare<double>("geometry.tag_height", std::numeric_limits<double>::quiet_NaN());
         auto_declare<std::vector<double>>("geometry.receiver_rim_center", {});
         auto_declare<double>("geometry.receiver_radius", receiver_.radius);
+        auto_declare<double>("geometry.receiver_rim_z", receiver_rim_z_);
         const pour::LipPathConfig ld;
         auto_declare<double>("geometry.lip_clearance", ld.clearance);
         auto_declare<double>("geometry.lip_max_height", ld.max_height);
@@ -285,6 +368,15 @@ CallbackReturn PouringController::on_init()
         auto_declare<double>("geometry.grasp_depth", ld.grasp_depth);
         auto_declare<double>("geometry.max_depth_error", ld.max_depth_error);
         auto_declare<double>("geometry.max_carry_lean", max_carry_lean_);
+        // Standing the vessel upright before the pour (pour/level.hpp).
+        const pour::LevelConfig lv;
+        auto_declare<bool>("geometry.level.enabled", level_enabled_);
+        auto_declare<std::string>("geometry.level.attitude_topic", "");
+        auto_declare<bool>("geometry.level.require_tag", level_require_tag_);
+        auto_declare<double>("geometry.level.rate", level_rate_);
+        auto_declare<double>("geometry.level.max_correction", lv.max_correction);
+        auto_declare<double>("geometry.level.max_tag_disagreement", lv.max_tag_disagreement);
+        auto_declare<double>("geometry.level.deadband", lv.deadband);
         auto_declare<std::vector<double>>("geometry.hand_boxes", {});
         auto_declare<double>("geometry.align_speed", align_speed_);
         auto_declare<double>("geometry.align_accel", align_accel_);
@@ -314,8 +406,12 @@ bool PouringController::assign_parameters()
     pour_joint_ = node->get_parameter("pour_joint").as_string();
     pour_direction_ = node->get_parameter("pour_direction").as_double();
     granular_tilt_about_ = node->get_parameter("granular.tilt_about").as_string();
+    liquid_tilt_about_ = node->get_parameter("liquid.tilt_about").as_string();
     granular_pour_direction_ = node->get_parameter("granular.pour_direction").as_double();
     granular_lip_height_ = node->get_parameter("granular.lip_height").as_double();
+    granular_lip_inset_ = node->get_parameter("granular.lip_inset").as_double();
+    granular_max_tilt_ = node->get_parameter("granular.max_tilt").as_double();
+    granular_timeout_ = node->get_parameter("granular.timeout").as_double();
     scale_timeout_ = node->get_parameter("scale_timeout").as_double();
     scale_sample_period_ = node->get_parameter("scale_sample_period").as_double();
     outlier_factor_ = node->get_parameter("outlier_factor").as_double();
@@ -324,7 +420,22 @@ bool PouringController::assign_parameters()
     weight_tolerance_ = node->get_parameter("weight_tolerance").as_double();
     max_delta_q_ = node->get_parameter("max_delta_q").as_double();
     tilt_accel_ = node->get_parameter("tilt_accel").as_double();
+    tilt_jerk_ = node->get_parameter("tilt_jerk").as_double();
+    ik_hold_ratio_ = node->get_parameter("ik_hold_ratio").as_double();
     feedback_period_ = node->get_parameter("feedback_period").as_double();
+    if (!std::isfinite(tilt_jerk_) || tilt_jerk_ < 0.0) {
+        RCLCPP_ERROR(logger, "tilt_jerk must be >= 0 (0: no jerk bound), got %f", tilt_jerk_);
+        return false;
+    }
+    if (!std::isfinite(ik_hold_ratio_) || ik_hold_ratio_ < 1.0 || ik_hold_ratio_ >= 2.0) {
+        RCLCPP_ERROR(logger,
+            "ik_hold_ratio must be in [1, 2): the path is braked hard once the IK is that many "
+            "tolerances behind, and stopped dead at 2, beyond which it would run on well outside "
+            "the lip's gap; got %f",
+            ik_hold_ratio_);
+        return false;
+    }
+    tilt_ramp_.set_jerk(tilt_jerk_);
 
     planner_config_.container_tolerance = node->get_parameter("container_tolerance").as_double();
     planner_config_.verify_timeout = node->get_parameter("verify_timeout").as_double();
@@ -335,11 +446,14 @@ bool PouringController::assign_parameters()
     planner_config_.max_tilt_lead_far = node->get_parameter("max_tilt_lead_far").as_double();
     planner_config_.lead_fraction = node->get_parameter("lead_fraction").as_double();
     planner_config_.seek_fast_until = node->get_parameter("seek_fast_until").as_double();
+    planner_config_.slow_seek_min_fraction = node->get_parameter("slow_seek_min_fraction").as_double();
     planner_config_.flow_deadband = node->get_parameter("flow_deadband").as_double();
     planner_config_.no_flow_epsilon = node->get_parameter("no_flow_epsilon").as_double();
     planner_config_.park_check_sec = node->get_parameter("park_check_sec").as_double();
     planner_config_.park_drip_grams = node->get_parameter("park_drip_grams").as_double();
     planner_config_.stop_margin_factor = node->get_parameter("stop_margin_factor").as_double();
+    planner_config_.granular_stop_margin_factor =
+        node->get_parameter("granular.stop_margin_factor").as_double();
     {
         auto & fm = planner_config_.flow_model;
         fm.prior_gain = node->get_parameter("flow_model.prior_gain").as_double();
@@ -349,6 +463,7 @@ bool PouringController::assign_parameters()
         fm.prior_rise_sd = node->get_parameter("flow_model.prior_rise_sd").as_double();
         fm.flow_noise = node->get_parameter("flow_model.flow_noise").as_double();
         fm.min_pairs = static_cast<int>(node->get_parameter("flow_model.min_pairs").as_int());
+        fm.max_onset_shift = node->get_parameter("flow_model.max_onset_shift").as_double();
     }
     planner_config_.settle_timeout = node->get_parameter("settle_timeout").as_double();
     planner_config_.stall_timeout = node->get_parameter("stall_timeout").as_double();
@@ -400,6 +515,12 @@ bool PouringController::assign_parameters()
             "from the scale", pour_direction_);
         return false;
     }
+    if (liquid_tilt_about_ != "goal" && liquid_tilt_about_ != "fingertips") {
+        RCLCPP_ERROR(logger,
+            "liquid.tilt_about must be \"goal\" or \"fingertips\" (got \"%s\")",
+            liquid_tilt_about_.c_str());
+        return false;
+    }
     if (granular_tilt_about_ != "goal" && granular_tilt_about_ != "pour_joint") {
         RCLCPP_ERROR(logger,
             "granular.tilt_about must be \"goal\" or \"pour_joint\" (got \"%s\")",
@@ -411,6 +532,26 @@ bool PouringController::assign_parameters()
         RCLCPP_ERROR(logger,
             "granular.lip_height must be 0 (use geometry.lip_height) or up to 0.2 m (got %f)",
             granular_lip_height_);
+        return false;
+    }
+    if (!std::isfinite(granular_lip_inset_) || granular_lip_inset_ < 0.0 ||
+        granular_lip_inset_ > 0.1) {
+        RCLCPP_ERROR(logger,
+            "granular.lip_inset must be 0 (use geometry.lip_inset) or up to 0.1 m (got %f)",
+            granular_lip_inset_);
+        return false;
+    }
+    if (!std::isfinite(granular_max_tilt_) || granular_max_tilt_ < 0.0 ||
+        granular_max_tilt_ > M_PI) {
+        RCLCPP_ERROR(logger,
+            "granular.max_tilt must be 0 (use max_tilt) or up to pi rad (got %f)",
+            granular_max_tilt_);
+        return false;
+    }
+    if (!std::isfinite(granular_timeout_) || granular_timeout_ < 0.0) {
+        RCLCPP_ERROR(logger,
+            "granular.timeout must be 0 (use the liquid's) or positive seconds (got %f)",
+            granular_timeout_);
         return false;
     }
     if (granular_pour_direction_ != 0.0 && granular_pour_direction_ != 1.0 &&
@@ -517,6 +658,7 @@ bool PouringController::assign_geometry_parameters()
     vessel_.radius = node->get_parameter("geometry.vessel_radius").as_double();
     vessel_.height = node->get_parameter("geometry.vessel_height").as_double();
     receiver_.radius = node->get_parameter("geometry.receiver_radius").as_double();
+    receiver_rim_z_ = node->get_parameter("geometry.receiver_rim_z").as_double();
     lip_config_.clearance = node->get_parameter("geometry.lip_clearance").as_double();
     lip_config_.max_height = node->get_parameter("geometry.lip_max_height").as_double();
     lip_config_.lip_height = node->get_parameter("geometry.lip_height").as_double();
@@ -566,11 +708,61 @@ bool PouringController::assign_geometry_parameters()
         RCLCPP_ERROR(logger, "geometry.max_carry_lean must be positive (got %f)", max_carry_lean_);
         return false;
     }
+    level_enabled_ = node->get_parameter("geometry.level.enabled").as_bool();
+    attitude_topic_ = node->get_parameter("geometry.level.attitude_topic").as_string();
+    level_require_tag_ = node->get_parameter("geometry.level.require_tag").as_bool();
+    level_rate_ = node->get_parameter("geometry.level.rate").as_double();
+    level_config_.max_correction = node->get_parameter("geometry.level.max_correction").as_double();
+    level_config_.max_tag_disagreement =
+        node->get_parameter("geometry.level.max_tag_disagreement").as_double();
+    level_config_.deadband = node->get_parameter("geometry.level.deadband").as_double();
+    if (level_enabled_) {
+        std::string why;
+        if (!level_config_.validate(why)) {
+            RCLCPP_ERROR(logger, "geometry.%s", why.c_str());
+            return false;
+        }
+        if (!std::isfinite(level_rate_) || level_rate_ <= 0.0 || level_rate_ > 0.5) {
+            RCLCPP_ERROR(logger,
+                "geometry.level.rate must be in (0, 0.5] rad/s (got %f): the vessel is turned "
+                "with whatever it holds in it", level_rate_);
+            return false;
+        }
+        if (level_require_tag_ && attitude_topic_.empty()) {
+            RCLCPP_ERROR(logger,
+                "geometry.level.require_tag needs geometry.level.attitude_topic: there is no "
+                "tag to require");
+            return false;
+        }
+        // The vessel is turned about the point of its axis the jaws hold, and
+        // that is found from the pose's point being on the axis at the bottom.
+        if (vessel_.tag_radius != 0.0 || vessel_.tag_height != 0.0) {
+            RCLCPP_ERROR(logger,
+                "geometry.level needs the pose's point at the vessel's bottom centre "
+                "(tag_radius 0, tag_height 0; got %f, %f): it turns the vessel about the "
+                "point of its axis the jaws hold, found from there",
+                vessel_.tag_radius, vessel_.tag_height);
+            return false;
+        }
+    }
+    if (!std::isfinite(receiver_rim_z_) || receiver_rim_z_ < 0.0 || receiver_rim_z_ > 1.0) {
+        RCLCPP_ERROR(logger,
+            "geometry.receiver_rim_z must be 0 (take the goal's) or a height in the base "
+            "frame up to 1 m (got %f)", receiver_rim_z_);
+        return false;
+    }
+    // Where the receiver stands comes with each goal, as perception measured
+    // it. A position left here from when it was configured would be ignored
+    // while looking authoritative, so it is refused instead.
+    if (!node->get_parameter("geometry.receiver_rim_center").as_double_array().empty()) {
+        RCLCPP_ERROR(logger,
+            "geometry.receiver_rim_center is no longer read: the receiver is not fixed, and "
+            "each pour goal says where its rim is (Pour.action receiver_rim_center). Remove "
+            "it from the configuration");
+        return false;
+    }
     if (!vec3("geometry.approach_axis_in_ee",
               "the direction the jaws reach along, in the EE frame", lip_config_.approach_axis_in_ee) ||
-        !vec3("geometry.receiver_rim_center",
-              "the centre of the receiver's rim in the arm's base frame -- the scale's centre, "
-              "at the rim's height", receiver_.rim_center) ||
         !vec3("geometry.closing_axis_in_ee", "the direction the jaws close along, in the EE frame",
               lip_config_.closing_axis_in_ee)) {
         return false;
@@ -706,6 +898,27 @@ CallbackReturn PouringController::on_configure(const rclcpp_lifecycle::State & p
                 vessel_buffer_.writeFromNonRT(sample);
             });
     }
+    attitude_sub_.reset();
+    if (measured_geometry_ && level_enabled_ && !attitude_topic_.empty()) {
+        attitude_buffer_.writeFromNonRT(AttitudeSample{});
+        attitude_sub_ = get_node()->create_subscription<geometry_msgs::msg::PoseStamped>(
+            attitude_topic_, rclcpp::SensorDataQoS(),
+            [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+                AttitudeSample sample;
+                sample.stamp = get_node()->now().seconds();
+                const auto & q = msg->pose.orientation;
+                const Eigen::Quaterniond rotation(q.w, q.x, q.y, q.z);
+                sample.finite = std::isfinite(q.w) && std::isfinite(q.x) &&
+                                std::isfinite(q.y) && std::isfinite(q.z) &&
+                                rotation.norm() > 1e-6;
+                // The tag's normal: its z, which is the vessel's axis.
+                sample.axis = sample.finite
+                    ? Eigen::Vector3d(rotation.normalized() * Eigen::Vector3d::UnitZ())
+                    : Eigen::Vector3d::UnitZ();
+                sample.frame_ok = msg->header.frame_id == vessel_pose_frame_;
+                attitude_buffer_.writeFromNonRT(sample);
+            });
+    }
 
     action_server_ = std::make_shared<FR5PourActionServer>(
         get_node(), "/controller_action_server/pouring_controller", num_dof_);
@@ -716,6 +929,11 @@ CallbackReturn PouringController::on_configure(const rclcpp_lifecycle::State & p
     defaults.tolerance = weight_tolerance_;
     defaults.timeout = 120.0;
     action_server_->set_defaults(defaults);
+    action_server_->set_granular_max_tilt(granular_max_tilt_);
+    action_server_->set_granular_timeout(granular_timeout_);
+    // The lip path is laid out around the receiver, so a measured pour cannot
+    // start without being told where it is.
+    action_server_->set_requires_receiver(measured_geometry_);
 
     RCLCPP_INFO(get_node()->get_logger(),
         "PouringController configured: law '%s', pour joint '%s' (direction %+.0f), weight "
@@ -724,6 +942,28 @@ CallbackReturn PouringController::on_configure(const rclcpp_lifecycle::State & p
         filter_config.max_step_grams, measured_geometry_ ? "measured" : "joint",
         measured_geometry_ ? ", vessel from " : "",
         measured_geometry_ ? vessel_pose_topic_.c_str() : "");
+    if (measured_geometry_ && level_enabled_) {
+        RCLCPP_INFO(get_node()->get_logger(),
+            "The vessel is stood upright before each pour, by %s%s (up to %.3f rad, at %.3f "
+            "rad/s, tag believed within %.3f rad of the kinematics)",
+            attitude_topic_.empty() ? "the axis the grasp gave it" : "its tag on ",
+            attitude_topic_.c_str(), level_config_.max_correction, level_rate_,
+            level_config_.max_tag_disagreement);
+    }
+    if (!tilt_debug_pub_) {
+        tilt_debug_pub_ = get_node()->create_publisher<std_msgs::msg::Float64MultiArray>(
+            "~/tilt_debug", rclcpp::SystemDefaultsQoS());
+        tilt_debug_rt_ = std::make_unique<
+            realtime_tools::RealtimePublisher<std_msgs::msg::Float64MultiArray>>(tilt_debug_pub_);
+    }
+    const std::string jerk_note =
+        tilt_jerk_ > 0.0 ? std::to_string(tilt_jerk_) + " rad/s^3" : std::string("unbounded");
+    RCLCPP_INFO(get_node()->get_logger(),
+        "Tilt: accel %.3f rad/s^2, jerk %s; capped at what the IK (%.0f%% of max_delta_q) and "
+        "the lip (%.0f%% of max_lip_speed) can follow; braked from 1x the IK tolerance behind, "
+        "hard (%.0fx the accel) from %.2fx, stopped dead at %.1fx", tilt_accel_,
+        jerk_note.c_str(), 100.0 * kIkRateShare, 100.0 * kLipRateShare, kEmergencyBrake,
+        ik_hold_ratio_, kDeadHoldRatio);
     return CallbackReturn::SUCCESS;
 }
 
@@ -749,6 +989,7 @@ CallbackReturn PouringController::on_activate(const rclcpp_lifecycle::State & pr
     // Whatever arrived before now was measured under another controller, which
     // may have been moving the arm.
     vessel_buffer_.writeFromNonRT(VesselSample{});
+    attitude_buffer_.writeFromNonRT(AttitudeSample{});
     quiet_since_ = get_node()->now().seconds();
     law_started_ = false;
     return CallbackReturn::SUCCESS;
@@ -870,6 +1111,10 @@ bool PouringController::start_goal(double now)
     const bool granular =
         action_server_->bounds().material == PourAction::Goal::MATERIAL_GRANULAR;
     const bool roll = granular && granular_tilt_about_ == "pour_joint";
+    // Water toward the fingertips, whatever the goal's reference shows: a
+    // planner's recorded pour may roll the wrist (the two-beaker cell's turned
+    // j6 by -85 deg, 2026-09-29), and a rolled liquid goes over the jaw's side.
+    const bool fingertips = !granular && liquid_tilt_about_ == "fingertips";
     const double configured =
         (granular && granular_pour_direction_ != 0.0) ? granular_pour_direction_ : pour_direction_;
     const int asked = action_server_->bounds().pour_direction;
@@ -889,7 +1134,30 @@ bool PouringController::start_goal(double now)
             "Granular: tipping about the pour joint (direction %+.0f), not the goal's reference "
             "configuration (granular.tilt_about: pour_joint)", goal_direction_);
     }
-    if (!reference.empty() && !roll) {
+    if (fingertips) {
+        if (!measured_geometry_) {
+            abort_before_motion("the pour was not started: liquid.tilt_about: fingertips tips "
+                                "the vessel about the jaws, which needs pour_geometry: measured");
+            return false;
+        }
+        Eigen::VectorXd q_now = state_.q;
+        q_now.head(num_dof_) = q_ref_;
+        pinocchio::SE3 H_now;
+        Eigen::MatrixXd J_unused;
+        compute_arm_kinematics(q_now, H_now, J_unused);
+        double heading = 0.0;
+        std::string why;
+        if (!fingertips_axis(H_now, reference_axis_ee_, heading, why)) {
+            abort_before_motion("the pour was not started: " + why);
+            return false;
+        }
+        reference_axis_valid_ = true;
+        RCLCPP_INFO(get_node()->get_logger(),
+            "Liquid: tipping toward the fingertips (heading %.0f deg), not the goal's reference "
+            "configuration (liquid.tilt_about: fingertips)", heading * 180.0 / M_PI);
+    }
+    fingertips_ = fingertips;
+    if (!reference.empty() && !roll && !fingertips) {
         Eigen::VectorXd q_now = state_.q;
         q_now.head(num_dof_) = q_ref_;
         Eigen::VectorXd q_deep = state_.q;
@@ -958,6 +1226,10 @@ bool PouringController::start_goal(double now)
         phase_ = Phase::Measure;
         measure_started_ = now;
         q_start_ = q_ref_;
+        held_measured_ = false;
+        level_s_ = 0.0;
+        level_ramp_.reset();
+        level_note_.clear();
         align_s_ = 0.0;
         align_ramp_.reset();
         inset_cmd_ = 0.0;
@@ -1084,8 +1356,8 @@ controller_interface::return_type PouringController::update(
                  nominal_period_);
 
     const bool running = action_server_ && action_server_->is_running();
-    const bool returning =
-        phase_ == Phase::Untilt || phase_ == Phase::Unalign || phase_ == Phase::Return;
+    const bool returning = phase_ == Phase::Untilt || phase_ == Phase::Unalign ||
+                           phase_ == Phase::Unlevel || phase_ == Phase::Return;
     if (!running && !returning) {
         // Idle: freeze the reference. Re-deriving a hold from the measured
         // position would feed servo droop back into the command.
@@ -1221,6 +1493,131 @@ std::string PouringController::vessel_sample_problem(const VesselSample & sample
     return os.str();
 }
 
+bool PouringController::attitude_usable(const AttitudeSample & sample, double now) const
+{
+    return sample.stamp > 0.0 && sample.frame_ok && sample.finite &&
+           now - sample.stamp <= vessel_pose_max_age_ &&
+           sample.stamp >= quiet_since_ + vessel_settle_sec_;
+}
+
+bool PouringController::fingertips_axis(const pinocchio::SE3 & H, Eigen::Vector3d & axis_ee,
+                                        double & heading, std::string & why) const
+{
+    // The jaws' centre line on the horizontal, toward the fingertips, as the
+    // lip path finds it.
+    const Eigen::Vector3d up = Eigen::Vector3d::UnitZ();
+    const Eigen::Vector3d closing = (H.rotation() * lip_config_.closing_axis_in_ee).normalized();
+    const Eigen::Vector3d approach = (H.rotation() * lip_config_.approach_axis_in_ee).normalized();
+    Eigen::Vector3d along = up.cross(closing);
+    along.z() = 0.0;
+    if (along.norm() < 1e-6) {
+        why = "the jaws close vertically, so there is no fingertip side to tip toward";
+        return false;
+    }
+    along.normalize();
+    if (along.dot(approach) < 0.0) {
+        along = -along;
+    }
+    // The horizontal across the jaws, signed so a positive tilt brings the
+    // fingertip side of the vessel down.
+    Eigen::Vector3d axis_world = up.cross(along);
+    if (axis_world.cross(along).dot(up) > 0.0) {
+        axis_world = -axis_world;
+    }
+    axis_ee = H.rotation().transpose() * axis_world;
+    heading = std::atan2(along.y(), along.x());
+    return true;
+}
+
+bool PouringController::plan_pour_geometry(std::string & why)
+{
+    // The grasp, from the command the arm is holding and the vessel held_ has.
+    Eigen::VectorXd q_full = state_.q;
+    q_full.head(num_dof_) = q_ref_;
+    pinocchio::SE3 H;
+    Eigen::MatrixXd J;
+    compute_arm_kinematics(q_full, H, J);
+    // Toward the fingertips is a direction of the jaws on the horizontal, and
+    // levelling may have turned the EE: found again from where it is now.
+    if (fingertips_) {
+        double heading = 0.0;
+        if (!fingertips_axis(H, reference_axis_ee_, heading, why)) {
+            return false;
+        }
+        reference_axis_valid_ = true;
+    }
+    // The local Jacobian's angular column for a revolute joint is its axis
+    // in the EE frame.
+    const Eigen::Vector3d axis = reference_axis_valid_
+        ? Eigen::Vector3d(H.rotation() * reference_axis_ee_)
+        : Eigen::Vector3d(goal_direction_ * (H.rotation() * J.col(pour_index_).tail<3>()));
+    // Rolled toward a jaw, the jaw hangs under the lip: on this gripper its
+    // lower edge is 48 mm below it and 20 mm out, and held at 45-58 mm it
+    // came onto the receiver's rim by 0.26 rad (2026-09-28) -- far short of
+    // sugar's ~1.1 rad onset. A granular pour can hold its lip higher; what
+    // it pours does not splash.
+    pour::LipPathConfig lip_config = lip_config_;
+    const bool granular =
+        action_server_->bounds().material == PourAction::Goal::MATERIAL_GRANULAR;
+    if (granular && granular_lip_inset_ > 0.0) {
+        lip_config.inset = granular_lip_inset_;
+    }
+    if (granular && granular_lip_height_ > 0.0) {
+        lip_config.lip_height = granular_lip_height_;
+        lip_config.max_height = std::max(lip_config.max_height, granular_lip_height_);
+    }
+    // The stream has to land in the receiver from the first tilt anything
+    // can come out at -- and not before it: nothing pours below the seek's
+    // fast range, which for a granular bed runs its angle of repose past
+    // the liquid's. Asked to land from 0.5 rad, the lip path lifted a
+    // rolled beaker's lip from 45 to 58 mm to catch a stream sugar never
+    // makes there, and at 58 the jaw under the lip met the rim by 0.26
+    // rad. Asked from 0.85 it keeps 45 mm and pours 0.72-1.75 rad.
+    const pour::PourLimits & limits =
+        (granular ? granular_ : liquid_).at(action_server_->bounds().flow_index);
+    lip_config.landing_by_tilt = std::max(
+        lip_config.landing_by_tilt, planner_config_.seek_fast_until + limits.repose_angle);
+    // The receiver's radius is the cell's; where it stands is the goal's.
+    pour::Receiver receiver = receiver_;
+    const auto & rim = action_server_->bounds().receiver_rim_center;
+    if (rim.size() != 3) {
+        why = "the goal did not say where the receiver's rim is";
+        return false;
+    }
+    receiver.rim_center = Eigen::Vector3d(rim[0], rim[1], rim[2]);
+    // Where the receiver stands is perception's; how high its rim is, is
+    // not yet. beaker2's tag put its bottom at z 0.080 (2026-09-29), 20 mm
+    // under where it stands, and every height the pour holds is measured
+    // from the rim: the whole pour came down with it.
+    if (receiver_rim_z_ > 0.0) {
+        if (std::abs(rim[2] - receiver_rim_z_) > 1e-4) {
+            RCLCPP_INFO(get_node()->get_logger(),
+                "Receiver rim height fixed at %.4f m (geometry.receiver_rim_z); the goal "
+                "said %.4f", receiver_rim_z_, rim[2]);
+        }
+        receiver.rim_center.z() = receiver_rim_z_;
+    }
+    const Eigen::Isometry3d ee = to_isometry(H);
+    if (!lip_path_.plan(ee, axis, held_.bottom(ee), action_server_->bounds().max_tilt, vessel_,
+                        receiver, lip_config, why)) {
+        return false;
+    }
+    // A new path: the look-ahead's cells are filled again as they are asked for.
+    lip_table_lo_ = -max_back_tilt_ - kLipLookahead;
+    const double table_hi = action_server_->bounds().max_tilt + kLipLookahead;
+    lip_table_.assign(
+        static_cast<std::size_t>(std::ceil((table_hi - lip_table_lo_) / kLipTableStep)) + 1,
+        std::numeric_limits<double>::quiet_NaN());
+    RCLCPP_INFO(get_node()->get_logger(),
+                "Pour geometry (%s%s%s), receiver rim at (%.4f, %.4f, %.4f): %s",
+                action_server_->bounds().grasp_joints.empty() ? "marker measured now"
+                                                              : "grasp measured before the goal",
+                level_note_.empty() ? "" : "; vessel ", level_note_.c_str(),
+                receiver.rim_center.x(), receiver.rim_center.y(), receiver.rim_center.z(),
+                lip_path_.summary().c_str());
+    return true;
+}
+
 void PouringController::abort_before_motion(const std::string & reason)
 {
     RCLCPP_WARN(get_node()->get_logger(), "Pour refused before anything moved: %s",
@@ -1232,7 +1629,7 @@ void PouringController::abort_before_motion(const std::string & reason)
 
 void PouringController::fail_geometric(const std::string & reason, Phase via)
 {
-    if (phase_ == Phase::Unalign || phase_ == Phase::Return) {
+    if (phase_ == Phase::Unalign || phase_ == Phase::Unlevel || phase_ == Phase::Return) {
         // Already on the way back with a reason of its own. Only a failure to
         // follow the way back changes anything: it goes to joint space.
         if (via == Phase::Return) {
@@ -1282,7 +1679,11 @@ bool PouringController::track(const Eigen::Isometry3d & target, double now, std:
     J_task.topRows<3>() -= skew_r * J.bottomRows<3>();
     Eigen::Matrix<double, 6, 6> JJt = J_task * J_task.transpose();
     JJt.diagonal().array() += ik_lambda_ * ik_lambda_;
-    Eigen::VectorXd dq = J_task.transpose() * JJt.ldlt().solve(error);
+    ik_JJt_ldlt_.compute(JJt);
+    ik_J_task_ = J_task;
+    ik_R_ = H.rotation();
+    ik_solve_cached_ = true;
+    Eigen::VectorXd dq = J_task.transpose() * ik_JJt_ldlt_.solve(error);
     if (!dq.allFinite()) {
         why = "the lip path's IK solve went non-finite";
         return false;
@@ -1336,6 +1737,28 @@ bool PouringController::track(const Eigen::Isometry3d & target, double now, std:
     return true;
 }
 
+void PouringController::publish_tilt_debug(double now, double proposed)
+{
+    if (!tilt_debug_rt_ || !tilt_debug_rt_->trylock()) {
+        return;
+    }
+    auto & data = tilt_debug_rt_->msg_.data;
+    data.resize(12);
+    data[0] = now;
+    data[1] = static_cast<double>(last_phase_);
+    data[2] = tilt_;
+    data[3] = proposed;
+    data[4] = tilt_ramp_.velocity();
+    data[5] = tilt_ramp_.acceleration();
+    data[6] = ik_lag_ratio_;
+    data[7] = static_cast<double>(hold_reason_);
+    data[8] = inset_cmd_;
+    data[9] = ik_speed_scale();
+    data[10] = std::isfinite(tilt_cap_ik_) ? tilt_cap_ik_ : -1.0;
+    data[11] = std::isfinite(tilt_cap_lip_) ? tilt_cap_lip_ : -1.0;
+    tilt_debug_rt_->unlockAndPublish();
+}
+
 double PouringController::ik_speed_scale() const
 {
     // The path used to run at full speed until the IK fell a tolerance behind
@@ -1347,6 +1770,109 @@ double PouringController::ik_speed_scale() const
     // the IK can follow; the hard stop is left for a residual that grows
     // regardless.
     return std::clamp((1.0 - ik_lag_ratio_) / (1.0 - kSlowFrom), 0.0, 1.0);
+}
+
+double PouringController::joints_per_tilt(double tilt, double inset) const
+{
+    if (!ik_solve_cached_) {
+        return 0.0;
+    }
+    // The task error a step of 2 kPathEps along the path would give the IK,
+    // taken the way track() takes it -- the lip point and the rotation, in the
+    // frame of the last solve -- and solved with that solve's own matrices.
+    const Eigen::Isometry3d a = lip_path_.ee_pose(tilt - kPathEps, inset);
+    const Eigen::Isometry3d b = lip_path_.ee_pose(tilt + kPathEps, inset);
+    const Eigen::Vector3d r = lip_path_.lip_in_ee();
+    Eigen::Matrix<double, 6, 1> step;
+    step.head<3>() = ik_R_.transpose() *
+        ((b.translation() + b.linear() * r) - (a.translation() + a.linear() * r));
+    step.tail<3>() = pinocchio::log3(Eigen::Matrix3d(a.linear().transpose() * b.linear()));
+    const Eigen::VectorXd dq = ik_J_task_.transpose() * ik_JJt_ldlt_.solve(step);
+    if (!dq.allFinite()) {
+        return 0.0;
+    }
+    return dq.cwiseAbs().maxCoeff() / (2.0 * kPathEps);
+}
+
+double PouringController::lip_window_end(double from, double direction) const
+{
+    // No further than the motion goes: upright on the way back, the law's
+    // target when it has one, the tilt's range otherwise.
+    double end = direction > 0.0 ? tilt_bound_ : -max_back_tilt_;
+    if (phase_ == Phase::Untilt) {
+        end = 0.0;
+    } else if (std::isfinite(law_target_tilt_)) {
+        end = law_target_tilt_;
+    }
+    if ((end - from) * direction <= 0.0) {
+        return from;
+    }
+    return from + std::copysign(std::min(kLipLookahead, std::abs(end - from)), direction);
+}
+
+double PouringController::lip_limit_cached(double tilt) const
+{
+    const double x = (tilt - lip_table_lo_) / kLipTableStep;
+    if (lip_table_.empty() || !(x >= 0.0) ||
+        x > static_cast<double>(lip_table_.size() - 1)) {
+        return lip_path_.inset_limit(tilt);
+    }
+    const auto i = static_cast<std::size_t>(std::lround(x));
+    double & cell = lip_table_[i];
+    if (std::isnan(cell)) {
+        cell = lip_path_.inset_limit(lip_table_lo_ + static_cast<double>(i) * kLipTableStep);
+    }
+    return cell;
+}
+
+double PouringController::lip_ahead(double from, double direction) const
+{
+    double lowest = lip_path_.inset_limit(from);
+    if (std::abs(direction) < 1e-12) {
+        return lowest;
+    }
+    const double end = lip_window_end(from, direction);
+    const int cells = static_cast<int>(std::lround(std::abs(end - from) / kLipTableStep));
+    for (int k = 1; k <= cells; ++k) {
+        const double along = std::copysign(k * kLipTableStep, direction);
+        lowest = std::min(lowest, lip_limit_cached(from + along) +
+                                      kLipEnvelopeSlope * std::abs(along));
+    }
+    return lowest;
+}
+
+double PouringController::tilt_rate_cap(double direction, double dt)
+{
+    // The tilt used to run at the law's rate until the IK fell behind and then
+    // be held or braked -- seen after it happened, a delay that restarts from
+    // rest every time. This is the rate it can be followed at, planned from
+    // where it is: the ramp brakes into it smoothly as the path changes.
+    tilt_cap_ik_ = std::numeric_limits<double>::infinity();
+    tilt_cap_lip_ = std::numeric_limits<double>::infinity();
+    const double need = joints_per_tilt(tilt_, inset_cmd_);
+    if (need > 1e-9 && dt > 0.0) {
+        tilt_cap_ik_ = kIkRateShare * (max_delta_q_ / dt) / need;
+    }
+    // The lip backs out at no more than max_lip_speed. Wherever ahead the
+    // limit is closer in than the lip is now, the tilt may get there no sooner
+    // than the lip can back out to it -- not tip, wait for the lip, tip again
+    // (advance_tilt's hold_reason 2 and 3). The limit closes in steps, so this
+    // looks over a stretch of the path, not at its slope here: the slope
+    // between two steps is flat and at one is vertical, and a cap taken from
+    // it came too late to brake for (2026-10-04, 0.53 then 0.10 rad/s).
+    if (max_lip_speed_ > 0.0 && std::abs(direction) > 1e-12) {
+        const double end = lip_window_end(tilt_, direction);
+        const int cells = static_cast<int>(std::lround(std::abs(end - tilt_) / kLipTableStep));
+        for (int k = 1; k <= cells; ++k) {
+            const double along = std::copysign(k * kLipTableStep, direction);
+            const double behind = inset_cmd_ - lip_limit_cached(tilt_ + along);
+            if (behind > 1e-6) {
+                tilt_cap_lip_ = std::min(tilt_cap_lip_,
+                                         kLipRateShare * max_lip_speed_ * std::abs(along) / behind);
+            }
+        }
+    }
+    return std::min(tilt_cap_ik_, tilt_cap_lip_);
 }
 
 double PouringController::pour_joint_velocity_limit() const
@@ -1403,13 +1929,25 @@ std::string PouringController::joints_at_limits() const
 
 void PouringController::advance_tilt(double proposed, double dt)
 {
-    // Nothing advances while the arm is behind the path: the next target would
-    // only be further from where it is.
-    if (ik_lagging_) {
+    hold_reason_ = 0;
+    // Nothing advances while the arm is far behind the path (kDeadHoldRatio):
+    // the next target would only be further from where it is. That is the last
+    // resort. tilt_rate_cap() keeps the tilt to what the IK can follow; past
+    // the tolerance ik_speed_scale() is 0 and the ramp decelerates, and past
+    // ik_hold_ratio the caller brakes it hard -- because holding it dead there
+    // stopped the tilt within a cycle and restarted it from rest, every ~0.6 s
+    // on the way back upright (2026-10-03, a 125 Hz trace of a syrup pour).
+    if (ik_lagging_ && ik_lag_ratio_ >= kDeadHoldRatio) {
+        hold_reason_ = 1;
         return;
     }
     const double goal = lip_path_.inset_limit(proposed);
     const double step = max_lip_speed_ * dt;
+    // Where the lip heads: the limit a little way ahead in the direction the
+    // tilt moves, so it is already out where the limit closes in a step and
+    // the tilt never has to wait for it. Out further than it has to be is
+    // further from the receiver.
+    const double ahead = lip_ahead(proposed, proposed - tilt_);
     if (goal < inset_cmd_ - step) {
         // At the proposed tilt the lip has to be further out than it is, by
         // more than it can move in a cycle. Tipping the whole way first would
@@ -1425,10 +1963,17 @@ void PouringController::advance_tilt(double proposed, double dt)
         const double partial = tilt_ + share * (proposed - tilt_);
         if (lip_path_.inset_limit(partial) >= inset_cmd_ - step) {
             tilt_ = partial;
+            hold_reason_ = 3;
+        } else {
+            hold_reason_ = 2;
         }
         inset_cmd_ -= step;
     } else {
-        inset_cmd_ = std::min(goal, inset_cmd_ + step);
+        // ahead <= goal, so wherever this lands the lip is inside the limit at
+        // the proposed tilt.
+        const double in_step =
+            std::min(step, kLipEnvelopeSlope * std::abs(proposed - tilt_) + kLipCreep * dt);
+        inset_cmd_ = std::clamp(ahead, inset_cmd_ - step, inset_cmd_ + in_step);
         tilt_ = proposed;
     }
     peak_tilt_ = std::max(peak_tilt_, std::abs(tilt_));
@@ -1445,96 +1990,202 @@ controller_interface::return_type PouringController::update_measured(double now,
             abort_before_motion("the goal was cancelled before the pour began");
             return controller_interface::return_type::OK;
         }
-        const auto & bounds = action_server_->bounds();
-        const bool measured_earlier = !bounds.grasp_joints.empty();
-        VesselSample sample = *vessel_buffer_.readFromRT();
-        if (measured_earlier) {
-            // The goal carries a grasp measured before it: the marker's
-            // base-frame centre and the joints the arm was in. The grasp is a
-            // rigid offset, so the marker's place in the EE frame then is its
-            // place now -- carried to the present by this controller's own
-            // kinematics, the same model the lip path is followed with.
-            Eigen::VectorXd q_then = state_.q;
-            for (int i = 0; i < num_dof_; ++i) {
-                q_then(i) = bounds.grasp_joints[i];
+        Eigen::VectorXd q_now = state_.q;
+        q_now.head(num_dof_) = q_ref_;
+        pinocchio::SE3 H_now;
+        Eigen::MatrixXd J_unused;
+        compute_arm_kinematics(q_now, H_now, J_unused);
+        const Eigen::Isometry3d ee_now = to_isometry(H_now);
+
+        if (!held_measured_) {
+            const auto & bounds = action_server_->bounds();
+            const bool measured_earlier = !bounds.grasp_joints.empty();
+            VesselSample sample = *vessel_buffer_.readFromRT();
+            // The vessel's axis as the kinematics know it: upright, as the
+            // marker's pose assumes, unless the grasp was measured earlier and
+            // the EE has turned it since.
+            Eigen::Vector3d axis_now = Eigen::Vector3d::UnitZ();
+            if (measured_earlier) {
+                // The goal carries a grasp measured before it: the marker's
+                // base-frame centre and the joints the arm was in. The grasp is a
+                // rigid offset, so the marker's place in the EE frame then is its
+                // place now -- carried to the present by this controller's own
+                // kinematics, the same model the lip path is followed with.
+                Eigen::VectorXd q_then = state_.q;
+                for (int i = 0; i < num_dof_; ++i) {
+                    q_then(i) = bounds.grasp_joints[i];
+                }
+                pinocchio::SE3 H_then;
+                compute_arm_kinematics(q_then, H_then, J_unused);
+                const Eigen::Vector3d marker_then(bounds.grasp_marker[0], bounds.grasp_marker[1],
+                                                  bounds.grasp_marker[2]);
+                // The vessel was upright when it was measured -- standing on the
+                // bench in the jaws. Whatever the EE has turned through since, it
+                // has turned the vessel through too.
+                axis_now = H_now.rotation() * H_then.rotation().transpose() *
+                           Eigen::Vector3d::UnitZ();
+                const double lean = pour::lean_of(axis_now);
+                // Levelling stands it up again, within its own bound, below.
+                if (!level_enabled_ && lean > max_carry_lean_) {
+                    std::ostringstream os;
+                    os << "the pour was not started: the vessel was measured upright at its "
+                       << "grasp, and the carry since has tipped it " << std::fixed
+                       << std::setprecision(3) << lean << " rad (limit " << max_carry_lean_
+                       << " rad). The lip path assumes it hangs upright when the pour starts";
+                    abort_before_motion(os.str());
+                    return controller_interface::return_type::OK;
+                }
+                sample.position = ee_now * (to_isometry(H_then).inverse() * marker_then);
+                sample.finite = sample.position.allFinite();
+                sample.frame_ok = true;
+                sample.stamp = now;
+                if (!sample.finite) {
+                    abort_before_motion("the pour was not started: the grasp measured before "
+                                        "the goal does not give a finite marker position");
+                    return controller_interface::return_type::OK;
+                }
+            } else if (!vessel_sample_usable(sample, now)) {
+                if (now - measure_started_ > vessel_pose_timeout_) {
+                    std::ostringstream os;
+                    os << "no usable pose of the held vessel within vessel_pose_timeout ("
+                       << vessel_pose_timeout_ << " s): " << vessel_sample_problem(sample, now);
+                    abort_before_motion(os.str());
+                    return controller_interface::return_type::OK;
+                }
+                publish_feedback_if_due(dt);
+                return controller_interface::return_type::OK;
             }
-            pinocchio::SE3 H_then, H_now;
-            Eigen::MatrixXd J_unused;
-            compute_arm_kinematics(q_then, H_then, J_unused);
-            Eigen::VectorXd q_now = state_.q;
-            q_now.head(num_dof_) = q_ref_;
-            compute_arm_kinematics(q_now, H_now, J_unused);
-            const Eigen::Vector3d marker_then(bounds.grasp_marker[0], bounds.grasp_marker[1],
-                                              bounds.grasp_marker[2]);
-            // The vessel was upright when it was measured -- standing on the
-            // bench in the jaws. Whatever the EE has turned through since, it
-            // has turned the vessel through too.
-            const Eigen::Vector3d axis_now =
-                H_now.rotation() * H_then.rotation().transpose() * Eigen::Vector3d::UnitZ();
-            const double lean = std::acos(std::clamp(axis_now.z(), -1.0, 1.0));
-            if (lean > max_carry_lean_) {
+            // From here the vessel is rigid in the EE frame: where the jaws
+            // hold it, which way its axis runs, how far below them its bottom
+            // is. Without levelling, its bottom is the marker's point, exactly.
+            held_ = pour::held_from_grasp(
+                ee_now, sample.position, axis_now,
+                lip_config_.grasp_depth * lip_config_.approach_axis_in_ee.normalized());
+            held_measured_ = true;
+        }
+
+        if (level_enabled_) {
+            // The tag's word on the axis, when there is a tag to ask: its pose
+            // has to have been averaged with the arm standing still, like the
+            // marker's.
+            std::optional<Eigen::Vector3d> tag_axis;
+            if (!attitude_topic_.empty()) {
+                const AttitudeSample attitude = *attitude_buffer_.readFromRT();
+                if (attitude_usable(attitude, now)) {
+                    tag_axis = attitude.axis;
+                } else if (now - measure_started_ <= vessel_pose_timeout_) {
+                    publish_feedback_if_due(dt);
+                    return controller_interface::return_type::OK;
+                } else {
+                    std::ostringstream os;
+                    os << "no usable attitude of the vessel in the jaws on " << attitude_topic_
+                       << " within vessel_pose_timeout (" << vessel_pose_timeout_ << " s): "
+                       << (attitude.stamp <= 0.0
+                               ? "nothing has arrived. Is the pose node publishing it for the "
+                                 "vessel the robot has taken, and can a side camera see its tag?"
+                               : "none arrived settled, fresh and in the base frame");
+                    if (level_require_tag_) {
+                        abort_before_motion("the pour was not started: " + os.str());
+                        return controller_interface::return_type::OK;
+                    }
+                    RCLCPP_WARN(get_node()->get_logger(),
+                        "%s; standing the vessel upright by the axis the grasp gave it instead",
+                        os.str().c_str());
+                }
+            }
+            const Eigen::Vector3d kinematic = held_.axis(ee_now);
+            const pour::AxisChoice choice = pour::choose_axis(kinematic, tag_axis, level_config_);
+            const double lean = pour::lean_of(choice.axis);
+            std::ostringstream note;
+            note << std::fixed << std::setprecision(1);
+            if (tag_axis && !choice.from_tag) {
+                RCLCPP_WARN(get_node()->get_logger(),
+                    "The tag puts the vessel's axis %.3f rad from where the grasp left it "
+                    "(level.max_tag_disagreement %.3f rad): more likely a flipped tag pose than "
+                    "a vessel turned that far in the jaws. Standing it upright by the grasp's",
+                    choice.disagreement, level_config_.max_tag_disagreement);
+            }
+            note << "leaning " << lean * 180.0 / M_PI << " deg by its "
+                 << (choice.from_tag ? "tag" : "grasp");
+            if (choice.from_tag) {
+                note << " (" << choice.disagreement * 180.0 / M_PI << " deg from the grasp's)";
+            }
+            if (lean > level_config_.max_correction) {
                 std::ostringstream os;
-                os << "the pour was not started: the vessel was measured upright at its grasp, "
-                   << "and the carry since has tipped it " << std::fixed << std::setprecision(3)
-                   << lean << " rad (limit " << max_carry_lean_ << " rad). The lip path "
-                   << "assumes it hangs upright when the pour starts";
+                os << "the pour was not started: the vessel in the jaws is " << note.str()
+                   << ", past level.max_correction (" << std::fixed << std::setprecision(1)
+                   << level_config_.max_correction * 180.0 / M_PI
+                   << " deg). Check how it hangs before pouring from it";
                 abort_before_motion(os.str());
                 return controller_interface::return_type::OK;
             }
-            sample.position = to_isometry(H_now) * (to_isometry(H_then).inverse() * marker_then);
-            sample.finite = sample.position.allFinite();
-            sample.frame_ok = true;
-            sample.stamp = now;
-            if (!sample.finite) {
-                abort_before_motion("the pour was not started: the grasp measured before the "
-                                    "goal does not give a finite marker position");
+            // The jaws still hold it where they did; it is its axis that is now
+            // the one chosen.
+            held_.axis_in_ee = H_now.rotation().transpose() * choice.axis;
+            std::string why;
+            if (!level_move_.plan(ee_now, choice.axis, held_.grip(ee_now), why)) {
+                abort_before_motion("the pour was not started: " + why);
                 return controller_interface::return_type::OK;
             }
-        } else if (!vessel_sample_usable(sample, now)) {
-            if (now - measure_started_ > vessel_pose_timeout_) {
-                std::ostringstream os;
-                os << "no usable pose of the held vessel within vessel_pose_timeout ("
-                   << vessel_pose_timeout_ << " s): " << vessel_sample_problem(sample, now);
-                abort_before_motion(os.str());
+            if (lean > level_config_.deadband) {
+                note << ", stood upright about the jaws";
+                level_note_ = note.str();
+                level_s_ = 0.0;
+                level_ramp_.reset();
+                phase_ = Phase::Level;
+                RCLCPP_INFO(get_node()->get_logger(),
+                    "Levelling: the vessel is %s; turning the EE %.3f rad about the jaws at "
+                    "(%.4f, %.4f, %.4f) before the pour", level_note_.c_str(), level_move_.angle(),
+                    level_move_.pivot().x(), level_move_.pivot().y(), level_move_.pivot().z());
+                publish_feedback_if_due(dt);
                 return controller_interface::return_type::OK;
+            }
+            note << ", within level.deadband: not turned";
+            level_note_ = note.str();
+        }
+
+        std::string why;
+        if (!plan_pour_geometry(why)) {
+            abort_before_motion("the pour was not started: " + why);
+            return controller_interface::return_type::OK;
+        }
+        align_s_ = 0.0;
+        phase_ = Phase::Align;
+    }
+
+    if (phase_ == Phase::Level) {
+        last_phase_ = static_cast<std::uint8_t>(PourPhase::Verify);
+        std::string why;
+        if (action_server_->is_canceling()) {
+            level_ramp_.reset();
+            fail_geometric("the goal was cancelled before the pour began", Phase::Unlevel);
+        } else if (level_s_ >= level_move_.angle() && !ik_lagging_) {
+            if (!plan_pour_geometry(why)) {
+                level_ramp_.reset();
+                fail_geometric("the pour was not started: " + why, Phase::Unlevel);
+            } else {
+                align_s_ = 0.0;
+                align_ramp_.reset();
+                phase_ = Phase::Align;
+            }
+        } else {
+            if (!ik_lagging_) {
+                level_s_ += level_ramp_.reach(level_s_, level_move_.angle(),
+                                              level_rate_ * ik_speed_scale(), tilt_accel_, dt);
+            } else if (ik_lag_ratio_ < kDeadHoldRatio) {
+                level_s_ = std::clamp(level_s_ + level_ramp_.brake(kEmergencyBrake * tilt_accel_, dt),
+                                      0.0, level_move_.angle());
+            } else {
+                level_ramp_.reset();
+            }
+            if (!track(level_move_.at(level_s_), now, why)) {
+                fail_geometric(why, Phase::Return);
+            } else if (ik_blocked(now)) {
+                fail_geometric(blocked_reason(), Phase::Return);
             }
             publish_feedback_if_due(dt);
             return controller_interface::return_type::OK;
         }
-
-        // The grasp, from the command the arm is holding and the marker.
-        Eigen::VectorXd q_full = state_.q;
-        q_full.head(num_dof_) = q_ref_;
-        pinocchio::SE3 H;
-        Eigen::MatrixXd J;
-        compute_arm_kinematics(q_full, H, J);
-        // The local Jacobian's angular column for a revolute joint is its axis
-        // in the EE frame.
-        const Eigen::Vector3d axis = reference_axis_valid_
-            ? Eigen::Vector3d(H.rotation() * reference_axis_ee_)
-            : Eigen::Vector3d(goal_direction_ * (H.rotation() * J.col(pour_index_).tail<3>()));
-        // Rolled toward a jaw, the jaw hangs under the lip: on this gripper its
-        // lower edge is 48 mm below it and 20 mm out, and held at 45-58 mm it
-        // came onto the receiver's rim by 0.26 rad (2026-09-28) -- far short of
-        // sugar's ~1.1 rad onset. A granular pour can hold its lip higher; what
-        // it pours does not splash.
-        pour::LipPathConfig lip_config = lip_config_;
-        if (action_server_->bounds().material == PourAction::Goal::MATERIAL_GRANULAR &&
-            granular_lip_height_ > 0.0) {
-            lip_config.lip_height = granular_lip_height_;
-            lip_config.max_height = std::max(lip_config.max_height, granular_lip_height_);
-        }
-        if (!lip_path_.plan(to_isometry(H), axis, sample.position,
-                            action_server_->bounds().max_tilt, vessel_, receiver_, lip_config,
-                            why)) {
-            abort_before_motion("the pour was not started: " + why);
-            return controller_interface::return_type::OK;
-        }
-        RCLCPP_INFO(get_node()->get_logger(), "Pour geometry (%s): %s",
-                    measured_earlier ? "grasp measured before the goal" : "marker measured now",
-                    lip_path_.summary().c_str());
-        align_s_ = 0.0;
-        phase_ = Phase::Align;
     }
 
     if (phase_ == Phase::Align) {
@@ -1548,6 +2199,9 @@ controller_interface::return_type PouringController::update_measured(double now,
             if (!ik_lagging_) {
                 align_s_ += align_ramp_.reach(align_s_, lip_path_.align_length(),
                                               align_speed_ * ik_speed_scale(), align_accel_, dt);
+            } else if (ik_lag_ratio_ < kDeadHoldRatio) {
+                align_s_ = std::clamp(align_s_ + align_ramp_.brake(kEmergencyBrake * align_accel_, dt),
+                                      0.0, lip_path_.align_length());
             } else {
                 align_ramp_.reset();
             }
@@ -1580,25 +2234,42 @@ controller_interface::return_type PouringController::update_measured(double now,
                 "the pour takes that as its bound", reach_, reach_ * 180.0 / M_PI,
                 pinned.empty() ? "no joint at a limit: a singularity" : pinned.c_str());
         }
+        // Well behind the path the tilt is braked hard rather than held: the
+        // law still runs, but what it asks waits until the arm has caught up.
+        const bool braking = ik_lagging_ && ik_lag_ratio_ >= ik_hold_ratio_ &&
+                             ik_lag_ratio_ < kDeadHoldRatio;
         if (phase_ == Phase::Pouring) {
             const double rate = step_law(now);
             if (phase_ == Phase::Pouring) {
-                proposed = std::clamp(tilt_ + shaped_law_step(rate * ik_speed_scale(), dt),
-                                      -max_back_tilt_,
-                                      tilt_bound_);
+                const double capped =
+                    std::copysign(std::min(std::abs(rate) * ik_speed_scale(),
+                                           tilt_rate_cap(std::isfinite(law_target_tilt_)
+                                                             ? law_target_tilt_ - tilt_
+                                                             : rate,
+                                                         dt)),
+                                  rate);
+                const double step = braking ? tilt_ramp_.brake(kEmergencyBrake * tilt_accel_, dt)
+                                            : shaped_law_step(capped, dt);
+                proposed = std::clamp(tilt_ + step, -max_back_tilt_, tilt_bound_);
             }
         }
         if (phase_ == Phase::Untilt) {
             last_phase_ = static_cast<std::uint8_t>(PourPhase::Done);
-            const double rate = std::min(law_->return_tilt_rate(),
-                                         max_delta_q_ / std::max(dt, 1e-9));
-            proposed = tilt_ + tilt_ramp_.reach(tilt_, 0.0, rate * ik_speed_scale(),
-                                                tilt_accel_, dt);
+            const double rate = std::min({law_->return_tilt_rate(),
+                                          max_delta_q_ / std::max(dt, 1e-9),
+                                          tilt_rate_cap(-tilt_, dt)});
+            proposed = tilt_ + (braking ? tilt_ramp_.brake(kEmergencyBrake * tilt_accel_, dt)
+                                        : tilt_ramp_.reach(tilt_, 0.0, rate * ik_speed_scale(),
+                                                           tilt_accel_, dt));
         }
         advance_tilt(proposed, dt);
+        if (braking && hold_reason_ == 0) {
+            hold_reason_ = 4;
+        }
         // advance_tilt holds the tilt back while the IK lags or the lip backs
         // out; the ramp carries on from what it actually did.
         tilt_ramp_.observed(tilt_ - tilt_before, dt);
+        publish_tilt_debug(now, proposed);
 
         const bool home = phase_ == Phase::Untilt && tilt_ == 0.0 && !ik_lagging_ &&
                           inset_cmd_ >= lip_path_.inset_limit(0.0) - 1e-9;
@@ -1622,15 +2293,45 @@ controller_interface::return_type PouringController::update_measured(double now,
     if (phase_ == Phase::Unalign) {
         last_phase_ = static_cast<std::uint8_t>(PourPhase::Done);
         if (align_s_ <= 0.0 && !ik_lagging_) {
-            phase_ = Phase::Return;
+            level_ramp_.reset();
+            phase_ = level_s_ > 0.0 ? Phase::Unlevel : Phase::Return;
         } else {
             if (!ik_lagging_) {
                 align_s_ += align_ramp_.reach(align_s_, 0.0, align_speed_ * ik_speed_scale(),
                                               align_accel_, dt);
+            } else if (ik_lag_ratio_ < kDeadHoldRatio) {
+                align_s_ = std::clamp(align_s_ + align_ramp_.brake(kEmergencyBrake * align_accel_, dt),
+                                      0.0, lip_path_.align_length());
             } else {
                 align_ramp_.reset();
             }
             if (!track(lip_path_.ee_pose_aligning(align_s_), now, why)) {
+                fail_geometric(why, Phase::Return);
+            } else if (ik_blocked(now, kReturnBlockFactor)) {
+                fail_geometric(blocked_reason(), Phase::Return);
+            }
+            publish_feedback_if_due(dt);
+            return controller_interface::return_type::OK;
+        }
+    }
+
+    if (phase_ == Phase::Unlevel) {
+        // Back the way Level came, as slowly: the vessel may still be full.
+        last_phase_ = static_cast<std::uint8_t>(PourPhase::Done);
+        std::string why;
+        if (level_s_ <= 0.0 && !ik_lagging_) {
+            phase_ = Phase::Return;
+        } else {
+            if (!ik_lagging_) {
+                level_s_ += level_ramp_.reach(level_s_, 0.0, level_rate_ * ik_speed_scale(),
+                                              tilt_accel_, dt);
+            } else if (ik_lag_ratio_ < kDeadHoldRatio) {
+                level_s_ = std::clamp(level_s_ + level_ramp_.brake(kEmergencyBrake * tilt_accel_, dt),
+                                      0.0, level_move_.angle());
+            } else {
+                level_ramp_.reset();
+            }
+            if (!track(level_move_.at(level_s_), now, why)) {
                 fail_geometric(why, Phase::Return);
             } else if (ik_blocked(now, kReturnBlockFactor)) {
                 fail_geometric(blocked_reason(), Phase::Return);

@@ -65,6 +65,9 @@ struct PlannerConfig {
     //: the bench pours from: an onset below it is found at the fast rate, a
     //: delay late, with that much more in the air.
     double seek_fast_until{0.0};
+    //: The least fraction of seek_tilt_rate a small goal seeks at; see
+    //: PourLimits::slow_seek_below_grams. In (0, 1].
+    double slow_seek_min_fraction{0.5};
     //: The bulk phase holds its angle while the flow is within this fraction of
     //: the flow it wants, either side. Outside it, it steps -- up when short,
     //: down when over -- one lead at a time.
@@ -77,6 +80,12 @@ struct PlannerConfig {
     //: Above one leaves a gap the trim pulses close; below one leaves an
     //: overshoot nothing can.
     double stop_margin_factor{1.5};
+    //: The same for a granular pour; 0 is stop_margin_factor. The forecast is
+    //: a liquid's flow model -- a stream in the air for transport_delay, still
+    //: draining on the way back down to the onset -- and a bed tipped back
+    //: stops at once and lands within ~0.2 s. On the rig (sugar, 2026-09-29/
+    //: 10-01) it forecast 1.5-12.9 g still to come where 0.3-0.8 g landed.
+    double granular_stop_margin_factor{0.0};
     //: Priors for the flow model the stop decisions forecast with.
     FlowModelConfig flow_model;
     //: How long a settle may take before the pour is failed [s]. A reading that
@@ -210,7 +219,7 @@ private:
     PourCommand fail_after_retract(const std::string & reason, const PourObservation & obs);
     PourCommand emit(double tilt_rate) const;
     //: The same command with this material's taps on it, when it has any.
-    [[nodiscard]] PourCommand shaken(PourCommand cmd) const;
+    [[nodiscard]] PourCommand shaken(PourCommand cmd, bool final_approach = false) const;
     //: The nearer of the goal's max_tilt and the arm's reach, and a phrase that
     //: says which one it was, for the abort messages.
     [[nodiscard]] double tilt_bound(const PourObservation & obs) const;
@@ -218,6 +227,9 @@ private:
     PourCommand finish(bool success, const std::string & message);
     [[nodiscard]] double poured(const PourObservation & obs) const;
     [[nodiscard]] double tilt_rate_limit() const;
+    //: The rate this goal searches for its onset at: seek_tilt_rate, slowed for
+    //: a goal under the material's slow_seek_below_grams.
+    [[nodiscard]] double seek_rate() const;
     void record_tilt(const PourObservation & obs);
     //: What the tilt was one transport delay ago -- the tilt that produced the
     //: flow the scale is reporting now.
@@ -239,6 +251,8 @@ private:
     void record_stop(const PourObservation & obs, const Forecast & coming);
     //: Tilt rate a trim pulse creeps toward the onset at [rad/s].
     [[nodiscard]] double creep_rate() const;
+    //: stop_margin_factor, or granular_stop_margin_factor for a granular pour.
+    [[nodiscard]] double margin_factor() const;
     //: Adopt an onset angle and derive the park angle from it.
     void set_onset(double onset);
     //: The single way into Retract. Bounds the target by max_back_tilt and
@@ -300,6 +314,12 @@ private:
     //: The most the first bulk has seen landed [g]. A reading that falls back
     //: halfway from it before any stop sends the pour back to seeking.
     double bulk_peak_{0.0};
+    //: Since when the scale has shown the bulk's stream stopped outright, or
+    //: -1. In the final approach only a stream stopped this long is climbed after.
+    double quiet_since_{-1.0};
+    //: The highest tilt the bulk has reached this pour [rad]; max_step_down is
+    //: measured from it.
+    double bulk_tilt_peak_{0.0};
     double park_entered_{0.0};
     //: The margin the onset estimate earned, resolved once when the onset is
     //: found. Every re-park is a whole multiple of it.

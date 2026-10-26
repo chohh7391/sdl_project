@@ -158,6 +158,18 @@ struct VesselSim {
     //: at the onset, which is what every test before this assumed.
     double sticky_excess{0.0};
 
+    //: How far under the onset a stream that is already running keeps running
+    //: [rad]: a thick liquid's. While running the flow is gain x (tilt - onset
+    //: + drain_below), so at its own onset it still pours gain x drain_below.
+    //: 0 is water, which stops at the onset.
+    double drain_below{0.0};
+
+    //: Mass the lip lets go of as one lump when the stream first starts [g],
+    //: on top of the stream: what the rig's syrup did (2026-10-03, -04) --
+    //: 0.82-0.86 g inside one 0.2 s sample, then ~0.5 g/s. 0 is none.
+    double onset_lump_grams{0.0};
+    bool lump_released{false};
+
     double landed{0.0};
     //: Everything that has left the lip, landed or not.
     double poured_out{0.0};
@@ -176,7 +188,7 @@ struct VesselSim {
         if (!was_flowing && excess <= sticky_excess) {
             return 0.0;
         }
-        return std::max(0.0, excess) * gain;
+        return std::max(0.0, was_flowing ? excess + drain_below : excess) * gain;
     }
 
     //: What has left the lip and not landed yet [g]: the quantity a stop
@@ -200,8 +212,13 @@ struct VesselSim {
             flow = std::min(flow, std::max(0.0, contents_grams - poured_out) / dt);
         }
         if (flow > 0.0) {
-            pipe.emplace_back(now + transport_delay, flow * dt);
-            poured_out += flow * dt;
+            double grams = flow * dt;
+            if (!lump_released && onset_lump_grams > 0.0) {
+                grams += onset_lump_grams;
+                lump_released = true;
+            }
+            pipe.emplace_back(now + transport_delay, grams);
+            poured_out += grams;
             was_flowing = true;
         } else if (was_flowing) {
             // The stream broke: whatever was clinging to the lip now drains.
@@ -236,7 +253,16 @@ struct RunResult {
     std::vector<double> park_angles;
     //: Seconds the law asked for taps, per phase, and the most it asked for.
     std::map<PourPhase, double> shake_seconds;
+    //: Seconds the law spent in each phase.
+    std::map<PourPhase, double> phase_seconds;
     double max_shake_amplitude{0.0};
+    //: How far the bulk tilted past where it was when the scale came within
+    //: RunOptions::watch_last_grams of the goal [rad].
+    double rise_near_target{0.0};
+    //: And the fastest it was asked to tilt on there [rad/s].
+    double max_rate_near_target{0.0};
+    //: Most the bulk stepped the tilt back from the highest it had reached [rad].
+    double bulk_step_down{0.0};
 };
 
 struct RunOptions {
@@ -265,6 +291,8 @@ struct RunOptions {
     double cylinder_height_mm{0.0};
     double contents_grams{0.0};
     double sticky_excess{0.0};
+    double sim_drain_below{0.0};
+    double onset_lump_grams{0.0};
     //: The reading knocked down by dip_grams at dip_at and recovering linearly
     //: over dip_sec -- the bench bumped, the receiver touched. Nothing lands
     //: or leaves; only the indicator moves.
@@ -278,6 +306,8 @@ struct RunOptions {
     //: law, so this does too.
     double reach{std::numeric_limits<double>::infinity()};
     double reach_found_sec{0.5};
+    //: Watch the bulk's tilt once this close to the goal [g]; 0 does not.
+    double watch_last_grams{0.0};
 };
 
 /**
@@ -307,6 +337,8 @@ inline RunResult run_pour(PourLaw & planner, const PourRequest & goal, const Run
         vessel.contents_grams = opt.contents_grams;
     }
     vessel.sticky_excess = opt.sticky_excess;
+    vessel.drain_below = opt.sim_drain_below;
+    vessel.onset_lump_grams = opt.onset_lump_grams;
 
     ScaleFilter filter;
     ScaleFilter::Config fc;
@@ -322,6 +354,9 @@ inline RunResult run_pour(PourLaw & planner, const PourRequest & goal, const Run
     // so it starts at zero however the vessel is actually held; the simulated
     // vessel sees grasp_tilt added to it.
     double tilt = 0.0;
+    double watch_from = std::nan("");
+    double scale_start = std::nan("");
+    double bulk_tilt_peak = -std::numeric_limits<double>::infinity();
     double next_sample = 0.0;
     const double on_pan =
         std::isnan(opt.vessel_grams) ? request.container_grams : opt.vessel_grams;
@@ -369,6 +404,7 @@ inline RunResult run_pour(PourLaw & planner, const PourRequest & goal, const Run
         obs.reach = reach_known;
 
         const auto cmd = planner.update(obs);
+        result.phase_seconds[cmd.phase] += kControlDt;
         if (cmd.shake_amplitude > 0.0) {
             result.shake_seconds[cmd.phase] += kControlDt;
             result.max_shake_amplitude = std::max(result.max_shake_amplitude, cmd.shake_amplitude);
@@ -386,6 +422,22 @@ inline RunResult run_pour(PourLaw & planner, const PourRequest & goal, const Run
             result.phases_seen.push_back(cmd.phase);
         }
         result.last_phase = cmd.phase;
+        if (cmd.phase == PourPhase::Bulk) {
+            bulk_tilt_peak = std::max(bulk_tilt_peak, tilt);
+            result.bulk_step_down = std::max(result.bulk_step_down, bulk_tilt_peak - tilt);
+        }
+        // Watched by the scale, as the law sees it, not by what has landed.
+        if (std::isnan(scale_start) && obs.has_reading) {
+            scale_start = obs.grams;
+        }
+        if (opt.watch_last_grams > 0.0 && cmd.phase == PourPhase::Bulk &&
+            goal.target_grams - (obs.grams - scale_start) <= opt.watch_last_grams) {
+            if (std::isnan(watch_from)) {
+                watch_from = tilt;
+            }
+            result.rise_near_target = std::max(result.rise_near_target, tilt - watch_from);
+            result.max_rate_near_target = std::max(result.max_rate_near_target, cmd.tilt_rate);
+        }
 
         if (cmd.finished) {
             result.finished = true;

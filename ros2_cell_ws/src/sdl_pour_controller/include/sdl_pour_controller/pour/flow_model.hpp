@@ -41,6 +41,16 @@ struct FlowModelConfig {
     //: pours 2.6 g over at worst where they had been 0.46. The fix that held in
     //: both was a lower prior_gain.
     int min_pairs{0};
+    //: How far a fit may put the onset from where the flow was first seen
+    //: [rad]: past it the fit is not taken and the last one stands. (Not also
+    //: a rise that falls: the sim's vessels do not empty, and a rise fitted a
+    //: hair under zero there froze fits that 50 g pours needed.) A steady climb at a
+    //: steady flow -- the tilt rising with what has left, nothing else moving
+    //: -- cannot tell the tilt's share from the emptying's, and on the rig
+    //: (2026-10-04, 50 g of water) the fit slid to 1.9 g/s/rad with the onset
+    //: at -64 deg: flow on the way down to the park all the way, 10.6 g
+    //: forecast, 2.25 g came, the pour stopped 5.5 g short. 0 is off.
+    double max_onset_shift{0.25};
 };
 
 /**
@@ -89,6 +99,8 @@ private:
     double info_mean_[3]{};
     //: [gain, -gain*onset0, -gain*rise]
     double theta_[3]{};
+    //: The onset the pour began from: where the flow was first seen.
+    double onset_begin_{0.0};
 };
 
 } // namespace pour

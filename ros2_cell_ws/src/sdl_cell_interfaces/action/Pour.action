@@ -99,6 +99,17 @@ int8 pour_direction
 # closing axis, and a config file cannot know which the next one does.
 # Empty (the default): tip about the pour joint's axis, pour_direction's way.
 float64[] pour_reference_joints
+
+# Where the vessel being poured INTO is: the centre of its rim, in the arm's
+# base frame [m], as three numbers -- x, y and the rim's height.
+#
+# REQUIRED under `pour_geometry: measured`, and a goal without it is refused:
+# the receiver is not a fixed part of the cell. It is wherever perception last
+# put it -- a tagged beaker on the balance pan, measured before the task was
+# planned -- and the lip path is laid out around it. Nothing in the
+# controller's configuration stands in for a receiver the caller did not give.
+# Under `pour_geometry: joint` it is not used and may be left empty.
+float64[] receiver_rim_center
 ---
 bool is_completed
 

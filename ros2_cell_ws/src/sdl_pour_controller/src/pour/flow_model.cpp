@@ -52,6 +52,7 @@ void FlowModel::begin(const FlowModelConfig & config, double onset)
 {
     config_ = config;
     pairs_ = 0;
+    onset_begin_ = onset;
     const double g = config.prior_gain;
     const double s = config.prior_rise;
     theta_[0] = g;
@@ -127,6 +128,15 @@ void FlowModel::solve()
     if (!std::isfinite(theta[0]) || !std::isfinite(theta[1]) || !std::isfinite(theta[2]) ||
         theta[0] <= 0.0) {
         return;
+    }
+    // Nor is one whose onset has wandered far from where the flow was seen to
+    // start: the data along a steady climb let it slide that way, and the stop
+    // forecast trusts it (max_onset_shift).
+    if (config_.max_onset_shift > 0.0) {
+        const double onset0 = -theta[1] / theta[0];
+        if (std::abs(onset0 - onset_begin_) > config_.max_onset_shift) {
+            return;
+        }
     }
     for (int i = 0; i < 3; ++i) {
         theta_[i] = theta[i];
