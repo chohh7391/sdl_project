@@ -478,7 +478,7 @@ margin 187/175, **54 px**, spread 0.7/0.1 mm. latch 후 복귀까지 정상.
   330 mm다. keep-out은 남겼다 — 위치를 extrinsics 파일에서 읽으므로 재보정이 자동으로 조준을
   고친다.
 
-- 2026-09-15 카메라 스택 모듈 분리 + OAK/D435 AprilTag 실증 + 체커보드 캘리브 → cho_robot_project v0.1.0의 `docs/sessions/2026-09-15.md`
-- 2026-09-11 AprilTag 인식 파이프라인 신설 + Franka system-identification 컨트롤러 제거 → cho_robot_project v0.1.0의 `docs/sessions/2026-09-11.md`
-- 2026-09-09 VLA 코어 분리 + OpenArm 컨트롤러 통합 + cuRobo 경로 제거 → cho_robot_project v0.1.0의 `docs/sessions/2026-09-09.md`
-- 2026-09-08 cuRobo를 MoveIt 플래너 플러그인으로 연동(09-09에 제거) → cho_robot_project v0.1.0의 `docs/sessions/2026-09-08.md`
+- 2026-09-15 카메라 스택 모듈 분리 + OAK/D435 AprilTag 실증 + 체커보드 캘리브 → cho_robot_project 0865c56(옛 v0.1.0)의 `docs/sessions/2026-09-15.md`
+- 2026-09-11 AprilTag 인식 파이프라인 신설 + Franka system-identification 컨트롤러 제거 → cho_robot_project 0865c56(옛 v0.1.0)의 `docs/sessions/2026-09-11.md`
+- 2026-09-09 VLA 코어 분리 + OpenArm 컨트롤러 통합 + cuRobo 경로 제거 → cho_robot_project 0865c56(옛 v0.1.0)의 `docs/sessions/2026-09-09.md`
+- 2026-09-08 cuRobo를 MoveIt 플래너 플러그인으로 연동(09-09에 제거) → cho_robot_project 0865c56(옛 v0.1.0)의 `docs/sessions/2026-09-08.md`
